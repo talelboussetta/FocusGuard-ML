@@ -1,0 +1,9 @@
+opencv-python
+pynput
+numpy
+pandas
+scikit-learn
+streamlit
+matplotlib
+plotly
+joblib
