@@ -48,3 +48,6 @@ print("Training completed.")
 y_pred = clf.predict(X_test)
 print("Prediction done. Classification report:")
 print(classification_report(y_test, y_pred))
+import joblib
+joblib.dump(clf, "focus_predictor.pkl")
+
