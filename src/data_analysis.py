@@ -1,20 +1,35 @@
 import pandas as pd
-
 from datetime import datetime
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+import matplotlib.dates as mdates
 
 def plot_activity(df):
+    if df.empty:
+        print("No data to plot.")
+        return
+
+    # Sort by timestamp for consistency
+    df = df.sort_values('timestamp').copy()
+
+    # Prepare time-based features
     df['minute'] = df['timestamp'].dt.floor('T')
     df['hour'] = df['timestamp'].dt.hour
     df['minute_of_hour'] = df['timestamp'].dt.minute
 
-    # Count events per type
-    event_counts = df['event_type'].value_counts()
-
-    # Events per minute
+    # Calculate event counts per minute and fill missing with 0
     time_events = df.groupby(['minute', 'event_type']).size().unstack(fill_value=0)
+
+    # Add combined clicks = keyboard_press + mouse_click
+    time_events['clicks'] = 0
+    if 'keyboard_press' in time_events.columns:
+        time_events['clicks'] += time_events['keyboard_press']
+    if 'mouse_click' in time_events.columns:
+        time_events['clicks'] += time_events['mouse_click']
+
+    # Smooth lines with rolling average (window 3 minutes)
+    rolling_events = time_events.rolling(window=3, min_periods=1).mean()
 
     # Blink intervals
     blink_df = df[df['event_type'] == 'blink'].copy()
@@ -24,48 +39,89 @@ def plot_activity(df):
     # Activity heatmap data
     heatmap_data = df.groupby(['hour', 'minute_of_hour']).size().unstack(fill_value=0)
 
-    # Plot layout
-    fig, axes = plt.subplots(2, 2, figsize=(14, 10))
-    fig.suptitle("FocusGuard Activity Dashboard", fontsize=16)
+    # Cumulative blinks as a proxy for "Focus Over Time"
+    blink_cumulative = blink_df.groupby('minute').size().cumsum()
 
-    # 1. Lineplot – events per minute
+    # For fatigue proxy, use average blink interval per minute (if enough data)
+    blink_interval_per_minute = blink_df.groupby('minute')['delta'].mean()
+
+    # Set up plot grid
+    fig, axes = plt.subplots(3, 2, figsize=(16, 14))
+    fig.suptitle("FocusGuard Activity Dashboard", fontsize=18)
+
+    # 1. Events per minute (raw) - blinks, keyboard, mouse clicks
     ax = axes[0, 0]
     for event in ['blink', 'keyboard_press', 'mouse_click']:
-        if event in time_events:
-            sns.lineplot(data=time_events, x=time_events.index, y=event, label=event, ax=ax)
-    ax.set_title("Events Per Minute")
+        if event in time_events.columns:
+            ax.plot(time_events.index, time_events[event], label=f"{event} (raw)", alpha=0.4)
+    ax.set_title("Events Per Minute (Raw)")
     ax.set_xlabel("Time")
     ax.set_ylabel("Count")
     ax.legend()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
     ax.tick_params(axis='x', rotation=45)
 
-    # 2. Barplot – total event types
-    sns.barplot(x=event_counts.index, y=event_counts.values, ax=axes[0, 1], palette="Set2")
-    axes[0, 1].set_title("Total Event Counts")
-    axes[0, 1].set_ylabel("Count")
-    axes[0, 1].set_xlabel("Event Type")
+    # 2. Events per minute (smoothed rolling average)
+    ax = axes[0, 1]
+    for event in ['blink', 'keyboard_press', 'mouse_click', 'clicks']:
+        if event in rolling_events.columns:
+            ax.plot(rolling_events.index, rolling_events[event], label=f"{event} (smoothed)")
+    ax.set_title("Events Per Minute (Smoothed)")
+    ax.set_xlabel("Time")
+    ax.set_ylabel("Count (rolling avg)")
+    ax.legend()
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+    ax.tick_params(axis='x', rotation=45)
 
-    # 3. Histogram – blink intervals
-    if not blink_intervals.empty:
-        sns.histplot(blink_intervals, bins=20, ax=axes[1, 0], kde=True, color="royalblue")
-        axes[1, 0].set_title("Time Between Blinks (seconds)")
-        axes[1, 0].set_xlabel("Seconds")
+    # 3. Cumulative blinks over time (Focus Over Time proxy)
+    ax = axes[1, 0]
+    if not blink_cumulative.empty:
+        ax.plot(blink_cumulative.index, blink_cumulative, color='green')
+        ax.set_title("Cumulative Blinks (Focus Over Time)")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Cumulative Blink Count")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        ax.tick_params(axis='x', rotation=45)
     else:
-        axes[1, 0].text(0.5, 0.5, "Not enough blinks to analyze", ha='center')
-        axes[1, 0].set_title("Blink Intervals")
+        ax.text(0.5, 0.5, "Not enough blinks to plot focus over time", ha='center')
+        ax.set_title("Cumulative Blinks (Focus Over Time)")
 
-    # 4. Heatmap – activity by hour and minute
-    sns.heatmap(heatmap_data, cmap="YlGnBu", ax=axes[1, 1])
-    axes[1, 1].set_title("Activity Density by Time of Day")
-    axes[1, 1].set_xlabel("Minute")
-    axes[1, 1].set_ylabel("Hour")
+    # 4. Blink intervals histogram (Fatigue proxy)
+    ax = axes[1, 1]
+    if not blink_intervals.empty:
+        sns.histplot(blink_intervals, bins=20, kde=True, color="royalblue", ax=ax)
+        ax.set_title("Time Between Blinks (seconds) - Fatigue Proxy")
+        ax.set_xlabel("Seconds")
+    else:
+        ax.text(0.5, 0.5, "Not enough blinks to analyze", ha='center')
+        ax.set_title("Blink Intervals")
 
-    plt.tight_layout(rect=[0, 0, 1, 0.96])  # space for suptitle
+    # 5. Activity heatmap by hour and minute
+    ax = axes[2, 0]
+    sns.heatmap(heatmap_data, cmap="YlGnBu", ax=ax)
+    ax.set_title("Activity Density by Time of Day")
+    ax.set_xlabel("Minute")
+    ax.set_ylabel("Hour")
+
+    # 6. Clicks per minute (keyboard + mouse)
+    ax = axes[2, 1]
+    if 'clicks' in time_events.columns:
+        ax.plot(time_events.index, time_events['clicks'], label='Clicks per Minute', color='purple', alpha=0.6)
+        ax.set_title("Clicks Per Minute")
+        ax.set_xlabel("Time")
+        ax.set_ylabel("Clicks Count")
+        ax.xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+        ax.tick_params(axis='x', rotation=45)
+        ax.legend()
+    else:
+        ax.text(0.5, 0.5, "No click data available", ha='center')
+        ax.set_title("Clicks Per Minute")
+
+    plt.tight_layout(rect=[0, 0, 1, 0.96])
     plt.show(block=True)
 
-
-
-LOG_FILE = r'C:\Users\talel\OneDrive\Documents\GitHub\FocusGuard-ML\data\activity_log.csv'  
+# Usage (keep your existing load_data and main functions)
+LOG_FILE = r"C:\Users\talel\OneDrive\Documents\GitHub\FocusGuard-ML\src\data\activity_log.csv"
 
 def load_data():
     # Load CSV with timestamp parsing
@@ -74,27 +130,15 @@ def load_data():
     df = df.dropna(subset=['timestamp'])  # drop rows with bad timestamps
     return df
 
-def summarize_events(df):
-    # Filter blinks, keyboard, mouse events
-    blinks = df[df['event_type'] == 'blink']
-    keyboard_presses = df[df['event_type'] == 'keyboard_press']
-    mouse_clicks = df[df['event_type'].str.contains('mouse')]
 
-    print(f"Total blinks recorded: {len(blinks)}")
-    print(f"Total keyboard presses: {len(keyboard_presses)}")
-    print(f"Total mouse events: {len(mouse_clicks)}")
-
-def events_per_minute(df):
-    # Round timestamps to minute
-    df['minute'] = df['timestamp'].dt.floor('T')
-    counts = df.groupby(['minute', 'event_type']).size().unstack(fill_value=0)
-    print("\nEvents per minute:")
-    print(counts.head(10))  # show first 10 minutes
 
 def main():
+    
     df = load_data()
-    summarize_events(df)
-    events_per_minute(df)
+    if df.empty:
+        print("No data available to plot.")
+        return
+    
     plot_activity(df)
 
 if __name__ == "__main__":
