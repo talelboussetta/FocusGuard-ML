@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 import matplotlib.dates as mdates
+import os
 
 def plot_activity(df):
     if df.empty:
@@ -125,7 +126,7 @@ LOG_FILE = r"C:\Users\talel\OneDrive\Documents\GitHub\FocusGuard-ML\src\data\act
 
 def load_data():
     # Load CSV with timestamp parsing
-    df = pd.read_csv(LOG_FILE, header=None, names=['timestamp', 'event_type', 'event_detail'])
+    df = pd.read_csv(LOG_FILE, header=None, names=['timestamp', 'event_type', 'event_detail'],encoding="latin1", errors='ignore', on_bad_lines='skip')
     df['timestamp'] = pd.to_datetime(df['timestamp'], errors='coerce')
     df = df.dropna(subset=['timestamp'])  # drop rows with bad timestamps
     return df
@@ -133,13 +134,15 @@ def load_data():
 
 
 def main():
-    
     df = load_data()
     if df.empty:
         print("No data available to plot.")
         return
-    
-    plot_activity(df)
+
+    # Save dashboard image here:
+    save_path = "data/focusguard_dashboard.png"
+    os.makedirs(os.path.dirname(save_path), exist_ok=True)
+    plot_activity(df, save_path=save_path)
 
 if __name__ == "__main__":
     main()
