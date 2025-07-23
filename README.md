@@ -24,15 +24,38 @@ FocusGuard is a machine learning-powered tool that monitors behavioral data — 
 - Matplotlib / Plotly (visualizations)
 
 ## 📁 Project Structure
- FocusGuard-ML/
-├── data/ # Collected raw and processed data
-├── notebooks/ # Jupyter notebooks for EDA and model training
-├── src/ # Core scripts (data collection, feature engineering, modeling)
-├── dashboard/ # Streamlit dashboard app
-├── README.md # Project overview and instructions
-├── requirements.txt # Project dependencies
-├── venv/ # Python virtual environment (not tracked by Git)
-└── .gitignore # Git ignore file
+project-root/
+│
+├── front/                     # Frontend application (React, Vue, etc.)
+│   ├── public/                # Static assets (index.html, favicon, etc.)
+│   ├── src/                   # Source code for frontend
+│   │   ├── components/        # React components or Vue components
+│   │   ├── pages/             # Pages or views
+│   │   ├── hooks/             # Custom React hooks (if any)
+│   │   ├── services/          # API calls and services
+│   │   ├── styles/            # CSS or styling files
+│   │   ├── App.js             # Main app component
+│   │   └── index.js           # Entry point
+│   ├── .env                   # Frontend environment variables (optional)
+│   ├── package.json           # Frontend dependencies and scripts
+│   └── README.md              # Frontend specific instructions (optional)
+│
+├── serv/                      # Backend server (Node.js, Python Flask, etc.)
+│   ├── app.py / index.js      # Main backend entry point
+│   ├── routes/                # API route handlers
+│   ├── controllers/           # Controller logic (optional, if using MVC)
+│   ├── services/              # Business logic / external API integration
+│   ├── models/                # Database models (if any)
+│   ├── config.py / config.js  # Configuration file to manage environment variables
+│   ├── .env                   # Backend environment variables (API keys, secrets)
+│   ├── requirements.txt / package.json  # Backend dependencies
+│   ├── README.md              # Backend specific instructions (optional)
+│   └── utils/                 # Utility functions/helpers
+│
+├── .gitignore                 # Files and folders to ignore in Git
+├── README.md                  # Project overview and main instructions
+└── LICENSE                    # License file (if any)
+
 
 ## ✅ Goals (v1.0)
 
