@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@keyframes bgShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+.bg-dynamic {
+  background: linear-gradient(270deg, #0a3d62, #3c6382, #0a3d62);
+  background-size: 600% 600%;
+  animation: bgShift 40s ease infinite;
+}
