@@ -7,7 +7,7 @@ api = Blueprint('api', __name__)
 @api.route("/predict", methods=["POST"])
 def predict():
     try:
-        data = request.json
+        data = request.json(force=True)
         base64_img = data.get("image")
         if not base64_img:
             return jsonify({"error": "Missing image"}), 400
