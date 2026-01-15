@@ -1,4 +1,0 @@
-flask
-flask-cors
-requests
-# FocusGuard-ML Server Requirements
