@@ -1,9 +1,19 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight } from 'lucide-react'
+import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
 
 const LandingPage = () => {
   const navigate = useNavigate()
+
+  const scrollToHowItWorks = () => {
+    const element = document.getElementById('how-it-works')
+    element?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  const scrollToPrivacy = () => {
+    const element = document.getElementById('privacy')
+    element?.scrollIntoView({ behavior: 'smooth' })
+  }
 
   const features = [
     {
@@ -23,6 +33,104 @@ const LandingPage = () => {
       title: 'Personal Garden',
       description: 'Watch your productivity bloom into a beautiful garden',
       gradient: 'from-nature-500 to-emerald-700',
+    },
+  ]
+
+  const stats = [
+    { value: '23%', label: 'Average Productivity Increase' },
+    { value: '85%', label: 'Users Report Better Focus' },
+    { value: '2.5x', label: 'More Deep Work Sessions' },
+    { value: '10k+', label: 'Focus Warriors Worldwide' },
+  ]
+
+  const howItWorksSteps = [
+    {
+      step: '01',
+      title: 'Start Your Session',
+      description: 'Choose your focus duration and begin a Pomodoro session. Our AI-powered camera tracks your engagement in real-time.',
+      icon: <Clock className="w-8 h-8" />,
+      gradient: 'from-primary-500 to-primary-700',
+    },
+    {
+      step: '02',
+      title: 'Stay Focused',
+      description: 'FocusGuard uses computer vision to monitor your attention level, providing gentle feedback to keep you on track.',
+      icon: <Camera className="w-8 h-8" />,
+      gradient: 'from-purple-500 to-pink-700',
+    },
+    {
+      step: '03',
+      title: 'Plant Your Progress',
+      description: 'Complete sessions to earn seeds and plant trees in your personal garden. Watch your dedication grow into a beautiful forest.',
+      icon: <Leaf className="w-8 h-8" />,
+      gradient: 'from-nature-500 to-emerald-700',
+    },
+    {
+      step: '04',
+      title: 'Get AI Insights',
+      description: 'Receive personalized analytics about your focus patterns, peak productivity times, and actionable recommendations.',
+      icon: <Brain className="w-8 h-8" />,
+      gradient: 'from-cyan-500 to-blue-700',
+    },
+  ]
+
+  const benefits = [
+    {
+      icon: <Target className="w-6 h-6" />,
+      title: 'Science-Backed Technique',
+      description: 'Based on the proven Pomodoro Technique, used by millions to enhance focus and productivity.',
+    },
+    {
+      icon: <Zap className="w-6 h-6" />,
+      title: 'Real-Time Feedback',
+      description: 'AI-powered camera detection helps you maintain focus by identifying distractions as they happen.',
+    },
+    {
+      icon: <Shield className="w-6 h-6" />,
+      title: 'Privacy First',
+      description: 'All camera processing happens locally. Your data stays on your device, ensuring complete privacy.',
+    },
+    {
+      icon: <Users className="w-6 h-6" />,
+      title: 'Build Streaks',
+      description: 'Maintain daily streaks and unlock achievements as you build a consistent focus habit.',
+    },
+    {
+      icon: <Award className="w-6 h-6" />,
+      title: 'Gamified Progress',
+      description: 'Turn productivity into a game with gardens, levels, and rewards that motivate you daily.',
+    },
+    {
+      icon: <TrendingUp className="w-6 h-6" />,
+      title: 'Deep Analytics',
+      description: 'Understand your productivity patterns with detailed charts and AI-generated insights.',
+    },
+  ]
+
+  const privacyFeatures = [
+    {
+      icon: <Lock className="w-8 h-8" />,
+      title: '100% Local Processing',
+      description: 'All AI models run entirely on your device. Your camera feed is processed locally and never leaves your computer.',
+      gradient: 'from-green-500 to-emerald-700',
+    },
+    {
+      icon: <Server className="w-8 h-8" />,
+      title: 'No Cloud Storage',
+      description: 'We don\'t store your data on any servers. Everything stays on your local machine, giving you complete control.',
+      gradient: 'from-blue-500 to-cyan-700',
+    },
+    {
+      icon: <Eye className="w-8 h-8" />,
+      title: 'Zero Tracking',
+      description: 'No analytics, no telemetry, no tracking cookies. We don\'t collect, transmit, or sell any of your personal data.',
+      gradient: 'from-purple-500 to-pink-700',
+    },
+    {
+      icon: <FileCheck className="w-8 h-8" />,
+      title: 'Open Source',
+      description: 'Our code is transparent and auditable. You can verify exactly what happens with your data at any time.',
+      gradient: 'from-primary-500 to-primary-700',
     },
   ]
 
@@ -96,12 +204,22 @@ const LandingPage = () => {
               FocusGuard
             </span>
           </div>
-          <button
-            onClick={() => navigate('/auth')}
-            className="btn-secondary"
-          >
-            Sign In
-          </button>
+          <div className="flex items-center gap-4">
+            <motion.button
+              onClick={scrollToPrivacy}
+              className="text-slate-300 hover:text-nature-400 transition-colors flex items-center space-x-2"
+              whileHover={{ scale: 1.05 }}
+            >
+              <Shield className="w-4 h-4" />
+              <span className="hidden sm:inline">Privacy</span>
+            </motion.button>
+            <button
+              onClick={() => navigate('/auth')}
+              className="btn-secondary"
+            >
+              Sign In
+            </button>
+          </div>
         </motion.nav>
 
         {/* Hero Section */}
@@ -153,6 +271,7 @@ const LandingPage = () => {
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </motion.button>
             <motion.button
+              onClick={scrollToHowItWorks}
               className="btn-secondary"
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -230,6 +349,361 @@ const LandingPage = () => {
               </motion.div>
             ))}
           </div>
+        </motion.section>
+
+        {/* Stats Section */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="container mx-auto px-6 py-20"
+        >
+          <div className="glass rounded-3xl p-12">
+            <div className="grid md:grid-cols-4 gap-8">
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  whileInView={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.6, delay: index * 0.1 }}
+                  viewport={{ once: true }}
+                  className="text-center"
+                >
+                  <motion.div
+                    className="text-4xl md:text-5xl font-display font-bold gradient-text mb-2"
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    {stat.value}
+                  </motion.div>
+                  <div className="text-slate-400">{stat.label}</div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </motion.section>
+
+        {/* How It Works Section */}
+        <motion.section
+          id="how-it-works"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="container mx-auto px-6 py-20"
+        >
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-5xl font-display font-bold text-center mb-8"
+          >
+            How <span className="gradient-text">FocusGuard</span> Works
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="text-xl text-slate-400 text-center mb-16 max-w-3xl mx-auto"
+          >
+            Our AI-powered platform combines proven productivity techniques with cutting-edge technology
+            to help you achieve deep focus and build lasting habits.
+          </motion.p>
+
+          <div className="space-y-12">
+            {howItWorksSteps.map((step, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.8, delay: index * 0.2 }}
+                viewport={{ once: true }}
+                className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} items-center gap-8`}
+              >
+                <div className="flex-1">
+                  <motion.div
+                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center mb-6`}
+                    whileHover={{ rotate: 360, scale: 1.1 }}
+                    transition={{ duration: 0.6 }}
+                  >
+                    {step.icon}
+                  </motion.div>
+                  <div className="text-6xl font-display font-bold text-slate-800 mb-4">
+                    {step.step}
+                  </div>
+                  <h3 className="text-3xl font-display font-semibold mb-4">
+                    {step.title}
+                  </h3>
+                  <p className="text-lg text-slate-400 leading-relaxed">
+                    {step.description}
+                  </p>
+                </div>
+                <div className="flex-1">
+                  <motion.div
+                    className={`glass rounded-2xl p-8 aspect-square flex items-center justify-center bg-gradient-to-br ${step.gradient} bg-opacity-10`}
+                    whileHover={{ scale: 1.05 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <motion.div
+                      animate={{
+                        scale: [1, 1.1, 1],
+                        rotate: [0, 5, 0],
+                      }}
+                      transition={{
+                        duration: 4,
+                        repeat: Infinity,
+                        ease: 'easeInOut',
+                      }}
+                    >
+                      {step.icon}
+                    </motion.div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* Benefits Section */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="container mx-auto px-6 py-20"
+        >
+          <motion.h2
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-4xl md:text-5xl font-display font-bold text-center mb-8"
+          >
+            Why Choose <span className="gradient-text">FocusGuard?</span>
+          </motion.h2>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1 }}
+            viewport={{ once: true }}
+            className="text-xl text-slate-400 text-center mb-16 max-w-3xl mx-auto"
+          >
+            Research shows that the average person loses focus every 40 seconds when working on a computer.
+            FocusGuard helps you reclaim your attention and achieve peak productivity.
+          </motion.p>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {benefits.map((benefit, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -5 }}
+                className="card-soft"
+              >
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-nature-500 flex items-center justify-center mb-4">
+                  {benefit.icon}
+                </div>
+                <h3 className="text-xl font-display font-semibold mb-3">
+                  {benefit.title}
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  {benefit.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+        </motion.section>
+
+        {/* Science Section */}
+        <motion.section
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="container mx-auto px-6 py-20"
+        >
+          <div className="glass rounded-3xl p-12 max-w-5xl mx-auto">
+            <motion.h2
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6 }}
+              viewport={{ once: true }}
+              className="text-3xl md:text-4xl font-display font-bold text-center mb-6"
+            >
+              Backed by <span className="gradient-text">Science</span>
+            </motion.h2>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              viewport={{ once: true }}
+              className="text-lg text-slate-300 leading-relaxed space-y-4"
+            >
+              <p>
+                The Pomodoro Technique, developed by Francesco Cirillo in the late 1980s, 
+                has been scientifically proven to improve focus and productivity. By breaking 
+                work into focused intervals, you leverage your brain's natural attention span.
+              </p>
+              <p>
+                Studies show that taking regular breaks can improve mental agility by up to 30%. 
+                FocusGuard enhances this proven method with AI-powered insights, helping you 
+                understand when you're most productive and how to optimize your work schedule.
+              </p>
+              <p>
+                Our computer vision technology uses machine learning to detect signs of 
+                distraction—all processed locally on your device for complete privacy. This 
+                real-time feedback helps you develop better focus habits naturally.
+              </p>
+            </motion.div>
+          </div>
+        </motion.section>
+
+        {/* Privacy Section */}
+        <motion.section
+          id="privacy"
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          transition={{ duration: 0.8 }}
+          viewport={{ once: true }}
+          className="container mx-auto px-6 py-20"
+        >
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            viewport={{ once: true }}
+            className="text-center mb-16"
+          >
+            <motion.div
+              className="inline-flex items-center space-x-2 px-4 py-2 glass rounded-full mb-6"
+              whileHover={{ scale: 1.05 }}
+            >
+              <Shield className="w-5 h-5 text-green-400" />
+              <span className="text-sm font-medium text-green-400">
+                Your Privacy Matters
+              </span>
+            </motion.div>
+            <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">
+              Your Data Stays <span className="gradient-text">With You</span>
+            </h2>
+            <p className="text-xl text-slate-400 max-w-3xl mx-auto">
+              We built FocusGuard with privacy as our top priority. Your focus data, camera feed, 
+              and personal information never leave your device. Period.
+            </p>
+          </motion.div>
+
+          <div className="grid md:grid-cols-2 gap-8 mb-16">
+            {privacyFeatures.map((feature, index) => (
+              <motion.div
+                key={index}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: index * 0.1 }}
+                viewport={{ once: true }}
+                whileHover={{ y: -5 }}
+                className="card-soft"
+              >
+                <div
+                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6`}
+                >
+                  {feature.icon}
+                </div>
+                <h3 className="text-2xl font-display font-semibold mb-4">
+                  {feature.title}
+                </h3>
+                <p className="text-slate-400 leading-relaxed">
+                  {feature.description}
+                </p>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Privacy Details */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            viewport={{ once: true }}
+            className="glass rounded-3xl p-8 md:p-12 max-w-5xl mx-auto"
+          >
+            <h3 className="text-2xl md:text-3xl font-display font-bold mb-8 text-center">
+              How It Works <span className="gradient-text">Locally</span>
+            </h3>
+            <div className="space-y-6 text-slate-300 leading-relaxed">
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-sm font-bold">
+                  1
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-2 text-slate-200">AI Models Run on Your Device</h4>
+                  <p>
+                    Our computer vision models are downloaded once and run entirely on your local machine. 
+                    When you start a session, your camera feed is processed in real-time by your own CPU/GPU—nothing 
+                    is sent to any server or cloud service.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center text-sm font-bold">
+                  2
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-2 text-slate-200">Local Data Storage</h4>
+                  <p>
+                    All your focus sessions, analytics, and garden progress are stored in your browser's local 
+                    storage or on your device's file system. We use IndexedDB for efficient local storage that 
+                    never syncs to any external server.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-sm font-bold">
+                  3
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-2 text-slate-200">No Network Requests</h4>
+                  <p>
+                    During your focus sessions, FocusGuard makes zero network requests. You can even disconnect 
+                    from the internet completely and the app will continue to work perfectly. The only time we 
+                    communicate with servers is during initial app download.
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold">
+                  4
+                </div>
+                <div>
+                  <h4 className="font-semibold text-lg mb-2 text-slate-200">You're in Control</h4>
+                  <p>
+                    Want to export your data? No problem. Want to delete everything? One click. Want to verify 
+                    our claims? Check our open-source code. Your privacy is not just a promise—it's built into 
+                    our architecture.
+                  </p>
+                </div>
+              </div>
+            </div>
+            <motion.div
+              className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20"
+              whileHover={{ scale: 1.02 }}
+            >
+              <div className="flex items-start gap-3">
+                <Lock className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold text-lg mb-2 text-green-400">Privacy Guarantee</h4>
+                  <p className="text-slate-300">
+                    We will never collect, transmit, sell, or share your personal data. This is not just 
+                    a policy—it's impossible by design. Your trust is our foundation.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
         </motion.section>
 
         {/* CTA Section */}

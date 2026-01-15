@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
-import { Play, Pause, Square, Leaf, Camera, Brain, BarChart3, MessageSquare } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Play, Pause, Square, Leaf, Camera, Brain, BarChart3, MessageSquare, ArrowRight } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import TimerCard from '../components/TimerCard'
 import StatsCard from '../components/StatsCard'
 
 const Dashboard = () => {
+  const navigate = useNavigate()
   const [isTimerRunning, setIsTimerRunning] = useState(false)
   const [time, setTime] = useState(25 * 60) // 25 minutes in seconds
 
@@ -42,12 +44,26 @@ const Dashboard = () => {
             transition={{ duration: 0.5 }}
             className="mb-8"
           >
-            <h1 className="text-4xl font-display font-bold mb-2">
-              Welcome back, <span className="gradient-text">Focus Warrior</span>
-            </h1>
-            <p className="text-slate-400">
-              Let's make today productive. Your garden is waiting to grow.
-            </p>
+            <div className="flex justify-between items-start">
+              <div>
+                <h1 className="text-4xl font-display font-bold mb-2">
+                  Welcome back, <span className="gradient-text">Focus Warrior</span>
+                </h1>
+                <p className="text-slate-400">
+                  Let's make today productive. Your garden is waiting to grow.
+                </p>
+              </div>
+              <motion.button
+                onClick={() => navigate('/garden')}
+                className="btn-primary flex items-center space-x-2 group"
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+              >
+                <Leaf className="w-5 h-5" />
+                <span>Go to Garden</span>
+                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+              </motion.button>
+            </div>
           </motion.div>
 
           {/* Main Grid */}
@@ -96,16 +112,40 @@ const Dashboard = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3, duration: 0.5 }}
-            className="mt-8"
+            className="mt-8 grid md:grid-cols-2 gap-6"
           >
-            <h2 className="text-2xl font-display font-semibold mb-4">
-              Motivational Insight
-            </h2>
+            {/* Quick Start Session Card */}
+            <motion.div
+              whileHover={{ scale: 1.02 }}
+              className="glass rounded-2xl p-6 cursor-pointer group"
+              onClick={() => navigate('/garden')}
+            >
+              <div className="flex items-start justify-between mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+                  <Leaf className="w-6 h-6" />
+                </div>
+                <ArrowRight className="w-5 h-5 text-slate-400 group-hover:translate-x-1 transition-transform" />
+              </div>
+              <h3 className="text-xl font-display font-semibold mb-2">
+                Start a Focus Session
+              </h3>
+              <p className="text-slate-400 text-sm leading-relaxed">
+                Plant a tree in your garden by completing a focused work session. Each session helps your garden grow! 🌱
+              </p>
+            </motion.div>
+
+            {/* Motivational Insight */}
             <div className="glass rounded-2xl p-6">
-              <p className="text-slate-300 text-lg leading-relaxed">
-                "You've been consistently focusing for 7 days straight. Your morning sessions
-                show the highest quality focus. Consider scheduling your most important work
-                between 9-11 AM. 🌟"
+              <div className="flex items-start mb-3">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                  <Brain className="w-6 h-6" />
+                </div>
+              </div>
+              <h3 className="text-xl font-display font-semibold mb-2">
+                AI Insight
+              </h3>
+              <p className="text-slate-300 text-sm leading-relaxed">
+                "You've been consistently focusing for 7 days straight. Your morning sessions show the highest quality focus. Consider scheduling your most important work between 9-11 AM. 🌟"
               </p>
             </div>
           </motion.div>
