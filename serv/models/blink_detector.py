@@ -11,10 +11,32 @@ Soukupová and Čech (2016) - Real-Time Eye Blink Detection using Facial Landmar
 """
 
 import cv2
-import mediapipe as mp
 import numpy as np
 from typing import Tuple, Optional, List
 import time
+
+# Dynamic import for MediaPipe to handle version differences
+try:
+    # Try importing the legacy way (older versions)
+    from mediapipe.python.solutions import face_mesh as mp_face_mesh_module
+    from mediapipe.python.solutions import drawing_utils as mp_drawing
+    mp_face_mesh = mp_face_mesh_module
+except (ImportError, AttributeError):
+    try:
+        # Try standard import (newer versions)
+        import mediapipe as mp
+        mp_face_mesh = mp.solutions.face_mesh
+        mp_drawing = mp.solutions.drawing_utils
+    except (ImportError, AttributeError):
+        print("=" * 60)
+        print("ERROR: MediaPipe installation issue detected")
+        print("=" * 60)
+        print("\nPlease reinstall MediaPipe:")
+        print("  pip uninstall mediapipe")
+        print("  pip install mediapipe")
+        print("\nIf the error persists, try installing opencv-contrib-python:")
+        print("  pip install opencv-contrib-python")
+        raise
 
 
 class BlinkDetector:
@@ -51,8 +73,7 @@ class BlinkDetector:
         self.consec_frames = consec_frames
         
         # Initialize MediaPipe Face Mesh
-        self.mp_face_mesh = mp.solutions.face_mesh
-        self.face_mesh = self.mp_face_mesh.FaceMesh(
+        self.face_mesh = mp_face_mesh.FaceMesh(
             max_num_faces=1,
             refine_landmarks=True,
             min_detection_confidence=min_detection_confidence,
