@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
+import forestImage from '../assets/images/forest.png'
+import focusedImage from '../assets/images/foucsed.png'
+import relaxedImage from '../assets/images/relaxed.png'
+import sessionImage from '../assets/images/session.png'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -285,22 +289,22 @@ const LandingPage = () => {
             variants={itemVariants}
             className="mt-20 relative"
           >
-            <div className="glass rounded-3xl p-8 max-w-5xl mx-auto">
-              <div className="aspect-video bg-gradient-to-br from-primary-500/20 to-nature-500/20 rounded-2xl flex items-center justify-center">
-                <motion.div
-                  animate={{
-                    scale: [1, 1.05, 1],
-                    rotate: [0, 5, 0],
-                  }}
-                  transition={{
-                    duration: 6,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                >
-                  <Leaf className="w-32 h-32 text-nature-400 opacity-50" />
-                </motion.div>
-              </div>
+            <div className="glass rounded-3xl p-8 max-w-5xl mx-auto overflow-hidden">
+              <motion.div
+                className="aspect-video rounded-2xl overflow-hidden relative"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <img
+                  src={forestImage}
+                  alt="Beautiful forest representing your productivity garden"
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
+                <div className="absolute bottom-6 left-6 right-6">
+                  <p className="text-white text-lg font-medium">Your productivity garden awaits 🌳</p>
+                </div>
+              </motion.div>
             </div>
           </motion.div>
         </motion.section>
@@ -413,56 +417,52 @@ const LandingPage = () => {
           </motion.p>
 
           <div className="space-y-12">
-            {howItWorksSteps.map((step, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                transition={{ duration: 0.8, delay: index * 0.2 }}
-                viewport={{ once: true }}
-                className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} items-center gap-8`}
-              >
-                <div className="flex-1">
-                  <motion.div
-                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center mb-6`}
-                    whileHover={{ rotate: 360, scale: 1.1 }}
-                    transition={{ duration: 0.6 }}
-                  >
-                    {step.icon}
-                  </motion.div>
-                  <div className="text-6xl font-display font-bold text-slate-800 mb-4">
-                    {step.step}
-                  </div>
-                  <h3 className="text-3xl font-display font-semibold mb-4">
-                    {step.title}
-                  </h3>
-                  <p className="text-lg text-slate-400 leading-relaxed">
-                    {step.description}
-                  </p>
-                </div>
-                <div className="flex-1">
-                  <motion.div
-                    className={`glass rounded-2xl p-8 aspect-square flex items-center justify-center bg-gradient-to-br ${step.gradient} bg-opacity-10`}
-                    whileHover={{ scale: 1.05 }}
-                    transition={{ duration: 0.3 }}
-                  >
+            {howItWorksSteps.map((step, index) => {
+              const stepImages = [sessionImage, focusedImage, forestImage, relaxedImage]
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  transition={{ duration: 0.8, delay: index * 0.2 }}
+                  viewport={{ once: true }}
+                  className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} items-center gap-8`}
+                >
+                  <div className="flex-1">
                     <motion.div
-                      animate={{
-                        scale: [1, 1.1, 1],
-                        rotate: [0, 5, 0],
-                      }}
-                      transition={{
-                        duration: 4,
-                        repeat: Infinity,
-                        ease: 'easeInOut',
-                      }}
+                      className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center mb-6`}
+                      whileHover={{ rotate: 360, scale: 1.1 }}
+                      transition={{ duration: 0.6 }}
                     >
                       {step.icon}
                     </motion.div>
-                  </motion.div>
-                </div>
-              </motion.div>
-            ))}
+                    <div className="text-6xl font-display font-bold text-slate-800 mb-4">
+                      {step.step}
+                    </div>
+                    <h3 className="text-3xl font-display font-semibold mb-4">
+                      {step.title}
+                    </h3>
+                    <p className="text-lg text-slate-400 leading-relaxed">
+                      {step.description}
+                    </p>
+                  </div>
+                  <div className="flex-1">
+                    <motion.div
+                      className="glass rounded-2xl overflow-hidden relative aspect-square"
+                      whileHover={{ scale: 1.05 }}
+                      transition={{ duration: 0.3 }}
+                    >
+                      <img
+                        src={stepImages[index]}
+                        alt={step.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className={`absolute inset-0 bg-gradient-to-br ${step.gradient} mix-blend-overlay opacity-20`} />
+                    </motion.div>
+                  </div>
+                </motion.div>
+              )
+            })}
           </div>
         </motion.section>
 
