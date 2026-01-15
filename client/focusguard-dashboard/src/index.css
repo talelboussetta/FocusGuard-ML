@@ -4,9 +4,11 @@
 
 @layer base {
   * {
-    @apply border-border;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
   }
-  
+
   body {
     @apply bg-slate-950 text-slate-100 font-sans antialiased;
     background-image: 
