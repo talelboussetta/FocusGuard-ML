@@ -1,0 +1,23 @@
+# FocusGuard ML - Server Requirements
+
+# Computer Vision
+opencv-python>=4.8.0
+mediapipe>=0.10.0
+
+# Numerical Computing
+numpy>=1.24.0
+
+# Deep Learning (for future models)
+tensorflow>=2.13.0
+
+# API Framework
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# Utilities
+python-dotenv>=1.0.0
+
+# Development
+pytest>=7.4.0
+black>=23.0.0
+flake8>=6.0.0
