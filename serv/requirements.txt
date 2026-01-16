@@ -2,13 +2,9 @@
 
 # Computer Vision
 opencv-python>=4.8.0
-mediapipe>=0.10.0
 
 # Numerical Computing
 numpy>=1.24.0
-
-# Deep Learning (for future models)
-tensorflow>=2.13.0
 
 # API Framework
 flask>=3.0.0
