@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: focusguard-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-focusguard_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-focusguard_password}
+      POSTGRES_DB: ${POSTGRES_DB:-focusguard_db}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./serv/database/init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-focusguard_user} -d ${POSTGRES_DB:-focusguard_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - focusguard-network
+
+  # Uncomment this when you're ready to add pgAdmin for database management
+  # pgadmin:
+  #   image: dpage/pgadmin4:latest
+  #   container_name: focusguard-pgadmin
+  #   restart: unless-stopped
+  #   environment:
+  #     PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL:-admin@focusguard.com}
+  #     PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD:-admin}
+  #   ports:
+  #     - "${PGADMIN_PORT:-5050}:80"
+  #   depends_on:
+  #     - postgres
+  #   networks:
+  #     - focusguard-network
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  focusguard-network:
+    driver: bridge
