@@ -40,6 +40,19 @@ DATABASE_URL = "postgresql://focusguard_user:focusguard_dev_password_123@localho
 psql -h localhost -U focusguard_user -d focusguard_db
 ```
 
+**Using DBeaver (Recommended GUI Tool):**
+1. Open DBeaver and click "New Database Connection"
+2. Select "PostgreSQL"
+3. Enter connection details:
+   - **Host:** localhost
+   - **Port:** 5432
+   - **Database:** focusguard_db
+   - **Username:** focusguard_user
+   - **Password:** focusguard_dev_password_123 (or check your .env file)
+4. Click "Test Connection" to verify
+5. Click "Finish" to save the connection
+6. You can now browse tables, run queries, and manage the database graphically
+
 **Using pgAdmin (if enabled):**
 - Navigate to http://localhost:5050
 - Login with credentials from .env file
