@@ -5,7 +5,7 @@ Functions for JWT token operations using python-jose.
 Handles access tokens (short-lived) and refresh tokens (long-lived).
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, Optional
 from jose import jwt, JWTError
 from .exceptions import TokenExpiredException, InvalidTokenException
@@ -45,14 +45,14 @@ def create_access_token(
     
     # Set expiration time
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES)
+        expire = datetime.now(timezone.utc) + timedelta(minutes=DEFAULT_ACCESS_TOKEN_EXPIRE_MINUTES)
     
     # Add standard JWT claims
     to_encode.update({
         "exp": expire,  # Expiration time
-        "iat": datetime.utcnow(),  # Issued at time
+        "iat": datetime.now(timezone.utc),  # Issued at time
         "type": "access"  # Token type
     })
     
@@ -82,14 +82,14 @@ def create_refresh_token(
     
     # Set expiration time (longer for refresh tokens)
     if expires_delta:
-        expire = datetime.utcnow() + expires_delta
+        expire = datetime.now(timezone.utc) + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(days=DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS)
+        expire = datetime.now(timezone.utc) + timedelta(days=DEFAULT_REFRESH_TOKEN_EXPIRE_DAYS)
     
     # Add standard JWT claims
     to_encode.update({
         "exp": expire,
-        "iat": datetime.utcnow(),
+        "iat": datetime.now(timezone.utc),
         "type": "refresh"  # Mark as refresh token
     })
     
