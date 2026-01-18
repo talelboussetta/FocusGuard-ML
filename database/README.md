@@ -125,6 +125,29 @@ The SQL files in `database/init/` must be executed **in numerical order** to pro
 4. `004_garden.sql` - Create garden table
 5. `005_user_stats.sql` - Create user_stats table
 6. `006_indexes.sql` - Create performance indexes
+7. `007_seed_data.sql` - **[OPTIONAL]** Insert dummy data for testing and development
+
+### Seed Data (007_seed_data.sql)
+
+The seed data script creates **5 dummy users** with realistic testing data:
+
+| User | Level | XP | Sessions | Focus Time | Streak |
+|------|-------|----|----|-------|--------|
+| alice_focus | 5 | 1,250 | 3 completed, 1 incomplete | 180 min | 3 days |
+| bob_study | 3 | 450 | 2 completed | 120 min | 2 days |
+| charlie_dev | 8 | 3,200 | 5 completed | 300 min | 5 days |
+| diana_code | 2 | 180 | 1 completed | 60 min | 1 day |
+| eve_learn | 10 | 5,000 | 7 completed | 420 min | 7 days |
+
+**Total**: 17 sessions, 17 garden entries (1-to-1 with completed sessions), 5 user stats records.
+
+**Purpose**:
+- Test database relations (foreign keys, cascades, 1-to-1 relationships)
+- Visualize data in DBeaver
+- Develop and test backend queries without manual data entry
+- Demonstrate gamification features (gardens, plants, growth stages)
+
+**Note**: This script uses hardcoded UUIDs for consistency. Do **not** run this in production!
 
 ### Method 1: Using DBeaver
 
@@ -163,6 +186,7 @@ The SQL files in `database/init/` must be executed **in numerical order** to pro
    \i /docker-entrypoint-initdb.d/004_garden.sql
    \i /docker-entrypoint-initdb.d/005_user_stats.sql
    \i /docker-entrypoint-initdb.d/006_indexes.sql
+   \i /docker-entrypoint-initdb.d/007_seed_data.sql  # Optional: Add test data
    ```
 
    **Note**: This assumes your `docker-compose.yml` mounts the `database/init/` folder to `/docker-entrypoint-initdb.d/` in the container.
