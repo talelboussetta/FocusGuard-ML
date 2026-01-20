@@ -5,6 +5,7 @@ SQLAlchemy model for the users table.
 """
 
 from sqlalchemy import Column, String, Integer, TIMESTAMP, CheckConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -26,9 +27,9 @@ class User(Base):
     
     # Primary key
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
         comment="Unique user identifier (UUID)"
     )
     

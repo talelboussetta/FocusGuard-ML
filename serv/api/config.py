@@ -75,8 +75,12 @@ class Settings(BaseSettings):
     allowed_origins: Union[str, List[str]] = Field(
         default=[
             "http://localhost:5173",  # Vite dev server
+            "http://localhost:5174",  # Vite dev server (alternate port)
+            "http://localhost:5175",  # Vite dev server (alternate port)
             "http://localhost:3000",  # React dev server
             "http://127.0.0.1:5173",
+            "http://127.0.0.1:5174",
+            "http://127.0.0.1:5175",
             "http://127.0.0.1:3000",
         ],
         description="Allowed CORS origins"

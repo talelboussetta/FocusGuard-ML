@@ -5,6 +5,7 @@ SQLAlchemy model for the user_stats table.
 """
 
 from sqlalchemy import Column, String, Integer, TIMESTAMP, ForeignKey, CheckConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 
@@ -23,7 +24,7 @@ class UserStats(Base):
     
     # Primary key (also foreign key - enforces 1-to-1 with users)
     user_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey('users.id', ondelete='CASCADE'),
         primary_key=True,
         comment="Reference to the user (also serves as primary key)"

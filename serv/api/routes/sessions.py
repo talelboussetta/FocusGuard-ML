@@ -12,6 +12,7 @@ from ..database import get_db
 from ..schemas.session import (
     SessionCreate,
     SessionUpdate,
+    SessionComplete,
     SessionResponse,
     SessionListResponse,
     ActiveSessionResponse
@@ -76,11 +77,14 @@ async def list_sessions(
         db, user_id, skip, limit, completed_only
     )
     
+    completed_count = sum(1 for s in sessions if s.completed)
+    incomplete_count = len(sessions) - completed_count
+    
     return SessionListResponse(
         sessions=[SessionResponse.model_validate(s) for s in sessions],
         total=total,
-        skip=skip,
-        limit=limit
+        completed_count=completed_count,
+        incomplete_count=incomplete_count
     )
 
 
@@ -102,6 +106,7 @@ async def get_active_session(
     session = await session_service.get_active_session(db, user_id)
     
     return ActiveSessionResponse(
+        has_active=session is not None,
         session=SessionResponse.model_validate(session) if session else None
     )
 
@@ -113,7 +118,7 @@ async def get_active_session(
     description="Get specific session details"
 )
 async def get_session(
-    session_id: int,
+    session_id: str,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
@@ -135,7 +140,7 @@ async def get_session(
 @limiter.limit("20/minute")
 async def update_session(
     request: Request,
-    session_id: int,
+    session_id: str,
     update_data: SessionUpdate,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
@@ -153,7 +158,7 @@ async def update_session(
     return SessionResponse.model_validate(session)
 
 
-@router.post(
+@router.patch(
     "/{session_id}/complete",
     response_model=SessionResponse,
     summary="Complete session",
@@ -162,27 +167,58 @@ async def update_session(
 @limiter.limit("20/minute")
 async def complete_session(
     request: Request,
-    session_id: int,
-    blink_rate: Optional[float] = Query(None, description="Blink rate from AI analysis"),
+    session_id: str,
+    complete_data: SessionComplete,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Complete a focus session.
     
+    - **actual_duration**: Actual time spent in minutes
+    - **focus_score**: Optional focus quality score (0-100)
     - **blink_rate**: Optional blink rate from AI model
     
     Automatically:
     - Marks session as completed
     - Updates user statistics
-    - Awards XP (10 XP per minute)
+    - Awards XP (10 XP per minute of actual duration)
     - Recalculates user level
     - Updates streak
     
     User must own the session.
     """
-    session = await session_service.complete_session(db, session_id, user_id, blink_rate)
+    session = await session_service.complete_session(
+        db, session_id, user_id, 
+        complete_data.actual_duration,
+        complete_data.focus_score,
+        complete_data.blink_rate
+    )
     return SessionResponse.model_validate(session)
+
+
+@router.patch(
+    "/{session_id}/abandon",
+    status_code=status.HTTP_204_NO_CONTENT,
+    summary="Abandon session",
+    description="Mark session as abandoned (deleted without awarding XP)"
+)
+@limiter.limit("20/minute")
+async def abandon_session(
+    request: Request,
+    session_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Abandon a focus session.
+    
+    Marks session as abandoned by deleting it.
+    No XP is awarded for abandoned sessions.
+    
+    User must own the session.
+    """
+    await session_service.delete_session(db, session_id, user_id)
 
 
 @router.delete(
@@ -194,7 +230,7 @@ async def complete_session(
 @limiter.limit("10/minute")
 async def delete_session(
     request: Request,
-    session_id: int,
+    session_id: str,
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)
 ):

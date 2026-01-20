@@ -15,7 +15,9 @@ from ..schemas.user import (
     PasswordChange,
     UserPublic
 )
+from ..schemas.stats import UserStatsResponse
 from ..services import user_service
+from ..services import stats_service
 from ..middleware.auth_middleware import get_current_user_id
 from ..middleware.rate_limiter import limiter
 from fastapi import Request
@@ -26,9 +28,9 @@ router = APIRouter(prefix="/users", tags=["Users"])
 
 @router.get(
     "/me",
-    response_model=UserWithStats,
+    response_model=UserResponse,
     summary="Get current user profile",
-    description="Get authenticated user's profile with statistics"
+    description="Get authenticated user's profile"
 )
 async def get_current_user(
     user_id: str = Depends(get_current_user_id),
@@ -37,11 +39,31 @@ async def get_current_user(
     """
     Get current authenticated user's profile.
     
-    Returns complete user data including level, XP, and statistics.
+    Returns complete user data including level and XP.
     Requires authentication.
     """
     user = await user_service.get_user_profile(db, user_id)
-    return UserWithStats.model_validate(user)
+    return UserResponse.model_validate(user)
+
+
+@router.get(
+    "/me/stats",
+    response_model=UserStatsResponse,
+    summary="Get current user statistics",
+    description="Get authenticated user's statistics"
+)
+async def get_current_user_stats(
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get current authenticated user's statistics.
+    
+    Returns total focus minutes, sessions, streaks, etc.
+    Requires authentication.
+    """
+    stats = await stats_service.get_user_stats(db, user_id)
+    return UserStatsResponse.model_validate(stats)
 
 
 @router.put(

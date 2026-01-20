@@ -1,21 +1,89 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
-import { Leaf, Play, Plus, Sparkles, Clock, Sprout } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Leaf, Play, Sparkles, Clock, Sprout, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import { gardenAPI, userAPI } from '../services/api'
+import type { Garden, UserStats } from '../services/api'
+import { useAuth } from '../contexts/AuthContext'
 
 const GardenPage = () => {
-  const [showSessionModal, setShowSessionModal] = useState(false)
-  const [sessionDuration, setSessionDuration] = useState(25)
-  const [trees, setTrees] = useState([
-    { id: 1, type: 'oak', level: 3, x: 20, y: 30 },
-    { id: 2, type: 'pine', level: 2, x: 60, y: 40 },
-    { id: 3, type: 'maple', level: 1, x: 40, y: 60 },
-  ])
+  const navigate = useNavigate()
+  const { user } = useAuth()
+  const [garden, setGarden] = useState<Garden | null>(null)
+  const [stats, setStats] = useState<UserStats | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [resetting, setResetting] = useState(false)
 
-  const startSession = () => {
-    setShowSessionModal(false)
-    // Navigate to camera/session page - you can add navigation here
-    window.location.href = '/camera'
+  useEffect(() => {
+    loadGarden()
+  }, [])
+
+  const loadGarden = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const [gardenData, statsData] = await Promise.all([
+        gardenAPI.get(),
+        userAPI.getStats()
+      ])
+      
+      setGarden(gardenData)
+      setStats(statsData)
+    } catch (err: any) {
+      setError(getErrorMessage(err, 'Failed to load garden'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleResetGarden = async () => {
+    if (!confirm('Are you sure you want to reset your garden? This will remove all plants!')) {
+      return
+    }
+    
+    try {
+      setResetting(true)
+      setError(null)
+      await gardenAPI.reset()
+      await loadGarden()
+    } catch (err: any) {
+      setError(err.message || 'Failed to reset garden')
+    } finally {
+      setResetting(false)
+    }
+  }
+
+  const formatMinutes = (minutes: number): string => {
+    const hours = Math.floor(minutes / 60)
+    const mins = minutes % 60
+    if (hours > 0) {
+      return `${hours}h ${mins}m`
+    }
+    return `${mins}m`
+  }
+
+  const getPlantEmoji = (type: string): string => {
+    const plants: { [key: string]: string } = {
+      common: '🌱',
+      rare: '🌿',
+      epic: '🌳',
+      legendary: '✨',
+    }
+    return plants[type] || '🌱'
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex">
+        <Sidebar />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -54,17 +122,45 @@ const GardenPage = () => {
                   Watch your dedication bloom into a beautiful garden
                 </p>
               </div>
-              <motion.button
-                onClick={() => setShowSessionModal(true)}
-                className="btn-primary flex items-center space-x-2"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Play className="w-5 h-5" />
-                <span>Start Focus Session</span>
-              </motion.button>
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={handleResetGarden}
+                  disabled={resetting}
+                  className="btn-secondary flex items-center space-x-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {resetting ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <RotateCcw className="w-5 h-5" />
+                  )}
+                  <span>Reset Garden</span>
+                </motion.button>
+                <motion.button
+                  onClick={() => navigate('/dashboard')}
+                  className="btn-primary flex items-center space-x-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Play className="w-5 h-5" />
+                  <span>Start Focus Session</span>
+                </motion.button>
+              </div>
             </div>
           </motion.div>
+
+          {/* Error Display */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400" />
+              <p className="text-red-300">{error}</p>
+            </motion.div>
+          )}
 
           {/* Stats Cards */}
           <div className="grid md:grid-cols-4 gap-4 mb-8">
@@ -79,8 +175,8 @@ const GardenPage = () => {
                   <Leaf className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold gradient-text">{trees.length}</div>
-                  <div className="text-sm text-slate-400">Trees Planted</div>
+                  <div className="text-2xl font-bold gradient-text">{garden?.total_plants || 0}</div>
+                  <div className="text-sm text-slate-400">Total Plants</div>
                 </div>
               </div>
             </motion.div>
@@ -92,12 +188,12 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                   <Sparkles className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold gradient-text">12</div>
-                  <div className="text-sm text-slate-400">Garden Level</div>
+                  <div className="text-2xl font-bold gradient-text">{garden?.rare_plants || 0}</div>
+                  <div className="text-sm text-slate-400">Rare Plants</div>
                 </div>
               </div>
             </motion.div>
@@ -113,8 +209,8 @@ const GardenPage = () => {
                   <Sprout className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold gradient-text">5</div>
-                  <div className="text-sm text-slate-400">Seeds Available</div>
+                  <div className="text-2xl font-bold gradient-text">{garden?.epic_plants || 0}</div>
+                  <div className="text-sm text-slate-400">Epic Plants</div>
                 </div>
               </div>
             </motion.div>
@@ -126,12 +222,12 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center">
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
-                  <div className="text-2xl font-bold gradient-text">48h</div>
-                  <div className="text-sm text-slate-400">Total Focus Time</div>
+                  <div className="text-2xl font-bold gradient-text">{garden?.legendary_plants || 0}</div>
+                  <div className="text-sm text-slate-400">Legendary Plants</div>
                 </div>
               </div>
             </motion.div>
@@ -150,171 +246,127 @@ const GardenPage = () => {
             {/* Ground */}
             <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-green-950/50 to-transparent" />
 
-            {/* Trees */}
-            {trees.map((tree, index) => (
-              <motion.div
-                key={tree.id}
-                initial={{ opacity: 0, scale: 0 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.5 + index * 0.2, type: 'spring' }}
-                className="absolute"
-                style={{
-                  left: `${tree.x}%`,
-                  bottom: `${tree.y}%`,
-                }}
-              >
+            {/* Garden Content */}
+            <div className="relative z-10 p-8">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
+                {/* Common Plants */}
                 <motion.div
-                  whileHover={{ scale: 1.1 }}
-                  className="cursor-pointer"
-                  animate={{
-                    y: [0, -5, 0],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                    delay: index * 0.5,
-                  }}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3 }}
+                  className="glass rounded-xl p-6 text-center"
                 >
-                  <Leaf 
-                    className={`w-${tree.level * 8} h-${tree.level * 8} text-nature-400`} 
-                    style={{ width: `${tree.level * 32}px`, height: `${tree.level * 32}px` }}
-                  />
-                  <div className="text-center mt-1 text-xs text-slate-400">
-                    Level {tree.level}
-                  </div>
+                  <div className="text-6xl mb-3">{getPlantEmoji('common')}</div>
+                  <h3 className="text-lg font-semibold mb-1">Common</h3>
+                  <p className="text-3xl font-bold gradient-text">
+                    {(garden?.total_plants || 0) - (garden?.rare_plants || 0) - (garden?.epic_plants || 0) - (garden?.legendary_plants || 0)}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">Regular plants</p>
                 </motion.div>
-              </motion.div>
-            ))}
 
-            {/* Empty state or plant new tree button */}
-            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: trees.length < 5 ? 1 : 0 }}
-                className="text-center pointer-events-auto"
-              >
-                <motion.button
-                  onClick={() => setShowSessionModal(true)}
-                  className="btn-secondary flex items-center space-x-2 mx-auto"
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
+                {/* Rare Plants */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.4 }}
+                  className="glass rounded-xl p-6 text-center"
                 >
-                  <Plus className="w-5 h-5" />
-                  <span>Complete a session to plant more trees</span>
-                </motion.button>
-              </motion.div>
-            </div>
+                  <div className="text-6xl mb-3">{getPlantEmoji('rare')}</div>
+                  <h3 className="text-lg font-semibold mb-1">Rare</h3>
+                  <p className="text-3xl font-bold text-blue-400">
+                    {garden?.rare_plants || 0}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">30% chance</p>
+                </motion.div>
 
-            {/* Decorative particles */}
-            {[...Array(10)].map((_, i) => (
+                {/* Epic Plants */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.5 }}
+                  className="glass rounded-xl p-6 text-center"
+                >
+                  <div className="text-6xl mb-3">{getPlantEmoji('epic')}</div>
+                  <h3 className="text-lg font-semibold mb-1">Epic</h3>
+                  <p className="text-3xl font-bold text-purple-400">
+                    {garden?.epic_plants || 0}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">15% chance</p>
+                </motion.div>
+
+                {/* Legendary Plants */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.6 }}
+                  className="glass rounded-xl p-6 text-center"
+                >
+                  <div className="text-6xl mb-3">{getPlantEmoji('legendary')}</div>
+                  <h3 className="text-lg font-semibold mb-1">Legendary</h3>
+                  <p className="text-3xl font-bold text-yellow-400">
+                    {garden?.legendary_plants || 0}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">5% chance</p>
+                </motion.div>
+              </div>
+
+              {/* Additional Stats */}
               <motion.div
-                key={i}
-                className="absolute w-2 h-2 bg-nature-400/30 rounded-full"
-                style={{
-                  left: `${Math.random() * 100}%`,
-                  top: `${Math.random() * 100}%`,
-                }}
-                animate={{
-                  y: [0, -20, 0],
-                  opacity: [0.3, 0.7, 0.3],
-                }}
-                transition={{
-                  duration: 3 + Math.random() * 2,
-                  repeat: Infinity,
-                  delay: Math.random() * 2,
-                }}
-              />
-            ))}
-          </motion.div>
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.7 }}
+                className="mt-8 glass rounded-xl p-6"
+              >
+                <h3 className="text-xl font-display font-semibold mb-4">Garden Stats</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div>
+                    <p className="text-slate-400 text-sm mb-1">Total Sessions</p>
+                    <p className="text-2xl font-bold">{stats?.total_sessions || 0}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm mb-1">Total Focus Time</p>
+                    <p className="text-2xl font-bold">{formatMinutes(stats?.total_focus_min || 0)}</p>
+                  </div>
+                  <div>
+                    <p className="text-slate-400 text-sm mb-1">Last Plant</p>
+                    <p className="text-2xl font-bold">
+                      {garden?.last_plant_at 
+                        ? new Date(garden.last_plant_at).toLocaleDateString()
+                        : 'Never'
+                      }
+                    </p>
+                  </div>
+                </div>
+              </motion.div>
 
-          {/* Garden Tips */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="mt-8 glass rounded-2xl p-6"
-          >
-            <h3 className="text-xl font-display font-semibold mb-3 flex items-center">
-              <Sparkles className="w-5 h-5 mr-2 text-primary-400" />
-              Garden Tips
-            </h3>
-            <p className="text-slate-300">
-              Complete focus sessions to earn seeds and grow your garden. Each 25-minute session 
-              earns you one seed. Plant seeds to grow trees, and watch them level up as you maintain 
-              your focus streak. The more consistent you are, the more beautiful your garden becomes! 🌱
-            </p>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Session Start Modal */}
-      {showSessionModal && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
-          onClick={() => setShowSessionModal(false)}
-        >
-          <motion.div
-            initial={{ scale: 0.9, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            className="card-soft max-w-lg w-full mx-4 p-8"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h2 className="text-3xl font-display font-bold mb-4">
-              Start a <span className="gradient-text">Focus Session</span>
-            </h2>
-            <p className="text-slate-400 mb-6">
-              Choose your session duration and get ready to plant a new tree in your garden!
-            </p>
-
-            {/* Duration selector */}
-            <div className="space-y-4 mb-8">
-              <label className="block text-sm text-slate-400">Session Duration</label>
-              <div className="grid grid-cols-3 gap-4">
-                {[15, 25, 45].map((duration) => (
+              {/* Empty State */}
+              {(garden?.total_plants || 0) === 0 && (
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.8 }}
+                  className="text-center mt-12"
+                >
+                  <Sprout className="w-16 h-16 text-slate-600 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Your garden is empty!</h3>
+                  <p className="text-slate-400 mb-6">
+                    Complete focus sessions to grow beautiful plants
+                  </p>
                   <motion.button
-                    key={duration}
-                    onClick={() => setSessionDuration(duration)}
-                    className={`p-4 rounded-xl border-2 transition-all ${
-                      sessionDuration === duration
-                        ? 'border-primary-500 bg-primary-500/20'
-                        : 'border-slate-700 hover:border-slate-600'
-                    }`}
+                    onClick={() => navigate('/dashboard')}
+                    className="btn-primary flex items-center space-x-2 mx-auto"
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                   >
-                    <div className="text-2xl font-bold gradient-text">{duration}</div>
-                    <div className="text-sm text-slate-400">minutes</div>
+                    <Play className="w-5 h-5" />
+                    <span>Start Your First Session</span>
                   </motion.button>
-                ))}
-              </div>
-            </div>
-
-            {/* Action buttons */}
-            <div className="flex gap-4">
-              <motion.button
-                onClick={() => setShowSessionModal(false)}
-                className="btn-secondary flex-1"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                Cancel
-              </motion.button>
-              <motion.button
-                onClick={startSession}
-                className="btn-primary flex-1 flex items-center justify-center space-x-2"
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <Play className="w-5 h-5" />
-                <span>Start Session</span>
-              </motion.button>
+                </motion.div>
+              )}
             </div>
           </motion.div>
-        </motion.div>
-      )}
+        </div>
+      </div>
     </div>
   )
 }

@@ -4,7 +4,8 @@ FocusGuard API - Session ORM Model
 SQLAlchemy model for the sessions table.
 """
 
-from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey
+from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey, Integer, Float
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -25,15 +26,15 @@ class Session(Base):
     
     # Primary key
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
         comment="Unique session identifier (UUID)"
     )
     
     # Foreign key to users
     user_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
         index=True,
@@ -47,6 +48,18 @@ class Session(Base):
         default=False,
         index=True,
         comment="Whether the session was completed successfully"
+    )
+    
+    duration_minutes = Column(
+        Integer,
+        nullable=True,
+        comment="Planned duration in minutes (e.g., 15, 25, 45, 60 for Pomodoro)"
+    )
+    
+    blink_rate = Column(
+        Float,
+        nullable=True,
+        comment="Blink rate from AI analysis"
     )
     
     # Timestamp

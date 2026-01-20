@@ -75,11 +75,13 @@ async def list_garden(
     """
     gardens, total = await garden_service.list_user_garden(db, user_id, skip, limit)
     
+    # Calculate fully grown count
+    fully_grown_count = sum(1 for g in gardens if g.growth_stage == 5)
+    
     return GardenListResponse(
         gardens=[GardenResponse.model_validate(g) for g in gardens],
         total=total,
-        skip=skip,
-        limit=limit
+        fully_grown=fully_grown_count
     )
 
 

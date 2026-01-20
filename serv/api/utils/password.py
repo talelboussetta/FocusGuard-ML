@@ -6,11 +6,7 @@ Functions for password operations:
 - verify_password() - Password verification against hash
 """
 
-from passlib.context import CryptContext
-
-# Bcrypt context with cost factor 12 (2^12 iterations)
-# Higher cost = more secure but slower (12 is good balance)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+import bcrypt
 
 
 def hash_password(password: str) -> str:
@@ -28,7 +24,11 @@ def hash_password(password: str) -> str:
         >>> hashed.startswith("$2b$")
         True
     """
-    return pwd_context.hash(password)
+    # Bcrypt has a 72 byte limit, truncate if necessary
+    password_bytes = password.encode('utf-8')[:72]
+    salt = bcrypt.gensalt(rounds=12)  # Cost factor 12 (2^12 iterations)
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
@@ -49,4 +49,7 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
         >>> verify_password("wrongPassword", hashed)
         False
     """
-    return pwd_context.verify(plain_password, hashed_password)
+    # Bcrypt has a 72 byte limit, truncate if necessary
+    password_bytes = plain_password.encode('utf-8')[:72]
+    hashed_bytes = hashed_password.encode('utf-8')
+    return bcrypt.checkpw(password_bytes, hashed_bytes)

@@ -119,11 +119,11 @@ async def authenticate_user(
     user = result.scalar_one_or_none()
     
     if not user:
-        raise InvalidCredentialsException()
+        raise InvalidCredentialsException("User not found. Please check your username/email or sign up for a new account.")
     
     # Verify password
     if not verify_password(login.password, user.password_hash):
-        raise InvalidCredentialsException()
+        raise InvalidCredentialsException("Invalid password. Please try again.")
     
     return user
 
@@ -139,7 +139,7 @@ async def create_tokens(user: User) -> Dict[str, str]:
         Dictionary with access_token and refresh_token
     """
     token_data = {
-        "sub": user.id,
+        "sub": str(user.id),
         "username": user.username
     }
     

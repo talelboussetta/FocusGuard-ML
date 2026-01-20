@@ -92,6 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const refreshUser = async () => {
     try {
       const freshUser = await userAPI.getProfile();
+      console.log('User refreshed - XP:', freshUser.xp, 'Level:', freshUser.lvl);
       updateUser(freshUser);
     } catch (error) {
       console.error('Failed to refresh user:', error);

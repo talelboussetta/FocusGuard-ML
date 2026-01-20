@@ -12,8 +12,7 @@ from .auth import (
     TokenResponse,
     RefreshTokenRequest,
     TokenPayload,
-    LogoutResponse,
-    UserResponse as AuthUserResponse
+    LogoutResponse
 )
 
 from .user import (
@@ -116,3 +115,7 @@ __all__ = [
     "LeaderboardEntry",
     "LeaderboardResponse",
 ]
+
+# Rebuild auth models to resolve forward references
+from .auth import rebuild_models
+rebuild_models()

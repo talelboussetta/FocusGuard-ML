@@ -4,8 +4,14 @@ FocusGuard API - Authentication Schemas
 Pydantic models for authentication requests/responses.
 """
 
-from typing import Optional
+from __future__ import annotations
+from typing import Optional, TYPE_CHECKING
 from pydantic import BaseModel, Field, EmailStr
+
+if TYPE_CHECKING:
+    from .user import UserResponse as UserResponseType
+else:
+    UserResponseType = "UserResponse"
 
 
 # ============================================================================
@@ -33,10 +39,10 @@ class RegisterRequest(BaseModel):
 class RegisterResponse(BaseModel):
     """User registration response."""
     
-    id: str = Field(..., description="User ID (UUID)")
-    username: str = Field(..., description="Username")
-    email: str = Field(..., description="Email address")
-    message: str = Field(default="User registered successfully")
+    access_token: str = Field(..., description="JWT access token")
+    refresh_token: str = Field(..., description="JWT refresh token")
+    token_type: str = Field(default="bearer", description="Token type")
+    user: UserResponseType = Field(..., description="User information")
 
 
 # ============================================================================
@@ -65,7 +71,7 @@ class LoginResponse(BaseModel):
     access_token: str = Field(..., description="JWT access token")
     refresh_token: str = Field(..., description="JWT refresh token")
     token_type: str = Field(default="bearer", description="Token type")
-    user: "UserResponse" = Field(..., description="User information")
+    user: UserResponseType = Field(..., description="User information")
 
 
 # ============================================================================
@@ -96,24 +102,6 @@ class TokenPayload(BaseModel):
 
 
 # ============================================================================
-# User Response (for auth endpoints)
-# ============================================================================
-
-class UserResponse(BaseModel):
-    """User information in auth responses."""
-    
-    id: str = Field(..., description="User ID (UUID)")
-    username: str = Field(..., description="Username")
-    email: str = Field(..., description="Email address")
-    lvl: int = Field(..., description="User level")
-    xp_points: int = Field(..., description="Experience points")
-    
-    model_config = {
-        "from_attributes": True  # Enable ORM mode
-    }
-
-
-# ============================================================================
 # Logout Schema
 # ============================================================================
 
@@ -121,3 +109,14 @@ class LogoutResponse(BaseModel):
     """Logout response."""
     
     message: str = Field(default="Successfully logged out")
+
+
+# ============================================================================
+# Model Rebuilding (resolve forward references)
+# ============================================================================
+
+def rebuild_models():
+    """Rebuild models after UserResponse is imported."""
+    from .user import UserResponse
+    RegisterResponse.model_rebuild()
+    LoginResponse.model_rebuild()

@@ -5,8 +5,9 @@ Pydantic models for user operations.
 """
 
 from typing import Optional
+from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, Field, EmailStr, field_serializer
 
 
 # ============================================================================
@@ -60,7 +61,7 @@ class PasswordChange(BaseModel):
 class UserInDB(BaseModel):
     """User schema as stored in database (includes password hash)."""
     
-    id: str
+    id: UUID
     username: str
     email: str
     password_hash: str
@@ -68,6 +69,10 @@ class UserInDB(BaseModel):
     xp_points: int
     created_at: datetime
     updated_at: datetime
+    
+    @field_serializer('id')
+    def serialize_id(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True
@@ -77,13 +82,17 @@ class UserInDB(BaseModel):
 class UserResponse(BaseModel):
     """Public user profile (no sensitive data)."""
     
-    id: str = Field(..., description="User ID (UUID)")
+    id: UUID = Field(..., description="User ID (UUID)")
     username: str = Field(..., description="Username")
     email: str = Field(..., description="Email address")
     lvl: int = Field(..., description="User level")
     xp_points: int = Field(..., description="Experience points")
     created_at: datetime = Field(..., description="Account creation date")
     updated_at: datetime = Field(..., description="Last update date")
+    
+    @field_serializer('id')
+    def serialize_id(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True,
@@ -104,10 +113,14 @@ class UserResponse(BaseModel):
 class UserPublic(BaseModel):
     """Minimal public user info (for leaderboards, etc.)."""
     
-    id: str
+    id: UUID
     username: str
     lvl: int
     xp_points: int
+    
+    @field_serializer('id')
+    def serialize_id(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True

@@ -5,8 +5,9 @@ Pydantic models for virtual garden operations.
 """
 
 from typing import Optional
+from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 from enum import Enum
 
 
@@ -44,10 +45,14 @@ class PlantType(str, Enum):
 class GardenCreate(BaseModel):
     """Schema for creating a new garden entry."""
     
-    session_id: str = Field(..., description="Associated session ID (UUID)")
+    session_id: UUID = Field(..., description="Associated session ID (UUID)")
     plant_type: PlantType = Field(..., description="Type of plant")
     plant_num: int = Field(..., ge=0, description="Plant number")
     growth_stage: int = Field(default=0, ge=0, le=5, description="Growth stage (0-5)")
+    
+    @field_serializer('session_id')
+    def serialize_uuid(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "json_schema_extra": {
@@ -82,14 +87,18 @@ class GardenUpdate(BaseModel):
 class GardenResponse(BaseModel):
     """Garden entry response."""
     
-    id: str = Field(..., description="Garden entry ID (UUID)")
-    user_id: str = Field(..., description="User ID (UUID)")
-    session_id: str = Field(..., description="Session ID (UUID)")
+    id: UUID = Field(..., description="Garden entry ID (UUID)")
+    user_id: UUID = Field(..., description="User ID (UUID)")
+    session_id: UUID = Field(..., description="Session ID (UUID)")
     plant_num: int = Field(..., description="Plant number")
     plant_type: str = Field(..., description="Plant type")
     growth_stage: int = Field(..., description="Growth stage (0-5)")
     total_plants: int = Field(..., description="Total plants")
     created_at: datetime = Field(..., description="Creation timestamp")
+    
+    @field_serializer('id', 'user_id', 'session_id')
+    def serialize_uuid(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True,

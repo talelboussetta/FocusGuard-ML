@@ -13,9 +13,21 @@ from fastapi import Request
 from ..config import settings
 
 
+def get_remote_address_skip_options(request: Request) -> str:
+    """
+    Get remote address for rate limiting, but skip OPTIONS requests.
+    
+    OPTIONS requests are CORS preflight and should not be rate limited.
+    """
+    if request.method == "OPTIONS":
+        # Return empty string to skip rate limiting for OPTIONS
+        return ""
+    return get_remote_address(request)
+
+
 # Create rate limiter instance
 limiter = Limiter(
-    key_func=get_remote_address,  # Rate limit by IP address
+    key_func=get_remote_address_skip_options,  # Rate limit by IP address, skip OPTIONS
     default_limits=[f"{settings.rate_limit_per_minute}/minute"],  # Default: 60 req/min
     enabled=settings.rate_limit_enabled,  # Can be disabled via config
 )

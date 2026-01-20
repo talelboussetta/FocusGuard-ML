@@ -5,6 +5,7 @@ SQLAlchemy model for the garden table.
 """
 
 from sqlalchemy import Column, String, Integer, TIMESTAMP, ForeignKey, CheckConstraint
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 import uuid
@@ -25,15 +26,15 @@ class Garden(Base):
     
     # Primary key
     id = Column(
-        String(36),
+        UUID(as_uuid=True),
         primary_key=True,
-        default=lambda: str(uuid.uuid4()),
+        default=uuid.uuid4,
         comment="Unique garden entry identifier (UUID)"
     )
     
     # Foreign keys
     user_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey('users.id', ondelete='CASCADE'),
         nullable=False,
         index=True,
@@ -41,7 +42,7 @@ class Garden(Base):
     )
     
     session_id = Column(
-        String(36),
+        UUID(as_uuid=True),
         ForeignKey('sessions.id', ondelete='CASCADE'),
         nullable=False,
         unique=True,  # Enforces 1-to-1 with session

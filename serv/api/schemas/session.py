@@ -5,8 +5,9 @@ Pydantic models for focus session operations.
 """
 
 from typing import Optional
+from uuid import UUID
 from datetime import datetime
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 # ============================================================================
@@ -41,6 +42,24 @@ class SessionUpdate(BaseModel):
     }
 
 
+class SessionComplete(BaseModel):
+    """Schema for completing a session."""
+    
+    actual_duration: int = Field(..., ge=1, description="Actual duration in minutes")
+    focus_score: Optional[float] = Field(None, ge=0, le=100, description="Focus score percentage")
+    blink_rate: Optional[float] = Field(None, ge=0, description="Blink rate from AI analysis")
+    
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "actual_duration": 25,
+                "focus_score": 95.5,
+                "blink_rate": 15.2
+            }]
+        }
+    }
+
+
 # ============================================================================
 # Session Response Schemas
 # ============================================================================
@@ -48,10 +67,16 @@ class SessionUpdate(BaseModel):
 class SessionResponse(BaseModel):
     """Session information response."""
     
-    id: str = Field(..., description="Session ID (UUID)")
-    user_id: str = Field(..., description="User ID (UUID)")
+    id: UUID = Field(..., description="Session ID (UUID)")
+    user_id: UUID = Field(..., description="User ID (UUID)")
     completed: bool = Field(..., description="Completion status")
+    duration_minutes: Optional[int] = Field(None, description="Planned duration in minutes")
+    blink_rate: Optional[float] = Field(None, description="Blink rate from AI analysis")
     created_at: datetime = Field(..., description="Session creation timestamp")
+    
+    @field_serializer('id', 'user_id')
+    def serialize_uuid(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True,
