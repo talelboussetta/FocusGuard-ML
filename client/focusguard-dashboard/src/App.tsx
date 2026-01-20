@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { AnimatePresence } from 'framer-motion'
 import { NotificationProvider } from './contexts/NotificationContext'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
+import { SessionProvider } from './contexts/SessionContext'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
@@ -9,6 +10,9 @@ import GardenPage from './pages/GardenPage'
 import CameraPage from './pages/CameraPage'
 import AITutorPage from './pages/AITutorPage'
 import AnalyticsPage from './pages/AnalyticsPage'
+import LeaderboardPage from './pages/LeaderboardPage'
+import ErrorPage from './pages/ErrorPage'
+import TimerOverlay from './components/TimerOverlay'
 
 // Protected Route Component
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -29,10 +33,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <Navigate to="/auth" replace />;
   }
 
-  return <>{children}</>;
+  return (
+    <SessionProvider>
+      <TimerOverlay />
+      {children}
+    </SessionProvider>
+  );
 }
 
 function AppRoutes() {
+  const { user } = useAuth();
+  
   return (
     <AnimatePresence mode="wait">
       <Routes>
@@ -78,6 +89,16 @@ function AppRoutes() {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="/leaderboard"
+          element={
+            <ProtectedRoute>
+              <LeaderboardPage />
+            </ProtectedRoute>
+          }
+        />
+        {/* Catch-all route for 404 errors */}
+        <Route path="*" element={<ErrorPage />} />
       </Routes>
     </AnimatePresence>
   );
