@@ -16,7 +16,7 @@ export interface User {
   email: string;
   full_name?: string;
   bio?: string;
-  xp: number;
+  xp_points: number;  // Backend uses xp_points, not xp
   lvl: number;
   is_active: boolean;
   created_at: string;
@@ -24,15 +24,24 @@ export interface User {
 }
 
 export interface Session {
-  session_id: string;
-  user_id: string;
-  planned_duration: number;
-  actual_duration: number;
-  status: 'active' | 'completed' | 'abandoned';
-  started_at: string;
-  completed_at?: string;
-  xp_earned: number;
-  focus_score?: number;
+  id: string;  // UUID from backend
+  user_id: string;  // UUID from backend
+  completed: boolean;
+  duration_minutes?: number;  // Planned duration (15, 25, 45, 60 for Pomodoro)
+  blink_rate?: number;  // AI analysis
+  created_at: string;
+}
+
+export interface ActiveSessionResponse {
+  has_active: boolean;
+  session: Session | null;
+}
+
+export interface SessionListResponse {
+  sessions: Session[];
+  total: number;
+  completed_count: number;
+  incomplete_count: number;
 }
 
 export interface Garden {
@@ -77,10 +86,74 @@ function getAuthHeader(): HeadersInit {
   return token ? { 'Authorization': `Bearer ${token}` } : {};
 }
 
+// Helper function to safely extract error message
+export function getErrorMessage(error: any, fallback: string = 'An error occurred'): string {
+  if (!error) return fallback;
+  
+  // If it's already a string, return it
+  if (typeof error === 'string') return error;
+  
+  // If it has a message property, use it
+  if (error.message && typeof error.message === 'string') return error.message;
+  
+  // If it has a detail property (FastAPI errors)
+  if (error.detail) {
+    if (typeof error.detail === 'string') return error.detail;
+    if (Array.isArray(error.detail)) {
+      return error.detail.map((e: any) => 
+        typeof e === 'string' ? e : e.msg || JSON.stringify(e)
+      ).join(', ');
+    }
+  }
+  
+  // If it has an error property
+  if (error.error && typeof error.error === 'string') return error.error;
+  
+  // Last resort - try to stringify, but avoid [object Object]
+  try {
+    const str = JSON.stringify(error);
+    return str !== '{}' && str !== '[object Object]' ? str : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ detail: 'An error occurred' }));
-    throw new Error(error.detail || `HTTP ${response.status}: ${response.statusText}`);
+    let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+    
+    try {
+      const errorData = await response.json();
+      
+      // Extract error message from various possible formats
+      if (typeof errorData === 'string') {
+        errorMessage = errorData;
+      } else if (errorData.detail) {
+        // FastAPI typically uses 'detail' for error messages
+        if (typeof errorData.detail === 'string') {
+          errorMessage = errorData.detail;
+        } else if (typeof errorData.detail === 'object' && errorData.detail.message) {
+          // Backend returns detail as object with message property
+          errorMessage = errorData.detail.message;
+        } else if (Array.isArray(errorData.detail)) {
+          // Validation errors are arrays
+          errorMessage = errorData.detail.map((err: any) => 
+            typeof err === 'string' ? err : err.msg || JSON.stringify(err)
+          ).join(', ');
+        } else {
+          errorMessage = JSON.stringify(errorData.detail);
+        }
+      } else if (errorData.message) {
+        errorMessage = errorData.message;
+      } else if (errorData.error) {
+        errorMessage = errorData.error;
+      }
+    } catch (e) {
+      // If JSON parsing fails, use the status text
+      console.error('Failed to parse error response:', e);
+    }
+    
+    throw new Error(errorMessage);
   }
   return response.json();
 }
@@ -91,31 +164,47 @@ async function handleResponse<T>(response: Response): Promise<T> {
 
 export const authAPI = {
   async register(username: string, email: string, password: string, full_name?: string) {
-    const response = await fetch(`${API_BASE_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password, full_name }),
-    });
-    return handleResponse<{
-      user: User;
-      access_token: string;
-      refresh_token: string;
-      token_type: string;
-    }>(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, email, password, full_name }),
+      });
+      return handleResponse<{
+        user: User;
+        access_token: string;
+        refresh_token: string;
+        token_type: string;
+      }>(response);
+    } catch (error: any) {
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Unable to connect to server. Please check your connection.');
+      }
+      throw error;
+    }
   },
 
   async login(username: string, password: string) {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
-    return handleResponse<{
-      user: User;
-      access_token: string;
-      refresh_token: string;
-      token_type: string;
-    }>(response);
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      return handleResponse<{
+        user: User;
+        access_token: string;
+        refresh_token: string;
+        token_type: string;
+      }>(response);
+    } catch (error: any) {
+      // Handle network errors
+      if (error instanceof TypeError && error.message.includes('fetch')) {
+        throw new Error('Unable to connect to server. Please check your connection.');
+      }
+      throw error;
+    }
   },
 
   async refreshToken(refreshToken: string) {
@@ -201,24 +290,26 @@ export const sessionAPI = {
         'Content-Type': 'application/json',
         ...getAuthHeader(),
       },
-      body: JSON.stringify({ planned_duration }),
+      body: JSON.stringify({ duration_min: planned_duration }),
     });
     return handleResponse<Session>(response);
   },
 
-  async list(params?: { status?: string; limit?: number; offset?: number }) {
+  async list(params?: { status?: string; limit?: number; offset?: number }): Promise<Session[]> {
     const query = new URLSearchParams(params as any).toString();
     const response = await fetch(`${API_BASE_URL}/sessions?${query}`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<Session[]>(response);
+    const data = await handleResponse<SessionListResponse>(response);
+    return data.sessions;
   },
 
-  async getActive() {
+  async getActive(): Promise<Session | null> {
     const response = await fetch(`${API_BASE_URL}/sessions/active`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<Session | null>(response);
+    const data = await handleResponse<ActiveSessionResponse>(response);
+    return data.session;
   },
 
   async getById(sessionId: string) {
@@ -307,8 +398,11 @@ export const statsAPI = {
       headers: getAuthHeader(),
     });
     return handleResponse<{
-      stats: DailyStats[];
+      daily_stats: DailyStats[];
       total_days: number;
+      total_focus_min: number;
+      total_sessions: number;
+      average_focus_per_day: number;
     }>(response);
   },
 
@@ -332,7 +426,7 @@ export const statsAPI = {
     }>(response);
   },
 
-  async getLeaderboard(metric: 'xp' | 'focus_time' | 'streak' = 'xp', limit: number = 10) {
+  async getLeaderboard(metric: 'xp' | 'sessions' | 'focus_time' | 'streak' = 'xp', limit: number = 10) {
     const response = await fetch(
       `${API_BASE_URL}/stats/leaderboard?metric=${metric}&limit=${limit}`,
       {
