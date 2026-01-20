@@ -17,7 +17,6 @@ const Dashboard = () => {
     timeLeft,
     isTimerRunning,
     sessionDuration,
-    plantsEarned,
     setPlannedDuration,
     startTimer,
     pauseTimer,
@@ -264,20 +263,6 @@ const Dashboard = () => {
                     >
                       {formatTime(timeLeft)}
                     </motion.div>
-                    
-                    {/* Live Plants Counter */}
-                    {activeSession && plantsEarned > 0 && (
-                      <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 glass px-4 py-2 rounded-full"
-                      >
-                        <span className="text-2xl">🌱</span>
-                        <span className="text-sm font-medium">
-                          {plantsEarned} plant{plantsEarned !== 1 ? 's' : ''} earned
-                        </span>
-                      </motion.div>
-                    )}
                   </div>
                 </div>
 

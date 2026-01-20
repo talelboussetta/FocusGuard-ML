@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import { sessionAPI, gardenAPI, type Session } from '../services/api'
-import { useNotification } from '../hooks/useNotification'
+import { useNotificationContext } from './NotificationContext'
 import { useSound } from '../hooks/useSound'
 
 interface SessionContextType {
@@ -40,7 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionStartMs, setSessionStartMs] = useState<number | null>(null)
   const [plantsEarned, setPlantsEarned] = useState(0)
   const lastPlantTimeRef = useRef<number>(0) // Track last time we planted
-  const { showNotification } = useNotification()
+  const { success: showNotification } = useNotificationContext()
   const { playNotification } = useSound()
 
   // Load active session on mount
