@@ -5,9 +5,10 @@ Pydantic models for user statistics and analytics.
 """
 
 from typing import Optional
+from uuid import UUID
 from datetime import datetime
 from datetime import date as date_type
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_serializer
 
 
 # ============================================================================
@@ -17,12 +18,16 @@ from pydantic import BaseModel, Field
 class UserStatsResponse(BaseModel):
     """User statistics response."""
     
-    user_id: str = Field(..., description="User ID (UUID)")
+    user_id: UUID = Field(..., description="User ID (UUID)")
     total_focus_min: int = Field(..., description="Total focus minutes")
     total_sessions: int = Field(..., description="Total completed sessions")
     current_streak: int = Field(..., description="Current consecutive days streak")
     best_streak: int = Field(..., description="Best streak ever achieved")
     updated_at: datetime = Field(..., description="Last update timestamp")
+    
+    @field_serializer('user_id')
+    def serialize_uuid(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True,
@@ -42,12 +47,16 @@ class UserStatsResponse(BaseModel):
 class UserStatsInDB(BaseModel):
     """User stats schema as stored in database."""
     
-    user_id: str
+    user_id: UUID
     total_focus_min: int
     total_sessions: int
     current_streak: int
     best_streak: int
     updated_at: datetime
+    
+    @field_serializer('user_id')
+    def serialize_uuid(self, value: UUID) -> str:
+        return str(value)
     
     model_config = {
         "from_attributes": True

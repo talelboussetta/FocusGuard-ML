@@ -67,9 +67,17 @@ async def get_daily_stats(
     """
     daily_stats = await stats_service.get_daily_stats(db, user_id, days)
     
+    # Calculate totals and averages
+    total_focus = sum(day.get('focus_min', 0) for day in daily_stats)
+    total_sess = sum(day.get('sessions_completed', 0) for day in daily_stats)
+    avg_per_day = total_focus / days if days > 0 else 0.0
+    
     return DailyStatsResponse(
-        days=days,
-        data=daily_stats
+        daily_stats=daily_stats,
+        total_days=days,
+        total_focus_min=total_focus,
+        total_sessions=total_sess,
+        average_focus_per_day=avg_per_day
     )
 
 
@@ -97,7 +105,7 @@ async def get_user_trends(
 
 
 @router.get(
-    "/leaderboard",
+    "/stats/leaderboard",
     response_model=LeaderboardResponse,
     summary="Get leaderboard",
     description="Get global leaderboard rankings"
@@ -105,8 +113,8 @@ async def get_user_trends(
 async def get_leaderboard(
     metric: str = Query(
         "xp",
-        description="Ranking metric: xp, focus_time, or streak",
-        pattern="^(xp|focus_time|streak)$"
+        description="Ranking metric: xp, focus_time, sessions, or streak",
+        pattern="^(xp|focus_time|sessions|streak)$"
     ),
     limit: int = Query(10, ge=1, le=100, description="Number of top users to return"),
     db: AsyncSession = Depends(get_db)
@@ -117,6 +125,7 @@ async def get_leaderboard(
     - **metric**: Ranking metric
       - `xp`: Ranked by total XP points
       - `focus_time`: Ranked by total focus minutes
+      - `sessions`: Ranked by total sessions completed
       - `streak`: Ranked by current streak
     - **limit**: Number of top users (default 10, max 100)
     
@@ -126,13 +135,14 @@ async def get_leaderboard(
     
     return LeaderboardResponse(
         metric=metric,
-        limit=limit,
-        entries=leaderboard
+        leaderboard=leaderboard,
+        total_users=len(leaderboard),
+        current_user_rank=None
     )
 
 
 @router.get(
-    "/leaderboard/me",
+    "/stats/leaderboard/me",
     response_model=UserRankResponse,
     summary="Get user rank",
     description="Get current user's rank on leaderboard"
@@ -140,8 +150,8 @@ async def get_leaderboard(
 async def get_user_rank(
     metric: str = Query(
         "xp",
-        description="Ranking metric: xp, focus_time, or streak",
-        pattern="^(xp|focus_time|streak)$"
+        description="Ranking metric: xp, focus_time, sessions, or streak",
+        pattern="^(xp|focus_time|sessions|streak)$"
     ),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)

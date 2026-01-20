@@ -58,7 +58,7 @@ async def get_daily_stats(
         List of daily statistics dictionaries
     """
     # Calculate date range
-    end_date = datetime.now(timezone.utc)
+    end_date = datetime.now()
     start_date = end_date - timedelta(days=days)
     
     # Get sessions in date range
@@ -83,12 +83,12 @@ async def get_daily_stats(
         if date_key not in daily_data:
             daily_data[date_key] = {
                 "date": date_key,
-                "sessions": 0,
-                "total_minutes": 0
+                "sessions_completed": 0,
+                "focus_min": 0
             }
         
-        daily_data[date_key]["sessions"] += 1
-        daily_data[date_key]["total_minutes"] += session.duration_minutes
+        daily_data[date_key]["sessions_completed"] += 1
+        daily_data[date_key]["focus_min"] += session.duration_minutes
     
     # Fill in missing dates with zeros
     current_date = start_date.date()
@@ -97,8 +97,8 @@ async def get_daily_stats(
         if date_key not in daily_data:
             daily_data[date_key] = {
                 "date": date_key,
-                "sessions": 0,
-                "total_minutes": 0
+                "sessions_completed": 0,
+                "focus_min": 0
             }
         current_date += timedelta(days=1)
     
@@ -121,8 +121,11 @@ async def get_user_trends(
         Dictionary with trend data
     """
     # Get stats for last 30 days
-    thirty_days_ago = datetime.now(timezone.utc) - timedelta(days=30)
-    
+    now = datetime.now()
+    thirty_days_ago = now - timedelta(days=30)
+    seven_days_ago = now - timedelta(days=7)
+    fourteen_days_ago = now - timedelta(days=14)
+
     result = await db.execute(
         select(Session)
         .where(
@@ -134,32 +137,32 @@ async def get_user_trends(
         )
     )
     recent_sessions = result.scalars().all()
-    
-    if not recent_sessions:
+
+    def total_minutes(sessions):
+        return sum((s.duration_minutes or 0) for s in sessions)
+
+    # Buckets
+    this_week_sessions = [s for s in recent_sessions if s.created_at >= seven_days_ago]
+    last_week_sessions = [s for s in recent_sessions if fourteen_days_ago <= s.created_at < seven_days_ago]
+    this_month_sessions = recent_sessions
+    last_month_sessions: list[Session] = []  # out of scope of 30d window
+
+    # Helper to build TrendStats-like dict
+    def build_trend(period: str, sessions_list: list[Session]):
+        focus_min = total_minutes(sessions_list)
+        sessions_count = len(sessions_list)
         return {
-            "average_session_length": 0,
-            "total_sessions_30d": 0,
-            "total_minutes_30d": 0,
-            "most_productive_hour": None
+          "period": period,
+          "focus_min": focus_min,
+          "sessions": sessions_count,
+          "growth_percentage": None
         }
-    
-    # Calculate averages
-    total_minutes = sum(s.duration_minutes for s in recent_sessions)
-    avg_session_length = total_minutes / len(recent_sessions)
-    
-    # Find most productive hour
-    hour_distribution = {}
-    for session in recent_sessions:
-        hour = session.created_at.hour
-        hour_distribution[hour] = hour_distribution.get(hour, 0) + 1
-    
-    most_productive_hour = max(hour_distribution, key=hour_distribution.get) if hour_distribution else None
-    
+
     return {
-        "average_session_length": round(avg_session_length, 1),
-        "total_sessions_30d": len(recent_sessions),
-        "total_minutes_30d": total_minutes,
-        "most_productive_hour": most_productive_hour
+        "this_week": build_trend("this_week", this_week_sessions),
+        "last_week": build_trend("last_week", last_week_sessions),
+        "this_month": build_trend("this_month", this_month_sessions),
+        "last_month": build_trend("last_month", last_month_sessions),
     }
 
 
@@ -173,7 +176,7 @@ async def get_leaderboard(
     
     Args:
         db: Database session
-        metric: Ranking metric ("xp", "focus_time", "streak")
+        metric: Ranking metric ("xp", "focus_time", "sessions", "streak")
         limit: Number of top users to return
         
     Returns:
@@ -195,6 +198,14 @@ async def get_leaderboard(
             .order_by(desc(UserStats.total_focus_min))
             .limit(limit)
         )
+    elif metric == "sessions":
+        # Rank by total sessions completed
+        result = await db.execute(
+            select(User, UserStats)
+            .join(UserStats, User.id == UserStats.user_id)
+            .order_by(desc(UserStats.total_sessions))
+            .limit(limit)
+        )
     elif metric == "streak":
         # Rank by current streak
         result = await db.execute(
@@ -212,17 +223,27 @@ async def get_leaderboard(
             .limit(limit)
         )
     
-    # Format results
+    # Format results with appropriate value for the metric
     leaderboard = []
     for rank, (user, stats) in enumerate(result.all(), start=1):
+        # Determine value based on metric
+        if metric == "xp":
+            value = user.xp_points
+        elif metric == "focus_time":
+            value = stats.total_focus_min
+        elif metric == "sessions":
+            value = stats.total_sessions
+        elif metric == "streak":
+            value = stats.current_streak
+        else:
+            value = user.xp_points
+        
         leaderboard.append({
             "rank": rank,
-            "user_id": user.id,
+            "user_id": str(user.id),
             "username": user.username,
             "lvl": user.lvl,
-            "xp_points": user.xp_points,
-            "total_focus_min": stats.total_focus_min,
-            "current_streak": stats.current_streak
+            "value": value
         })
     
     return leaderboard
