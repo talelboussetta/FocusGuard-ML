@@ -48,8 +48,8 @@ async def create_session(
     new_session = Session(
         user_id=user_id,
         completed=False,
-        blink_rate=None,
-        **session_data.model_dump(exclude_unset=True)
+        duration_minutes=session_data.duration_min,
+        **session_data.model_dump(exclude_unset=True, exclude={'blink_rate', 'duration_min'})
     )
     
     db.add(new_session)
@@ -61,7 +61,7 @@ async def create_session(
 
 async def get_session(
     db: AsyncSession,
-    session_id: int,
+    session_id: str,
     user_id: Optional[str] = None
 ) -> Session:
     """
@@ -69,7 +69,7 @@ async def get_session(
     
     Args:
         db: Database session
-        session_id: Session ID
+        session_id: Session ID (UUID string)
         user_id: Optional user ID to verify ownership
         
     Returns:
@@ -87,8 +87,8 @@ async def get_session(
     if not session:
         raise SessionNotFoundException(session_id=session_id)
     
-    # Verify ownership if user_id provided
-    if user_id and session.user_id != user_id:
+    # Verify ownership if user_id provided (convert UUIDs to strings for comparison)
+    if user_id and str(session.user_id) != str(user_id):
         raise ForbiddenException("You don't have access to this session")
     
     return session
@@ -96,7 +96,7 @@ async def get_session(
 
 async def update_session(
     db: AsyncSession,
-    session_id: int,
+    session_id: str,
     user_id: str,
     update_data: SessionUpdate
 ) -> Session:
@@ -105,7 +105,7 @@ async def update_session(
     
     Args:
         db: Database session
-        session_id: Session ID
+        session_id: Session ID (UUID string)
         user_id: User ID (for authorization)
         update_data: Updated session data
         
@@ -132,8 +132,10 @@ async def update_session(
 
 async def complete_session(
     db: AsyncSession,
-    session_id: int,
+    session_id: str,
     user_id: str,
+    actual_duration: int,
+    focus_score: Optional[float] = None,
     blink_rate: Optional[float] = None
 ) -> Session:
     """
@@ -143,6 +145,8 @@ async def complete_session(
         db: Database session
         session_id: Session ID
         user_id: User ID
+        actual_duration: Actual time spent in minutes
+        focus_score: Optional focus quality score (0-100)
         blink_rate: Optional blink rate from AI analysis
         
     Returns:
@@ -156,8 +160,8 @@ async def complete_session(
     if blink_rate is not None:
         session.blink_rate = blink_rate
     
-    # Update user stats
-    await _update_user_stats_on_completion(db, user_id, session)
+    # Update user stats (use actual_duration for XP calculation)
+    await _update_user_stats_on_completion(db, user_id, session, actual_duration, focus_score)
     
     await db.commit()
     await db.refresh(session)
@@ -168,11 +172,14 @@ async def complete_session(
 async def _update_user_stats_on_completion(
     db: AsyncSession,
     user_id: str,
-    session: Session
+    session: Session,
+    actual_duration: int,
+    focus_score: Optional[float] = None
 ) -> None:
     """
     Update user stats and XP when a session is completed.
     
+    Uses actual_duration for XP calculation instead of planned duration.
     Internal helper function.
     """
     # Get user stats
@@ -194,7 +201,7 @@ async def _update_user_stats_on_completion(
     
     # Update stats
     stats.total_sessions += 1
-    stats.total_focus_min += session.duration_minutes
+    stats.total_focus_min += actual_duration
     
     # Update streak (simplified - just increment)
     # TODO: Proper streak calculation based on consecutive days
@@ -202,8 +209,36 @@ async def _update_user_stats_on_completion(
     if stats.current_streak > stats.best_streak:
         stats.best_streak = stats.current_streak
     
-    # Update user XP and level
-    await _award_xp(db, user_id, session.duration_minutes)
+    # Award plants based on session duration (1 plant every 15 minutes)
+    plants_earned = actual_duration // 15
+    if plants_earned > 0:
+        from ..models import Garden
+        import random
+        
+        # Get next plant number for user
+        result = await db.execute(
+            select(func.max(Garden.plant_num)).where(Garden.user_id == user_id)
+        )
+        max_plant_num = result.scalar() or -1
+        
+        # Create garden entries for earned plants
+        for i in range(plants_earned):
+            plant_num = max_plant_num + i + 1
+            # Random plant type (0-18 for 19 types) - convert to string
+            plant_type = str(random.randint(0, 18))
+            
+            new_garden = Garden(
+                user_id=user_id,
+                session_id=session.id,
+                plant_num=plant_num,
+                plant_type=plant_type,
+                growth_stage=0,  # Start at growth stage 0
+                total_plants=1   # Each entry represents 1 plant
+            )
+            db.add(new_garden)
+    
+    # Update user XP and level (use actual_duration)
+    await _award_xp(db, user_id, actual_duration)
 
 
 async def _award_xp(
@@ -301,12 +336,14 @@ async def get_active_session(
         ).order_by(Session.created_at.desc())
     )
     
-    return result.scalar_one_or_none()
+    # Return the most recent incomplete session (or None)
+    # Using first() instead of scalar_one_or_none() to handle multiple incomplete sessions gracefully
+    return result.scalars().first()
 
 
 async def delete_session(
     db: AsyncSession,
-    session_id: int,
+    session_id: str,
     user_id: str
 ) -> None:
     """
@@ -314,7 +351,7 @@ async def delete_session(
     
     Args:
         db: Database session
-        session_id: Session ID
+        session_id: Session ID (UUID string)
         user_id: User ID (for authorization)
         
     Raises:
