@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
-import { sessionAPI, type Session } from '../services/api'
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
+import { sessionAPI, gardenAPI, type Session } from '../services/api'
+import { useNotification } from '../hooks/useNotification'
 
 interface SessionContextType {
   activeSession: Session | null
@@ -35,6 +36,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isTimerRunning, setIsTimerRunning] = useState(false)
   const [sessionDuration, setSessionDuration] = useState(25)
   const [sessionStartMs, setSessionStartMs] = useState<number | null>(null)
+  const lastPlantTimeRef = useRef<number>(0) // Track last time we planted
+  const { showNotification } = useNotification()
 
   // Load active session on mount
   // Load active session on mount and refresh periodically (but not if session is active)
@@ -52,17 +55,51 @@ export function SessionProvider({ children }: { children: ReactNode }) {
 
   // Timer effect - tick every second when running
   useEffect(() => {
-    if (!isTimerRunning || !sessionStartMs) return
+    if (!isTimerRunning || !sessionStartMs || !activeSession) return
 
     const timer = setInterval(() => {
       const elapsedSeconds = Math.floor((Date.now() - sessionStartMs) / 1000)
       const plannedSeconds = sessionDuration * 60
       const remaining = Math.max(0, plannedSeconds - elapsedSeconds)
       setTimeLeft(remaining)
+
+      // Check if we should plant a new plant (every 5 minutes = 300 seconds)
+      const elapsedMinutes = Math.floor(elapsedSeconds / 60)
+      const lastPlantMinute = lastPlantTimeRef.current
+      
+      // Plant at 5, 10, 15, 20, etc. minutes
+      if (elapsedMinutes > 0 && elapsedMinutes % 5 === 0 && elapsedMinutes !== lastPlantMinute) {
+        lastPlantTimeRef.current = elapsedMinutes
+        plantNewPlant()
+      }
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [isTimerRunning, sessionStartMs, sessionDuration])
+  }, [isTimerRunning, sessionStartMs, sessionDuration, activeSession])
+
+  const plantNewPlant = async () => {
+    if (!activeSession) return
+    
+    try {
+      const result = await gardenAPI.plantSingle(activeSession.id)
+      console.log('🌱 Planted:', result)
+      
+      // Show notification based on rarity
+      const rarityEmoji = {
+        legendary: '✨',
+        rare: '🌳',
+        uncommon: '🌿',
+        regular: '🌱'
+      }[result.rarity] || '🌱'
+      
+      showNotification(
+        `${rarityEmoji} ${result.message}`,
+        'success'
+      )
+    } catch (error) {
+      console.error('Failed to plant:', error)
+    }
+  }
 
   const loadActiveSession = async () => {
     // NEVER reload if a session is already loaded to prevent timer disruption
@@ -125,6 +162,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSessionStartMs(startMs)
     setTimeLeft(duration * 60)
     setIsTimerRunning(true)
+    lastPlantTimeRef.current = 0 // Reset plant tracker
   }
 
   const setPlannedDuration = (duration: number) => {

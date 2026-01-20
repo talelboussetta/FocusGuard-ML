@@ -45,9 +45,8 @@ class Garden(Base):
         UUID(as_uuid=True),
         ForeignKey('sessions.id', ondelete='CASCADE'),
         nullable=False,
-        unique=True,  # Enforces 1-to-1 with session
         index=True,
-        comment="Reference to the associated session (1-to-1 relationship)"
+        comment="Reference to the associated session (multiple plants per session allowed)"
     )
     
     # Garden/plant data

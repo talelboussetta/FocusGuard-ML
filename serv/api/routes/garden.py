@@ -176,3 +176,53 @@ async def delete_garden_entry(
     Returns 204 No Content on success.
     """
     await garden_service.delete_garden_entry(db, garden_id, user_id)
+
+
+@router.post(
+    "/reset",
+    status_code=status.HTTP_200_OK,
+    summary="Reset user garden",
+    description="Delete all plants from user's garden"
+)
+@limiter.limit("5/minute")
+async def reset_garden(
+    request: Request,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Reset the user's entire garden.
+    
+    Deletes all garden entries for the authenticated user.
+    Returns count of deleted plants.
+    """
+    deleted_count = await garden_service.reset_user_garden(db, user_id)
+    
+    return {
+        "message": f"Garden reset successfully. Removed {deleted_count} plants.",
+        "deleted_count": deleted_count
+    }
+
+
+@router.post(
+    "/plant/{session_id}",
+    status_code=status.HTTP_201_CREATED,
+    summary="Plant a single plant",
+    description="Plant a single plant in real-time during active session"
+)
+@limiter.limit("20/minute")
+async def plant_single(
+    request: Request,
+    session_id: str,
+    user_id: str = Depends(get_current_user_id),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Plant a single plant in real-time during an active session.
+    
+    - **session_id**: ID of the active session
+    
+    Returns plant details and rarity.
+    """
+    result = await garden_service.plant_single_plant(db, user_id, session_id)
+    return result

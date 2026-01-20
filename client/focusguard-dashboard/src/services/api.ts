@@ -354,7 +354,7 @@ export const sessionAPI = {
 
 export const gardenAPI = {
   async get() {
-    const response = await fetch(`${API_BASE_URL}/garden`, {
+    const response = await fetch(`${API_BASE_URL}/garden/stats`, {
       headers: getAuthHeader(),
     });
     return handleResponse<Garden>(response);
@@ -383,7 +383,37 @@ export const gardenAPI = {
     });
     return handleResponse<{
       message: string;
-      garden: Garden;
+      deleted_count: number;
+    }>(response);
+  },
+
+  async plantSingle(sessionId: string) {
+    const response = await fetch(`${API_BASE_URL}/garden/plant/${sessionId}`, {
+      method: 'POST',
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{
+      plant_num: number;
+      plant_type: string;
+      rarity: string;
+      total_plants: number;
+      message: string;
+    }>(response);
+  },
+
+  async getPlants(limit: number = 100) {
+    const response = await fetch(`${API_BASE_URL}/garden?limit=${limit}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<{
+      gardens: Array<{
+        id: string;
+        plant_num: number;
+        plant_type: string;
+        growth_stage: number;
+        created_at: string;
+      }>;
+      total: number;
     }>(response);
   },
 };

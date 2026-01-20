@@ -201,28 +201,39 @@ async def get_garden_statistics(
     
     if not gardens:
         return {
+            "user_id": user_id,
             "total_plants": 0,
-            "plants_by_type": {},
-            "average_growth_stage": 0.0,
-            "highest_plant_num": 0
+            "rare_plants": 0,
+            "epic_plants": 0,
+            "legendary_plants": 0,
+            "last_plant_at": None
         }
     
     # Calculate statistics
-    total_plants = sum(g.total_plants for g in gardens)
-    highest_plant_num = max(g.plant_num for g in gardens)
-    avg_growth_stage = sum(g.growth_stage for g in gardens) / len(gardens)
+    total_plants = len(gardens)
+    rare_plants = 0  # Uncommon (13-15)
+    epic_plants = 0  # Rare (16-17)
+    legendary_plants = 0  # Legendary (18)
     
-    # Count plants by type
-    plants_by_type = {}
     for garden in gardens:
-        plant_type = garden.plant_type
-        plants_by_type[plant_type] = plants_by_type.get(plant_type, 0) + 1
+        plant_type_num = int(garden.plant_type)
+        if 13 <= plant_type_num <= 15:
+            rare_plants += 1
+        elif 16 <= plant_type_num <= 17:
+            epic_plants += 1
+        elif plant_type_num == 18:
+            legendary_plants += 1
+    
+    # Get most recent plant timestamp
+    last_plant_at = max((g.created_at for g in gardens), default=None)
     
     return {
+        "user_id": user_id,
         "total_plants": total_plants,
-        "plants_by_type": plants_by_type,
-        "average_growth_stage": round(avg_growth_stage, 2),
-        "highest_plant_num": highest_plant_num
+        "rare_plants": rare_plants,
+        "epic_plants": epic_plants,
+        "legendary_plants": legendary_plants,
+        "last_plant_at": last_plant_at.isoformat() if last_plant_at else None
     }
 
 
@@ -243,3 +254,129 @@ async def delete_garden_entry(
     
     await db.delete(garden)
     await db.commit()
+
+
+async def reset_user_garden(
+    db: AsyncSession,
+    user_id: str
+) -> int:
+    """
+    Delete all garden entries for a user.
+    
+    Args:
+        db: Database session
+        user_id: User ID
+        
+    Returns:
+        Number of garden entries deleted
+    """
+    from sqlalchemy import delete
+    
+    # Delete all garden entries for this user
+    result = await db.execute(
+        delete(Garden).where(Garden.user_id == user_id)
+    )
+    
+    await db.commit()
+    
+    return result.rowcount
+
+
+async def plant_single_plant(
+    db: AsyncSession,
+    user_id: str,
+    session_id: str
+) -> dict:
+    """
+    Plant a single plant in real-time during an active session.
+    
+    Args:
+        db: Database session
+        user_id: User ID
+        session_id: Active session ID
+        
+    Returns:
+        Dictionary with plant details and total count
+        
+    Raises:
+        SessionNotFoundException: If session not found
+        ForbiddenException: If user doesn't own the session
+    """
+    import random
+    from ..models import UserStats
+    
+    # Verify session exists, belongs to user, and is not completed
+    result = await db.execute(
+        select(Session).where(
+            and_(
+                Session.id == session_id,
+                Session.user_id == user_id,
+                Session.completed == False
+            )
+        )
+    )
+    session = result.scalar_one_or_none()
+    
+    if not session:
+        raise SessionNotFoundException(session_id=session_id)
+    
+    # Get next plant number for user
+    result = await db.execute(
+        select(func.max(Garden.plant_num)).where(Garden.user_id == user_id)
+    )
+    max_plant_num = result.scalar() or -1
+    plant_num = max_plant_num + 1
+    
+    # Get user's total focus time for rare plant calculation
+    result = await db.execute(
+        select(UserStats.total_focus_min).where(UserStats.user_id == user_id)
+    )
+    total_focus_min = result.scalar() or 0
+    
+    # Plant rarity based on total study time
+    rand = random.random() * 100
+    
+    # Calculate rarity boost: 0.5% per 100 minutes studied (caps at 20% boost)
+    rarity_boost = min(20, (total_focus_min / 100) * 0.5)
+    
+    if rand < (2 + rarity_boost):  # Legendary
+        plant_type = "18"
+        rarity = "legendary"
+    elif rand < (7 + rarity_boost):  # Rare
+        plant_type = str(random.randint(16, 17))
+        rarity = "rare"
+    elif rand < (17 + rarity_boost):  # Uncommon
+        plant_type = str(random.randint(13, 15))
+        rarity = "uncommon"
+    else:  # Regular
+        plant_type = str(random.randint(0, 12))
+        rarity = "regular"
+    
+    # Create garden entry
+    new_garden = Garden(
+        user_id=user_id,
+        session_id=session_id,
+        plant_num=plant_num,
+        plant_type=plant_type,
+        growth_stage=0,  # Start at growth stage 0
+        total_plants=1   # Each entry represents 1 plant
+    )
+    db.add(new_garden)
+    await db.commit()
+    await db.refresh(new_garden)
+    
+    # Get total plant count
+    result = await db.execute(
+        select(func.count(Garden.id)).where(Garden.user_id == user_id)
+    )
+    total_plants = result.scalar() or 0
+    
+    print(f"🌱 Planted {rarity} plant #{plant_num} (type {plant_type}) for user {user_id}")
+    
+    return {
+        "plant_num": plant_num,
+        "plant_type": plant_type,
+        "rarity": rarity,
+        "total_plants": total_plants,
+        "message": f"🌱 New {rarity} plant added to your garden!"
+    }

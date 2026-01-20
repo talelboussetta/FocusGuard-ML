@@ -209,8 +209,10 @@ async def _update_user_stats_on_completion(
     if stats.current_streak > stats.best_streak:
         stats.best_streak = stats.current_streak
     
-    # Award plants based on session duration (1 plant every 15 minutes)
-    plants_earned = actual_duration // 15
+    # Award plants based on session duration (1 plant every 5 minutes)
+    plants_earned = actual_duration // 5
+    print(f"🌱 Session complete - Duration: {actual_duration} min, Plants earned: {plants_earned}")
+    
     if plants_earned > 0:
         from ..models import Garden
         import random
@@ -221,11 +223,37 @@ async def _update_user_stats_on_completion(
         )
         max_plant_num = result.scalar() or -1
         
+        # Get user's total focus time for rare plant calculation
+        result = await db.execute(
+            select(UserStats.total_focus_min).where(UserStats.user_id == user_id)
+        )
+        total_focus_min = result.scalar() or 0
+        
+        print(f"🌱 User total focus time: {total_focus_min} min, Max plant num: {max_plant_num}")
+        
         # Create garden entries for earned plants
         for i in range(plants_earned):
             plant_num = max_plant_num + i + 1
-            # Random plant type (0-18 for 19 types) - convert to string
-            plant_type = str(random.randint(0, 18))
+            
+            # Plant rarity based on total study time
+            # Regular plants (0-12): Always available
+            # Uncommon plants (13-15): 10% chance, increases with study time
+            # Rare plants (16-17): 5% chance, increases with study time
+            # Legendary plant (18): 2% chance, increases with study time
+            
+            rand = random.random() * 100
+            
+            # Calculate rarity boost: 0.5% per 100 minutes studied (caps at 20% boost)
+            rarity_boost = min(20, (total_focus_min / 100) * 0.5)
+            
+            if rand < (2 + rarity_boost):  # Legendary
+                plant_type = "18"
+            elif rand < (7 + rarity_boost):  # Rare
+                plant_type = str(random.randint(16, 17))
+            elif rand < (17 + rarity_boost):  # Uncommon
+                plant_type = str(random.randint(13, 15))
+            else:  # Regular
+                plant_type = str(random.randint(0, 12))
             
             new_garden = Garden(
                 user_id=user_id,
@@ -236,6 +264,9 @@ async def _update_user_stats_on_completion(
                 total_plants=1   # Each entry represents 1 plant
             )
             db.add(new_garden)
+            print(f"🌱 Created plant #{plant_num} - Type: {plant_type}, Rarity boost: {rarity_boost:.2f}%")
+    
+    print(f"🌱 Committing {plants_earned} plants to database...")
     
     # Update user XP and level (use actual_duration)
     await _award_xp(db, user_id, actual_duration)

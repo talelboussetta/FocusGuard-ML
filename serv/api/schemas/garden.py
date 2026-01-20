@@ -153,10 +153,12 @@ class GardenListResponse(BaseModel):
 class GardenStats(BaseModel):
     """Garden statistics for a user."""
     
+    user_id: str = Field(..., description="User ID")
     total_plants: int = Field(..., description="Total number of plants")
-    fully_grown_plants: int = Field(..., description="Number of fully grown plants")
-    favorite_plant: Optional[str] = Field(None, description="Most planted type")
-    plant_types_count: dict[str, int] = Field(default_factory=dict, description="Count by plant type")
+    rare_plants: int = Field(default=0, description="Number of uncommon plants (types 13-15)")
+    epic_plants: int = Field(default=0, description="Number of rare plants (types 16-17)")
+    legendary_plants: int = Field(default=0, description="Number of legendary plants (type 18)")
+    last_plant_at: Optional[str] = Field(None, description="Timestamp of most recent plant")
 
 
 # ============================================================================
