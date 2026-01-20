@@ -5,7 +5,8 @@ Pydantic models for user statistics and analytics.
 """
 
 from typing import Optional
-from datetime import datetime, date
+from datetime import datetime
+from datetime import date as date_type
 from pydantic import BaseModel, Field
 
 
@@ -60,7 +61,7 @@ class UserStatsInDB(BaseModel):
 class DailyStats(BaseModel):
     """Statistics for a single day."""
     
-    date: date = Field(..., description="Date")
+    date: date_type = Field(..., description="Date")
     focus_min: int = Field(..., description="Focus minutes for this day")
     sessions_completed: int = Field(..., description="Sessions completed this day")
     
@@ -165,6 +166,26 @@ class LeaderboardResponse(BaseModel):
                 "current_user_rank": 5,
                 "total_users": 100,
                 "metric": "xp"
+            }]
+        }
+    }
+
+
+class UserRankResponse(BaseModel):
+    """User's rank in a specific leaderboard."""
+    
+    rank: int = Field(..., description="User's rank position")
+    total_users: int = Field(..., description="Total users in leaderboard")
+    metric: str = Field(..., description="Metric type")
+    value: int = Field(..., description="User's value for this metric")
+    
+    model_config = {
+        "json_schema_extra": {
+            "examples": [{
+                "rank": 5,
+                "total_users": 100,
+                "metric": "xp",
+                "value": 2500
             }]
         }
     }

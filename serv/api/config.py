@@ -5,9 +5,9 @@ Loads environment variables and provides application configuration.
 Uses pydantic-settings for type-safe configuration management.
 """
 
-from typing import List
+from typing import List, Union
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, field_validator as validator
+from pydantic import Field, field_validator
 
 
 class Settings(BaseSettings):
@@ -72,7 +72,7 @@ class Settings(BaseSettings):
     # CORS Settings
     # ========================================================================
     
-    allowed_origins: List[str] = Field(
+    allowed_origins: Union[str, List[str]] = Field(
         default=[
             "http://localhost:5173",  # Vite dev server
             "http://localhost:3000",  # React dev server
@@ -126,12 +126,15 @@ class Settings(BaseSettings):
         extra="ignore"
     )
     
-    @validator("allowed_origins", pre=True)
-    def parse_cors_origins(cls, v):
+    @field_validator("allowed_origins", mode="before")
+    @classmethod
+    def parse_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         """Parse CORS origins from comma-separated string or list."""
         if isinstance(v, str):
-            return [origin.strip() for origin in v.split(",")]
-        return v
+            return [origin.strip() for origin in v.split(",") if origin.strip()]
+        elif isinstance(v, list):
+            return v
+        return []
 
 
 # ============================================================================

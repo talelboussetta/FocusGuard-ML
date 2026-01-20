@@ -106,7 +106,7 @@ async def get_leaderboard(
     metric: str = Query(
         "xp",
         description="Ranking metric: xp, focus_time, or streak",
-        regex="^(xp|focus_time|streak)$"
+        pattern="^(xp|focus_time|streak)$"
     ),
     limit: int = Query(10, ge=1, le=100, description="Number of top users to return"),
     db: AsyncSession = Depends(get_db)
@@ -141,7 +141,7 @@ async def get_user_rank(
     metric: str = Query(
         "xp",
         description="Ranking metric: xp, focus_time, or streak",
-        regex="^(xp|focus_time|streak)$"
+        pattern="^(xp|focus_time|streak)$"
     ),
     user_id: str = Depends(get_current_user_id),
     db: AsyncSession = Depends(get_db)

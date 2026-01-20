@@ -101,7 +101,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins,
+    allow_origins=settings.allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -181,7 +181,7 @@ async def api_info():
         "title": "FocusGuard API",
         "version": "1.0.0",
         "environment": "development",
-        "cors_origins": settings.cors_origins,
+        "cors_origins": settings.allowed_origins,
         "rate_limits": {
             "default": "60/minute",
             "login": "5/minute",
