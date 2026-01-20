@@ -12,7 +12,7 @@ from ..models import Garden, Session
 from ..schemas.garden import GardenCreate, GardenUpdate, PlantType
 from ..utils import (
     GardenNotFoundException,
-    UnauthorizedAccessException,
+    ForbiddenException,
     SessionNotFoundException,
     ValidationException
 )
@@ -36,7 +36,7 @@ async def create_garden_entry(
         
     Raises:
         SessionNotFoundException: If session not found
-        UnauthorizedAccessException: If user doesn't own the session
+        ForbiddenException: If user doesn't own the session
         ValidationException: If session already has a garden
     """
     # Verify session exists and belongs to user
@@ -49,7 +49,7 @@ async def create_garden_entry(
         raise SessionNotFoundException(session_id=garden_data.session_id)
     
     if session.user_id != user_id:
-        raise UnauthorizedAccessException("You don't own this session")
+        raise ForbiddenException("You don't own this session")
     
     # Check if session already has a garden (1-to-1 constraint)
     result = await db.execute(
@@ -89,7 +89,7 @@ async def get_garden_entry(
         
     Raises:
         GardenNotFoundException: If garden not found
-        UnauthorizedAccessException: If user doesn't own the garden
+        ForbiddenException: If user doesn't own the garden
     """
     result = await db.execute(
         select(Garden).where(Garden.id == garden_id)
@@ -101,7 +101,7 @@ async def get_garden_entry(
     
     # Verify ownership if user_id provided
     if user_id and garden.user_id != user_id:
-        raise UnauthorizedAccessException("You don't have access to this garden")
+        raise ForbiddenException("You don't have access to this garden")
     
     return garden
 
