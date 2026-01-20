@@ -1,6 +1,7 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AnimatePresence } from 'framer-motion'
 import { NotificationProvider } from './contexts/NotificationContext'
+import { AuthProvider, useAuth } from './contexts/AuthContext'
 import LandingPage from './pages/LandingPage'
 import AuthPage from './pages/AuthPage'
 import Dashboard from './pages/Dashboard'
@@ -9,21 +10,86 @@ import CameraPage from './pages/CameraPage'
 import AITutorPage from './pages/AITutorPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 
+// Protected Route Component
+function ProtectedRoute({ children }: { children: React.ReactNode }) {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+function AppRoutes() {
+  return (
+    <AnimatePresence mode="wait">
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/auth" element={<AuthPage />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/garden"
+          element={
+            <ProtectedRoute>
+              <GardenPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/camera"
+          element={
+            <ProtectedRoute>
+              <CameraPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/ai-tutor"
+          element={
+            <ProtectedRoute>
+              <AITutorPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/analytics"
+          element={
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+      </Routes>
+    </AnimatePresence>
+  );
+}
+
 function App() {
   return (
     <NotificationProvider>
       <Router>
-        <AnimatePresence mode="wait">
-          <Routes>
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/garden" element={<GardenPage />} />
-            <Route path="/camera" element={<CameraPage />} />
-            <Route path="/ai-tutor" element={<AITutorPage />} />
-            <Route path="/analytics" element={<AnalyticsPage />} />
-          </Routes>
-        </AnimatePresence>
+        <AuthProvider>
+          <AppRoutes />
+        </AuthProvider>
       </Router>
     </NotificationProvider>
   )
