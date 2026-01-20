@@ -17,6 +17,7 @@ const Dashboard = () => {
     timeLeft,
     isTimerRunning,
     sessionDuration,
+    plantsEarned,
     setPlannedDuration,
     startTimer,
     pauseTimer,
@@ -36,9 +37,14 @@ const Dashboard = () => {
     total_focus_min: (stats?.total_focus_min || 0) + (activeSession ? Math.floor((sessionDuration * 60 - timeLeft) / 60) : 0),
     total_sessions: (stats?.total_sessions || 0) + (activeSession ? 1 : 0),
     current_streak: stats?.current_streak || 0,
-    avg_focus_per_session: stats?.avg_focus_per_session || 0,
+    avg_focus_per_session: 0,
     longest_streak: stats?.longest_streak || 0,
     user_id: stats?.user_id || ''
+  }
+  
+  // Calculate average dynamically based on live totals
+  if (liveStats.total_sessions > 0) {
+    liveStats.avg_focus_per_session = liveStats.total_focus_min / liveStats.total_sessions
   }
 
   // Load dashboard data on mount
@@ -129,32 +135,6 @@ const Dashboard = () => {
       console.error('Complete session error:', errorMsg, err)
       setError(errorMsg)
       // If session not found, clear the stale state
-      if (errorMsg.includes('not found') || errorMsg.includes('404')) {
-        console.log('Session not found, clearing stale state')
-        stopTimer()
-      }
-    }
-  }
-
-  const handleAbandonSession = async () => {
-    if (!activeSession || !activeSession.id) {
-      setError('No active session found')
-      return
-    }
-    
-    console.log('Attempting to abandon session:', activeSession.id)
-    
-    try {
-      pauseTimer()
-      await sessionAPI.abandon(activeSession.id)
-      stopTimer()
-      await loadDashboardData()
-      console.log('Session abandoned successfully')
-    } catch (err: any) {
-      const errorMsg = getErrorMessage(err, 'Failed to abandon session')
-      console.error('Abandon session error:', errorMsg, err)
-      setError(errorMsg)
-      // If session not found, clear the stale state anyway
       if (errorMsg.includes('not found') || errorMsg.includes('404')) {
         console.log('Session not found, clearing stale state')
         stopTimer()
@@ -284,6 +264,20 @@ const Dashboard = () => {
                     >
                       {formatTime(timeLeft)}
                     </motion.div>
+                    
+                    {/* Live Plants Counter */}
+                    {activeSession && plantsEarned > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex items-center gap-2 glass px-4 py-2 rounded-full"
+                      >
+                        <span className="text-2xl">🌱</span>
+                        <span className="text-sm font-medium">
+                          {plantsEarned} plant{plantsEarned !== 1 ? 's' : ''} earned
+                        </span>
+                      </motion.div>
+                    )}
                   </div>
                 </div>
 
@@ -346,14 +340,6 @@ const Dashboard = () => {
                       >
                         <Square className="w-5 h-5" />
                         Complete
-                      </motion.button>
-                      <motion.button
-                        onClick={handleAbandonSession}
-                        className="px-4 bg-red-500/20 hover:bg-red-500/30 text-red-300 py-3 rounded-xl font-medium transition-colors"
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                      >
-                        Abandon
                       </motion.button>
                     </>
                   )}

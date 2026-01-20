@@ -1,12 +1,14 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from 'react'
 import { sessionAPI, gardenAPI, type Session } from '../services/api'
 import { useNotification } from '../hooks/useNotification'
+import { useSound } from '../hooks/useSound'
 
 interface SessionContextType {
   activeSession: Session | null
   timeLeft: number
   isTimerRunning: boolean
   sessionDuration: number
+  plantsEarned: number
   setPlannedDuration: (duration: number) => void
   
   // Timer control
@@ -36,8 +38,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [isTimerRunning, setIsTimerRunning] = useState(false)
   const [sessionDuration, setSessionDuration] = useState(25)
   const [sessionStartMs, setSessionStartMs] = useState<number | null>(null)
+  const [plantsEarned, setPlantsEarned] = useState(0)
   const lastPlantTimeRef = useRef<number>(0) // Track last time we planted
   const { showNotification } = useNotification()
+  const { playNotification } = useSound()
 
   // Load active session on mount
   // Load active session on mount and refresh periodically (but not if session is active)
@@ -84,6 +88,12 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const result = await gardenAPI.plantSingle(activeSession.id)
       console.log('🌱 Planted:', result)
       
+      // Increment plants counter
+      setPlantsEarned(prev => prev + 1)
+      
+      // Play success sound
+      playNotification()
+      
       // Show notification based on rarity
       const rarityEmoji = {
         legendary: '✨',
@@ -123,19 +133,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const plannedSeconds = duration * 60
       const remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
 
-      // Auto-abandon sessions that are very old (>2 hours only)
-      // Don't auto-abandon based on time remaining - user might want to complete it
-      const twoHoursInSeconds = 2 * 60 * 60
-      if (elapsedSeconds > twoHoursInSeconds) {
-        console.log('Auto-abandoning very old session:', session.id, 'elapsed:', elapsedSeconds, 'hours')
-        try {
-          await sessionAPI.abandon(session.id)
-          // Don't set any state - leave everything cleared
-        } catch (err) {
-          console.error('Failed to auto-abandon session:', err)
-        }
-        return
-      }
+      // Don't auto-abandon - let users complete sessions at any time
 
       // Restore session even if it has little time left - user might want to complete it
       console.log('Restoring active session with', Math.floor(remainingSeconds / 60), 'minutes remaining')
@@ -162,6 +160,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setSessionStartMs(startMs)
     setTimeLeft(duration * 60)
     setIsTimerRunning(true)
+    setPlantsEarned(0) // Reset plants counter
     lastPlantTimeRef.current = 0 // Reset plant tracker
   }
 
@@ -197,6 +196,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setTimeLeft(25 * 60)
     setSessionDuration(25)
     setSessionStartMs(null)
+    setPlantsEarned(0)
   }
 
   const refreshActiveSession = async () => {
@@ -210,6 +210,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         timeLeft,
         isTimerRunning,
         sessionDuration,
+        plantsEarned,
         setPlannedDuration,
         startTimer,
         pauseTimer,

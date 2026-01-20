@@ -331,13 +331,6 @@ export const sessionAPI = {
     return handleResponse<Session>(response);
   },
 
-  async abandon(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/abandon`, {
-      method: 'PATCH',
-      headers: getAuthHeader(),
-    });
-    return handleResponse<Session>(response);
-  },
 
   async delete(sessionId: string) {
     const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {

@@ -197,30 +197,6 @@ async def complete_session(
     return SessionResponse.model_validate(session)
 
 
-@router.patch(
-    "/{session_id}/abandon",
-    status_code=status.HTTP_204_NO_CONTENT,
-    summary="Abandon session",
-    description="Mark session as abandoned (deleted without awarding XP)"
-)
-@limiter.limit("20/minute")
-async def abandon_session(
-    request: Request,
-    session_id: str,
-    user_id: str = Depends(get_current_user_id),
-    db: AsyncSession = Depends(get_db)
-):
-    """
-    Abandon a focus session.
-    
-    Marks session as abandoned by deleting it.
-    No XP is awarded for abandoned sessions.
-    
-    User must own the session.
-    """
-    await session_service.delete_session(db, session_id, user_id)
-
-
 @router.delete(
     "/{session_id}",
     status_code=status.HTTP_204_NO_CONTENT,

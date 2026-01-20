@@ -130,6 +130,20 @@ const GardenPage = () => {
               </div>
               <div className="flex gap-3">
                 <motion.button
+                  onClick={() => loadGarden()}
+                  disabled={loading}
+                  className="btn-secondary flex items-center space-x-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  {loading ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <Leaf className="w-5 h-5" />
+                  )}
+                  <span>Refresh</span>
+                </motion.button>
+                <motion.button
                   onClick={handleResetGarden}
                   disabled={resetting}
                   className="btn-secondary flex items-center space-x-2"
@@ -141,7 +155,7 @@ const GardenPage = () => {
                   ) : (
                     <RotateCcw className="w-5 h-5" />
                   )}
-                  <span>Reset Garden</span>
+                  <span>Reset</span>
                 </motion.button>
                 <motion.button
                   onClick={() => navigate('/dashboard')}

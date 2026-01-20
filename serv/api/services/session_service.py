@@ -5,9 +5,9 @@ Business logic for focus session management.
 """
 
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, and_, func
+from sqlalchemy import select, and_, func, desc
 
 from ..models import Session, User, UserStats
 from ..schemas.session import SessionCreate, SessionUpdate
@@ -203,9 +203,46 @@ async def _update_user_stats_on_completion(
     stats.total_sessions += 1
     stats.total_focus_min += actual_duration
     
-    # Update streak (simplified - just increment)
-    # TODO: Proper streak calculation based on consecutive days
-    stats.current_streak += 1
+    # Update streak based on consecutive days
+    from datetime import datetime, timedelta
+    
+    # Get user's most recent completed session (excluding current one)
+    result = await db.execute(
+        select(Session)
+        .where(
+            and_(
+                Session.user_id == user_id,
+                Session.completed == True,
+                Session.id != session.id
+            )
+        )
+        .order_by(desc(Session.created_at))
+        .limit(1)
+    )
+    last_session = result.scalar_one_or_none()
+    
+    # Get today's date (date only, not time)
+    today = datetime.utcnow().date()
+    session_date = session.created_at.date() if hasattr(session.created_at, 'date') else datetime.fromisoformat(str(session.created_at)).date()
+    
+    if last_session:
+        last_session_date = last_session.created_at.date() if hasattr(last_session.created_at, 'date') else datetime.fromisoformat(str(last_session.created_at)).date()
+        days_diff = (session_date - last_session_date).days
+        
+        if days_diff == 0:
+            # Same day - don't increment streak
+            pass
+        elif days_diff == 1:
+            # Consecutive day - increment streak
+            stats.current_streak += 1
+        else:
+            # Broke streak - reset to 1
+            stats.current_streak = 1
+    else:
+        # First session ever - start streak at 1
+        stats.current_streak = 1
+    
+    # Update best streak if current is higher
     if stats.current_streak > stats.best_streak:
         stats.best_streak = stats.current_streak
     
