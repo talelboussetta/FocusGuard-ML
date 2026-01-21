@@ -29,7 +29,7 @@ class DistractionDetector:
     
     def __init__(
         self,
-        model_name: str = "yolo11n.pt",  # Nano model for speed
+        model_name: str = "yolov8n.pt",  # YOLOv8 Nano - faster than v11
         person_confidence: float = 0.5,
         phone_confidence: float = 0.4,
         phone_alert_duration: float = 10.0,  # seconds before alert
@@ -39,7 +39,7 @@ class DistractionDetector:
         Initialize the distraction detector.
         
         Args:
-            model_name: YOLO model to use (yolo11n.pt, yolo11s.pt, etc.)
+            model_name: YOLO model to use (yolov8n.pt is fastest)
             person_confidence: Confidence threshold for person detection
             phone_confidence: Confidence threshold for phone detection
             phone_alert_duration: Seconds of phone usage before alert
@@ -47,6 +47,10 @@ class DistractionDetector:
         """
         print(f"🤖 Loading YOLO model: {model_name}")
         self.model = YOLO(model_name)
+        
+        # Optimize for speed
+        self.model.overrides['verbose'] = False  # Reduce logging
+        self.model.overrides['half'] = False  # FP16 can be faster on GPU but we use CPU
         
         self.person_confidence = person_confidence
         self.phone_confidence = phone_confidence
@@ -131,8 +135,23 @@ class DistractionDetector:
         Returns:
             Tuple of (annotated_frame, detection_info)
         """
-        # Run YOLO detection
-        results = self.model(frame, verbose=False)[0]
+        # Resize frame to reduce processing time (640x640 is YOLO's optimal size)
+        height, width = frame.shape[:2]
+        if width > 640 or height > 640:
+            scale = 640 / max(width, height)
+            new_width = int(width * scale)
+            new_height = int(height * scale)
+            frame = cv2.resize(frame, (new_width, new_height))
+        
+        # Run YOLO detection with optimized settings
+        results = self.model(
+            frame, 
+            verbose=False,
+            imgsz=640,  # Input size - faster than larger sizes
+            conf=0.3,   # Lower confidence for faster processing
+            max_det=10  
+            batch=1# Limit max detections for speed
+        )[0]
         
         # Extract detections
         person_boxes = []

@@ -16,9 +16,22 @@ from sqlalchemy.orm import declarative_base
 from sqlalchemy.pool import NullPool
 from .config import settings
 
+# Ensure asyncpg is available (this import forces SQLAlchemy to use it)
+try:
+    import asyncpg  # noqa: F401
+except ImportError:
+    raise ImportError(
+        "asyncpg is required for async PostgreSQL operations. "
+        "Install it with: pip install asyncpg"
+    )
+
 # ============================================================================
 # Database Engine
 # ============================================================================
+
+# Debug: print URL being used
+print(f"🔍 DEBUG: Creating async engine with URL: {settings.database_url}")
+print(f"🔍 DEBUG: asyncpg available: {asyncpg is not None}")
 
 # Create async engine for PostgreSQL
 engine = create_async_engine(
@@ -27,6 +40,8 @@ engine = create_async_engine(
     future=True,  # Use SQLAlchemy 2.0 style
     poolclass=NullPool if settings.debug else None,  # Disable pooling in debug mode
 )
+
+print(f"✅ DEBUG: Engine created successfully: {engine.dialect.name}")
 
 # ============================================================================
 # Session Factory

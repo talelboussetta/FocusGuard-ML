@@ -15,6 +15,7 @@ from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Depends, Query, s
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..config import Settings
 from ..schemas.distraction import (
     DistractionEventCreate,
     DistractionEventResponse,
@@ -27,7 +28,12 @@ from ..schemas.distraction import (
 )
 from ..services import distraction_service
 from ..middleware.auth_middleware import get_current_user_id
+from ..utils.jwt_handler import decode_token
+from ..utils.exceptions import TokenExpiredException, InvalidTokenException
 from fastapi import HTTPException
+
+# Load config
+settings = Settings()
 
 
 router = APIRouter(prefix="/distraction", tags=["Distraction Detection"])
@@ -54,7 +60,7 @@ def get_detector():
                 detail=f"Distraction detector dependencies not installed: {e}. Install 'ultralytics', 'torch', 'torchvision'."
             )
         detector_instance = DistractionDetector(
-            model_name="yolo11n.pt",
+            model_name="yolov8n.pt",  # YOLOv8 Nano - faster than v11
             phone_alert_duration=10.0
         )
     return detector_instance
@@ -79,10 +85,22 @@ async def websocket_monitor(
     """
     await websocket.accept()
     
-    # TODO: Validate token and get user_id
-    # For now, we'll accept the connection
-    # In production, use: user_id = await validate_websocket_token(token)
-    user_id = "temp_user"  # Replace with actual validation
+    # Validate token and get user_id
+    try:
+        payload = decode_token(
+            token,
+            secret_key=settings.jwt_secret_key,
+            algorithm=settings.jwt_algorithm
+        )
+        user_id = payload.get("sub")
+        
+        if not user_id:
+            await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Invalid token: missing user ID")
+            return
+            
+    except (TokenExpiredException, InvalidTokenException) as e:
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=f"Authentication failed: {str(e)}")
+        return
     
     detector = get_detector()
     

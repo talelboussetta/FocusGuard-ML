@@ -1,265 +1,529 @@
-import { useState, useRef, useEffect } from 'react'
-import { motion } from 'framer-motion'
-import { Camera, CameraOff, Play, Pause, Eye, TrendingUp, Clock } from 'lucide-react'
-import Sidebar from '../components/Sidebar'
-import { Card } from '../components/ui/Card'
-import { Button } from '../components/ui/Button'
-import { Badge } from '../components/ui/Badge'
-import { Progress } from '../components/ui/Progress'
+import { useEffect, useRef, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Camera, CameraOff, Wifi, WifiOff, AlertCircle, ArrowLeft, Maximize2 } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { useSessionContext } from '../contexts/SessionContext'
+import { useNotificationContext } from '../contexts/NotificationContext'
+
+interface DetectionData {
+  person_detected: boolean
+  phone_detected: boolean
+  phone_usage_duration: number
+  should_alert: boolean
+  distraction_active: boolean
+  total_distractions: number
+  fps: number
+  person_count: number
+  phone_count: number
+}
 
 const CameraPage = () => {
-  const [isCameraOn, setIsCameraOn] = useState(false)
-  const [isMonitoring, setIsMonitoring] = useState(false)
-  const [blinkCount, setBlinkCount] = useState(0)
-  const [focusQuality, setFocusQuality] = useState(85)
-  const [sessionTime, setSessionTime] = useState(0)
+  const navigate = useNavigate()
+  const { activeSession, isTimerRunning } = useSessionContext()
+  const { success: showSuccess, error: showError, warning: showWarning } = useNotificationContext()
+
+  const [connected, setConnected] = useState(false)
+  const [cameraEnabled, setCameraEnabled] = useState(false)
+  const [detectionData, setDetectionData] = useState<DetectionData | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  const [annotatedFrame, setAnnotatedFrame] = useState<string | null>(null)
+
+  const wsRef = useRef<WebSocket | null>(null)
   const videoRef = useRef<HTMLVideoElement>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
   const streamRef = useRef<MediaStream | null>(null)
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
+  const isConnectingRef = useRef(false)
 
+  // Cleanup on unmount
   useEffect(() => {
-    let interval: NodeJS.Timeout
-    if (isMonitoring) {
-      interval = setInterval(() => {
-        setSessionTime((prev) => prev + 1)
-        // Simulate focus quality changes
-        setFocusQuality((prev) => Math.max(60, Math.min(100, prev + (Math.random() - 0.5) * 5)))
-      }, 1000)
+    return () => {
+      cleanup()
     }
-    return () => clearInterval(interval)
-  }, [isMonitoring])
+  }, [])
 
+  // Connect WebSocket when camera is enabled
+  useEffect(() => {
+    if (!activeSession?.id || !cameraEnabled) {
+      if (wsRef.current) {
+        wsRef.current.close()
+        wsRef.current = null
+      }
+      setConnected(false)
+      isConnectingRef.current = false
+      return
+    }
+
+    // Prevent duplicate connections
+    if (isConnectingRef.current || wsRef.current?.readyState === WebSocket.OPEN) {
+      return
+    }
+
+    const token = localStorage.getItem('access_token')
+    if (!token) {
+      setError('No authentication token found')
+      showError('Please login to use camera monitoring')
+      console.error('❌ No access token in localStorage')
+      return
+    }
+
+    isConnectingRef.current = true
+    console.log('🔌 Connecting to WebSocket...')
+    console.log('Session ID:', activeSession.id)
+    console.log('Token:', token.substring(0, 20) + '...')
+    const wsUrl = `ws://localhost:8000/distraction/ws/monitor?session_id=${activeSession.id}&token=${token}`
+    console.log('WebSocket URL:', wsUrl.replace(token, 'TOKEN'))
+    const ws = new WebSocket(wsUrl)
+
+    ws.onopen = () => {
+      console.log('✅ WebSocket connected')
+      setConnected(true)
+      setError(null)
+      isConnectingRef.current = false
+      showSuccess('Camera monitoring connected')
+      // Start sending frames now that connection is ready
+      console.log('🎬 Starting frame capture after WebSocket connect')
+      startFrameCapture()
+    }
+
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data)
+        console.log('📨 WebSocket message:', data)
+
+        if (data.type === 'connection') {
+          console.log('Monitoring started:', data.message)
+        } else if (data.type === 'detection') {
+          setDetectionData(data.data)
+          if (data.annotated_frame) {
+            setAnnotatedFrame(data.annotated_frame)
+          }
+        } else if (data.type === 'alert') {
+          showWarning(data.data.message)
+          playAlertSound()
+        } else if (data.type === 'error') {
+          console.error('WebSocket error:', data.message)
+          setError(data.message)
+        }
+      } catch (err) {
+        console.error('Failed to parse WebSocket message:', err)
+      }
+    }
+
+    ws.onerror = (event) => {
+      console.error('❌ WebSocket error:', event)
+      setError('Connection error - check console')
+      setConnected(false)
+      isConnectingRef.current = false
+    }
+
+    ws.onclose = (event) => {
+      console.log('🔌 WebSocket closed:', { code: event.code, reason: event.reason, wasClean: event.wasClean })
+      setConnected(false)
+      isConnectingRef.current = false
+      // Stop sending frames
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
+      if (event.code === 1008) {
+        setError('Authentication failed - invalid or expired token')
+        showError('Session token expired, please login again')
+      } else if (!event.wasClean) {
+        setError(`Connection closed unexpectedly (code: ${event.code})`)
+      }
+    }
+
+    wsRef.current = ws
+
+    return () => {
+      if (ws.readyState === WebSocket.OPEN || ws.readyState === WebSocket.CONNECTING) {
+        ws.close()
+      }
+    }
+  }, [activeSession?.id, cameraEnabled, showError, showSuccess, showWarning])
+
+  // Start webcam
   const startCamera = async () => {
+    console.log('📹 Starting camera...')
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { width: 1280, height: 720 },
+        video: {
+          width: { ideal: 640 },
+          height: { ideal: 480 },
+          facingMode: 'user'
+        }
       })
+      console.log('✅ Camera stream obtained')
+
       if (videoRef.current) {
         videoRef.current.srcObject = stream
+        await videoRef.current.play()
         streamRef.current = stream
+        console.log('✅ Video playing, enabling camera')
+        setCameraEnabled(true)
+        setError(null)
+        console.log('Camera enabled, WebSocket will auto-connect')
       }
-      setIsCameraOn(true)
-    } catch (error) {
-      console.error('Error accessing camera:', error)
-      alert('Could not access camera. Please check permissions.')
+    } catch (err: any) {
+      console.error('❌ Camera access denied:', err)
+      const errorMsg = err.message || 'Failed to access camera'
+      setError(errorMsg)
+      showError(errorMsg)
+      setCameraEnabled(false)
     }
   }
 
+  // Stop webcam
   const stopCamera = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop())
+      streamRef.current.getTracks().forEach(track => track.stop())
       streamRef.current = null
     }
     if (videoRef.current) {
       videoRef.current.srcObject = null
     }
-    setIsCameraOn(false)
-    setIsMonitoring(false)
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+    setCameraEnabled(false)
+    setAnnotatedFrame(null)
+    setDetectionData(null)
   }
 
-  const toggleMonitoring = () => {
-    if (!isCameraOn) {
-      alert('Please start the camera first')
-      return
+  // Capture and send frames
+  const startFrameCapture = () => {
+    console.log('🎬 Starting frame capture...')
+    if (intervalRef.current) {
+      console.log('⚠️ Clearing existing interval')
+      clearInterval(intervalRef.current)
     }
-    setIsMonitoring(!isMonitoring)
-    if (!isMonitoring) {
-      setBlinkCount(0)
-      setSessionTime(0)
-      setFocusQuality(85)
+
+    let frameCount = 0
+    intervalRef.current = setInterval(() => {
+      if (!wsRef.current || wsRef.current.readyState !== WebSocket.OPEN) {
+        return
+      }
+
+      if (!videoRef.current || !canvasRef.current) {
+        return
+      }
+
+      const video = videoRef.current
+      const canvas = canvasRef.current
+
+      if (video.readyState !== video.HAVE_ENOUGH_DATA) {
+        return
+      }
+
+      // Draw video frame to canvas
+      canvas.width = video.videoWidth
+      canvas.height = video.videoHeight
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
+
+      ctx.drawImage(video, 0, 0)
+
+      // Convert to base64 with lower quality for speed
+      const frameData = canvas.toDataURL('image/jpeg', 0.5)
+
+      // Send to server
+      try {
+        wsRef.current.send(JSON.stringify({
+          type: 'frame',
+          frame: frameData
+        }))
+        frameCount++
+        if (frameCount % 30 === 0) {
+          console.log(`📤 Sent ${frameCount} frames`)
+        }
+      } catch (err) {
+        console.error('Failed to send frame:', err)
+      }
+    }, 333) // ~3 FPS for faster processing
+  }
+
+  // Cleanup
+  const cleanup = () => {
+    stopCamera()
+    if (wsRef.current) {
+      wsRef.current.close()
+      wsRef.current = null
+    }
+    setConnected(false)
+  }
+
+  // Play alert sound
+  const playAlertSound = () => {
+    try {
+      const audio = new Audio('/sounds/alert.mp3')
+      audio.play().catch(() => {
+        // Fallback: use beep
+        const ctx = new AudioContext()
+        const oscillator = ctx.createOscillator()
+        oscillator.connect(ctx.destination)
+        oscillator.frequency.value = 800
+        oscillator.start()
+        oscillator.stop(ctx.currentTime + 0.2)
+      })
+    } catch (err) {
+      console.error('Alert sound error:', err)
     }
   }
 
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60)
-    const secs = seconds % 60
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
+  // Toggle camera
+  const toggleCamera = () => {
+    if (cameraEnabled) {
+      stopCamera()
+    } else {
+      startCamera()
+    }
+  }
+
+  if (!activeSession) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex items-center justify-center p-8">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="glass p-8 rounded-2xl max-w-md text-center"
+        >
+          <Camera className="w-16 h-16 mx-auto mb-4 text-slate-400" />
+          <h2 className="text-2xl font-display font-bold mb-2">No Active Session</h2>
+          <p className="text-slate-400 mb-6">
+            Start a focus session to enable camera monitoring.
+          </p>
+          <button
+            onClick={() => navigate('/dashboard')}
+            className="btn-primary flex items-center gap-2 mx-auto"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </button>
+        </motion.div>
+      </div>
+    )
   }
 
   return (
-    <div className="min-h-screen flex">
-      <Sidebar />
-      <div className="flex-1 overflow-y-auto">
-        <div className="p-8">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-8"
-          >
-            <h1 className="text-4xl font-display font-bold mb-2">
-              Focus <span className="gradient-text">Detection</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950">
+      {/* Animated Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <motion.div
+          className="absolute top-20 right-20 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
+          animate={{
+            scale: [1, 1.2, 1],
+            opacity: [0.2, 0.4, 0.2],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: 'easeInOut',
+          }}
+        />
+      </div>
+
+      <div className="relative z-10 p-6">
+        {/* Header */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className="btn-secondary flex items-center gap-2"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back
+            </button>
+            <h1 className="text-2xl font-display font-bold gradient-text">
+              Focus Monitoring
             </h1>
-            <p className="text-slate-400">
-              AI-powered focus tracking (100% local processing)
-            </p>
-          </motion.div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Camera Feed */}
-            <motion.div
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.1 }}
-              className="lg:col-span-2"
-            >
-              <Card className="relative overflow-hidden h-[500px]">
-                {isCameraOn ? (
-                  <>
-                    <video
-                      ref={videoRef}
-                      autoPlay
-                      playsInline
-                      muted
-                      className="w-full h-full object-cover rounded-xl"
-                    />
-                    {isMonitoring && (
-                      <div className="absolute top-4 left-4 flex items-center gap-2">
-                        <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
-                        <span className="text-white font-medium">Recording</span>
-                      </div>
-                    )}
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-3">
-                      <Button
-                        variant={isMonitoring ? 'danger' : 'success'}
-                        onClick={toggleMonitoring}
-                      >
-                        {isMonitoring ? (
-                          <>
-                            <Pause size={18} className="mr-2" />
-                            Stop Monitoring
-                          </>
-                        ) : (
-                          <>
-                            <Play size={18} className="mr-2" />
-                            Start Monitoring
-                          </>
-                        )}
-                      </Button>
-                      <Button variant="ghost" onClick={stopCamera}>
-                        <CameraOff size={18} className="mr-2" />
-                        Stop Camera
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <div className="flex flex-col items-center justify-center h-full">
-                    <CameraOff className="text-slate-600 mb-4" size={64} />
-                    <h3 className="text-xl font-bold text-slate-300 mb-2">
-                      Camera Off
-                    </h3>
-                    <p className="text-slate-500 mb-6 text-center max-w-md">
-                      Start your camera to begin focus detection. All processing happens locally on your device.
-                    </p>
-                    <Button onClick={startCamera}>
-                      <Camera size={18} className="mr-2" />
-                      Start Camera
-                    </Button>
-                  </div>
-                )}
-              </Card>
-            </motion.div>
-
-            {/* Stats Panel */}
-            <motion.div
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.2 }}
-              className="space-y-4"
-            >
-              {/* Focus Quality */}
-              <Card variant="gradient">
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Focus Quality</p>
-                    <p className="text-3xl font-bold text-white">{focusQuality}%</p>
-                  </div>
-                  <div className="p-3 bg-primary-500/20 rounded-xl">
-                    <TrendingUp className="text-primary-400" size={24} />
-                  </div>
-                </div>
-                <Progress
-                  value={focusQuality}
-                  variant={focusQuality > 80 ? 'success' : focusQuality > 60 ? 'warning' : 'danger'}
-                />
-                <Badge
-                  variant={focusQuality > 80 ? 'success' : focusQuality > 60 ? 'warning' : 'danger'}
-                  className="mt-3"
-                >
-                  {focusQuality > 80 ? 'Excellent' : focusQuality > 60 ? 'Good' : 'Needs Improvement'}
-                </Badge>
-              </Card>
-
-              {/* Blink Count */}
-              <Card>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Blinks Detected</p>
-                    <p className="text-3xl font-bold text-white">{blinkCount}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Normal: 15-20 per minute
-                    </p>
-                  </div>
-                  <div className="p-3 bg-purple-500/20 rounded-xl">
-                    <Eye className="text-purple-400" size={24} />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Session Time */}
-              <Card>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-sm text-slate-400 mb-1">Session Time</p>
-                    <p className="text-3xl font-bold text-white">{formatTime(sessionTime)}</p>
-                    <p className="text-xs text-slate-500 mt-1">
-                      {isMonitoring ? 'Active monitoring' : 'Not monitoring'}
-                    </p>
-                  </div>
-                  <div className="p-3 bg-emerald-500/20 rounded-xl">
-                    <Clock className="text-emerald-400" size={24} />
-                  </div>
-                </div>
-              </Card>
-
-              {/* Instructions */}
-              <Card variant="glass">
-                <h4 className="text-sm font-semibold text-white mb-2">
-                  💡 Tips for Best Results
-                </h4>
-                <ul className="space-y-2 text-xs text-slate-400">
-                  <li>• Ensure good lighting on your face</li>
-                  <li>• Position camera at eye level</li>
-                  <li>• Maintain 50-70cm distance</li>
-                  <li>• Look directly at the screen</li>
-                </ul>
-              </Card>
-            </motion.div>
           </div>
 
-          {/* Integration Notice */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="mt-6"
-          >
-            <Card variant="glass">
-              <div className="flex items-start gap-4">
-                <div className="p-3 bg-blue-500/20 rounded-xl">
-                  <Camera className="text-blue-400" size={24} />
-                </div>
-                <div>
-                  <h4 className="text-white font-semibold mb-1">
-                    Ready for Backend Integration
-                  </h4>
-                  <p className="text-sm text-slate-400">
-                    This UI is ready to connect with your OpenCV blink detector. Video feed can be sent to{' '}
-                    <code className="text-primary-400">http://localhost:5000/api/detect</code> for real-time analysis.
-                  </p>
-                </div>
-              </div>
-            </Card>
-          </motion.div>
+          <div className="flex items-center gap-3">
+            {/* Connection Status */}
+            <div className="glass px-4 py-2 rounded-lg flex items-center gap-2">
+              {connected ? (
+                <>
+                  <Wifi className="w-4 h-4 text-green-400" />
+                  <span className="text-sm text-green-300">Connected</span>
+                </>
+              ) : (
+                <>
+                  <WifiOff className="w-4 h-4 text-red-400" />
+                  <span className="text-sm text-red-300">Disconnected</span>
+                </>
+              )}
+            </div>
+
+            {/* Camera Toggle */}
+            <motion.button
+              onClick={toggleCamera}
+              className={`btn-primary flex items-center gap-2 ${
+                cameraEnabled ? 'bg-red-500 hover:bg-red-600' : ''
+              }`}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
+              {cameraEnabled ? (
+                <>
+                  <CameraOff className="w-4 h-4" />
+                  Stop Camera
+                </>
+              ) : (
+                <>
+                  <Camera className="w-4 h-4" />
+                  Start Camera
+                </>
+              )}
+            </motion.button>
+          </div>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-4 p-4 bg-red-500/10 border border-red-500/20 rounded-lg flex items-center gap-3"
+          >
+            <AlertCircle className="w-5 h-5 text-red-400" />
+            <p className="text-red-300">{error}</p>
+          </motion.div>
+        )}
+
+        {/* Camera Feed */}
+        {/* Always render video/canvas for refs, hide when not enabled */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted
+          className="hidden"
+        />
+        <canvas ref={canvasRef} className="hidden" />
+
+        <AnimatePresence>
+          {cameraEnabled && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="glass rounded-2xl overflow-hidden"
+            >
+              <div className="relative bg-slate-900" style={{ minHeight: '70vh' }}>
+                {/* Display annotated frame */}
+                {annotatedFrame ? (
+                  <div className="relative">
+                    <img
+                      src={annotatedFrame}
+                      alt="Annotated feed"
+                      className="w-full h-auto"
+                    />
+
+                    {/* Detection Overlay */}
+                    {detectionData && (
+                      <div className="absolute top-6 left-6 right-6 space-y-3">
+                        {/* Status Badges */}
+                        <div className="flex gap-3 flex-wrap">
+                          <div className={`glass px-4 py-2 rounded-xl text-sm font-medium ${
+                            detectionData.person_detected
+                              ? 'bg-green-500/20 text-green-300'
+                              : 'bg-red-500/20 text-red-300'
+                          }`}>
+                            👤 {detectionData.person_detected ? 'Present' : 'Absent'}
+                            {detectionData.person_count > 1 && ` (${detectionData.person_count})`}
+                          </div>
+
+                          {detectionData.phone_detected && (
+                            <div className="glass px-4 py-2 rounded-xl text-sm font-medium bg-orange-500/20 text-orange-300">
+                              📱 Phone detected ({detectionData.phone_usage_duration.toFixed(1)}s)
+                            </div>
+                          )}
+
+                          {detectionData.distraction_active && (
+                            <motion.div
+                              animate={{ scale: [1, 1.1, 1] }}
+                              transition={{ duration: 0.5, repeat: Infinity }}
+                              className="glass px-4 py-2 rounded-xl text-sm font-medium bg-red-500/30 text-red-200"
+                            >
+                              ⚠️ Distraction Alert!
+                            </motion.div>
+                          )}
+                        </div>
+
+                        {/* Stats Panel */}
+                        <div className="glass p-4 rounded-xl">
+                          <div className="grid grid-cols-4 gap-4 text-sm">
+                            <div>
+                              <p className="text-slate-400 mb-1">FPS</p>
+                              <p className="text-white font-bold text-xl">{detectionData.fps}</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 mb-1">Distractions</p>
+                              <p className="text-white font-bold text-xl">{detectionData.total_distractions}</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 mb-1">Persons</p>
+                              <p className="text-white font-bold text-xl">{detectionData.person_count}</p>
+                            </div>
+                            <div>
+                              <p className="text-slate-400 mb-1">Phones</p>
+                              <p className="text-white font-bold text-xl">{detectionData.phone_count}</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="text-center text-slate-400">
+                      <Camera className="w-16 h-16 mx-auto mb-4 animate-pulse" />
+                      <p className="text-lg">Initializing camera...</p>
+                      <p className="text-sm mt-2">Connecting to AI detection service</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Instructions */}
+        {!cameraEnabled && (
+          <div className="glass p-6 rounded-2xl max-w-3xl mx-auto">
+            <h3 className="text-xl font-display font-bold mb-4 flex items-center gap-2">
+              <Maximize2 className="w-5 h-5 text-primary-400" />
+              How Camera Monitoring Works
+            </h3>
+            <div className="grid md:grid-cols-2 gap-4 text-slate-300">
+              <div>
+                <h4 className="font-semibold text-white mb-2">✅ What We Detect:</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• Your presence at the desk</li>
+                  <li>• Phone usage with proximity detection</li>
+                  <li>• Duration of distractions</li>
+                  <li>• Real-time bounding boxes</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-semibold text-white mb-2">🔒 Privacy First:</h4>
+                <ul className="space-y-1 text-sm">
+                  <li>• Frames processed in real-time</li>
+                  <li>• No video recording or storage</li>
+                  <li>• All processing happens locally</li>
+                  <li>• You can stop anytime</li>
+                </ul>
+              </div>
+            </div>
+            <div className="mt-6 p-4 bg-primary-500/10 border border-primary-500/20 rounded-lg">
+              <p className="text-sm text-slate-300">
+                <strong className="text-primary-400">Tip:</strong> For best results, ensure good lighting and position your camera at eye level. The AI will draw green boxes around detected persons and red boxes around phones.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

@@ -40,7 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionStartMs, setSessionStartMs] = useState<number | null>(null)
   const [plantsEarned, setPlantsEarned] = useState(0)
   const lastPlantTimeRef = useRef<number>(0) // Track last time we planted
-  const { success: showNotification } = useNotificationContext()
+  const { success: showSuccess } = useNotificationContext()
   const { playNotification } = useSound()
 
   // Load active session on mount
@@ -107,10 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         regular: '🌱'
       }[result.rarity] || '🌱'
       
-      showNotification(
-        `${rarityEmoji} ${result.message}`,
-        'success'
-      )
+      showSuccess(`${rarityEmoji} ${result.message}`)
     } catch (error) {
       console.error('Failed to plant:', error)
     }

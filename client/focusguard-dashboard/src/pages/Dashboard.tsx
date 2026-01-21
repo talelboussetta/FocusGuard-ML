@@ -4,8 +4,10 @@ import { useNavigate } from 'react-router-dom'
 import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
+import DistractionMonitor from '../components/DistractionMonitor'
 import { useAuth } from '../contexts/AuthContext'
 import { useSessionContext } from '../contexts/SessionContext'
+import { useNotificationContext } from '../contexts/NotificationContext'
 import { userAPI, sessionAPI, getErrorMessage } from '../services/api'
 import type { UserStats, Session } from '../services/api'
 
@@ -236,7 +238,7 @@ const Dashboard = () => {
           {/* Main Grid */}
           <div className="grid lg:grid-cols-3 gap-6">
             {/* Timer Card */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-2 space-y-6">
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -330,6 +332,12 @@ const Dashboard = () => {
                   )}
                 </div>
               </motion.div>
+
+              {/* Distraction Monitor */}
+              <DistractionMonitor
+                sessionId={activeSession?.id || null}
+                isActive={!!activeSession && isTimerRunning}
+              />
             </div>
 
             {/* Stats Column */}
