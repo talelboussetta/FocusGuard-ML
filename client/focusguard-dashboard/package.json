@@ -10,28 +10,29 @@
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
   },
   "dependencies": {
+    "@mediapipe/tasks-vision": "^0.10.22-rc.20250304",
+    "@tensorflow-models/face-landmarks-detection": "^1.0.2",
+    "@tensorflow/tfjs": "^4.17.0",
+    "axios": "^1.6.7",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.3",
+    "lucide-react": "^0.344.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-router-dom": "^6.22.0",
-    "framer-motion": "^11.0.3",
     "recharts": "^2.12.0",
-    "axios": "^1.6.7",
-    "@tensorflow/tfjs": "^4.17.0",
-    "@tensorflow-models/face-landmarks-detection": "^1.0.2",
-    "zustand": "^4.5.0",
-    "lucide-react": "^0.344.0",
-    "clsx": "^2.1.0",
-    "tailwind-merge": "^2.2.1"
+    "tailwind-merge": "^2.2.1",
+    "zustand": "^4.5.0"
   },
   "devDependencies": {
     "@types/react": "^18.3.1",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.2.1",
-    "typescript": "^5.3.3",
-    "vite": "^5.1.0",
-    "tailwindcss": "^3.4.1",
-    "postcss": "^8.4.35",
     "autoprefixer": "^10.4.17",
-    "eslint": "^8.56.0"
+    "eslint": "^8.56.0",
+    "postcss": "^8.4.35",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3",
+    "vite": "^5.1.0"
   }
 }

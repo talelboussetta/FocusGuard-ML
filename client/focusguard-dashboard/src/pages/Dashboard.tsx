@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle } from 'lucide-react'
+import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
 import { useAuth } from '../contexts/AuthContext'
@@ -220,16 +220,27 @@ const Dashboard = () => {
                   Level {user?.lvl || 1} • {user?.xp_points || 0} XP • Your garden is waiting to grow.
                 </p>
               </div>
-              <motion.button
-                onClick={() => navigate('/garden')}
-                className="btn-primary flex items-center space-x-2 group"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                <Leaf className="w-5 h-5" />
-                <span>Go to Garden</span>
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-              </motion.button>
+              <div className="flex gap-3">
+                <motion.button
+                  onClick={() => navigate('/camera')}
+                  className="btn-secondary flex items-center space-x-2 group"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Camera className="w-5 h-5" />
+                  <span>Presence Detection</span>
+                </motion.button>
+                <motion.button
+                  onClick={() => navigate('/garden')}
+                  className="btn-primary flex items-center space-x-2 group"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Leaf className="w-5 h-5" />
+                  <span>Go to Garden</span>
+                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
+              </div>
             </div>
           </motion.div>
 
