@@ -1,7 +1,11 @@
 # FocusGuard ML - Server Requirements
 
-# Computer Vision
+# Computer Vision & Machine Learning
 opencv-python>=4.8.0
+ultralytics>=8.1.0              # YOLOv11 for object detection
+torch>=2.1.0                    # PyTorch for deep learning
+torchvision>=0.16.0             # Computer vision utilities
+pillow>=10.0.0                  # Image processing
 
 # Numerical Computing
 numpy>=1.24.0

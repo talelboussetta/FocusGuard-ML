@@ -113,5 +113,11 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
+    distraction_events = relationship(
+        "DistractionEvent",
+        back_populates="user",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, lvl={self.lvl})>"

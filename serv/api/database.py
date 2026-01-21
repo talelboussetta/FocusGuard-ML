@@ -86,10 +86,11 @@ async def init_db() -> None:
     This is mainly for development/testing.
     """
     async with engine.begin() as conn:
-        # Import all models here to ensure they're registered
-        # from .models import user, session, garden, user_stats
+        # Import all models to ensure they're registered with Base.metadata
+        # This guarantees create_all will include every table.
+        from . import models  # noqa: F401
         
-        # Create all tables
+        # Create all missing tables
         await conn.run_sync(Base.metadata.create_all)
 
 

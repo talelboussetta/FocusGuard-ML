@@ -16,7 +16,8 @@ from api.routes import (
     users_router,
     sessions_router,
     garden_router,
-    stats_router
+    stats_router,
+    distraction_router
 )
 from api.middleware.error_handler import register_exception_handlers
 from api.middleware.rate_limiter import limiter
@@ -120,6 +121,7 @@ app.include_router(users_router)
 app.include_router(sessions_router)
 app.include_router(garden_router)
 app.include_router(stats_router)
+app.include_router(distraction_router)
 
 
 @app.get(

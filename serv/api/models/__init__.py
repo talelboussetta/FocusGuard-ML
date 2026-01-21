@@ -8,10 +8,12 @@ from .user import User
 from .session import Session
 from .garden import Garden
 from .user_stats import UserStats
+from .distraction import DistractionEvent
 
 __all__ = [
     "User",
     "Session",
     "Garden",
     "UserStats",
+    "DistractionEvent",
 ]
