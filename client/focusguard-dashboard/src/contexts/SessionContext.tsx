@@ -40,7 +40,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [sessionStartMs, setSessionStartMs] = useState<number | null>(null)
   const [plantsEarned, setPlantsEarned] = useState(0)
   const lastPlantTimeRef = useRef<number>(0) // Track last time we planted
-  const { success: showNotification } = useNotificationContext()
+  const { success: showSuccess } = useNotificationContext()
   const { playNotification } = useSound()
 
   // Load active session on mount
@@ -66,6 +66,11 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const plannedSeconds = sessionDuration * 60
       const remaining = Math.max(0, plannedSeconds - elapsedSeconds)
       setTimeLeft(remaining)
+
+      // Pause timer when it reaches zero
+      if (remaining === 0) {
+        setIsTimerRunning(false)
+      }
 
       // Check if we should plant a new plant (every 5 minutes = 300 seconds)
       const elapsedMinutes = Math.floor(elapsedSeconds / 60)
@@ -102,10 +107,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         regular: '🌱'
       }[result.rarity] || '🌱'
       
-      showNotification(
-        `${rarityEmoji} ${result.message}`,
-        'success'
-      )
+      showSuccess(`${rarityEmoji} ${result.message}`)
     } catch (error) {
       console.error('Failed to plant:', error)
     }
@@ -143,7 +145,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       setSessionDuration(duration)
       setSessionStartMs(createdAt)
       setTimeLeft(remainingSeconds)
-      setIsTimerRunning(true)
+      // Only set timer running if there's time remaining
+      setIsTimerRunning(remainingSeconds > 0)
       
       console.log(`Restored active session ${session.id}: ${remainingSeconds}s remaining of ${plannedSeconds}s`)
     } catch (error) {

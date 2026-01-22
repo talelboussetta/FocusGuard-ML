@@ -61,6 +61,19 @@ from .stats import (
     LeaderboardResponse
 )
 
+from .distraction import (
+    EventType,
+    Severity,
+    DistractionEventCreate,
+    DistractionEventResponse,
+    DistractionEventList,
+    DistractionStats,
+    DetectionFrame,
+    MonitoringSessionStart,
+    MonitoringSessionStop,
+    AlertNotification
+)
+
 __all__ = [
     # Auth schemas
     "RegisterRequest",
@@ -114,6 +127,18 @@ __all__ = [
     "PlatformSummary",
     "LeaderboardEntry",
     "LeaderboardResponse",
+    
+    # Distraction schemas
+    "EventType",
+    "Severity",
+    "DistractionEventCreate",
+    "DistractionEventResponse",
+    "DistractionEventList",
+    "DistractionStats",
+    "DetectionFrame",
+    "MonitoringSessionStart",
+    "MonitoringSessionStop",
+    "AlertNotification",
 ]
 
 # Rebuild auth models to resolve forward references

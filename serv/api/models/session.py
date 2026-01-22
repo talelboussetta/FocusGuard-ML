@@ -83,5 +83,11 @@ class Session(Base):
         cascade="all, delete-orphan"
     )
     
+    distraction_events = relationship(
+        "DistractionEvent",
+        back_populates="session",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self):
         return f"<Session(id={self.id}, user_id={self.user_id}, completed={self.completed})>"
