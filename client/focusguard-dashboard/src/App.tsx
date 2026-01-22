@@ -12,6 +12,7 @@ import AITutorPage from './pages/AITutorPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import TeamPage from './pages/TeamPage'
+import ProfilePage from './pages/ProfilePage'
 import ErrorPage from './pages/ErrorPage'
 import TimerOverlay from './components/TimerOverlay'
 
@@ -95,6 +96,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <TeamPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/profile"
+          element={
+            <ProtectedRoute>
+              <ProfilePage />
             </ProtectedRoute>
           }
         />

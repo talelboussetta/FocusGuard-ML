@@ -123,7 +123,7 @@ const Sidebar = () => {
       {/* User Profile */}
       <div className="p-4 border-t border-slate-800/50 overflow-hidden">
         <div className="group">
-          <div className="flex items-center space-x-3 px-4 py-3 rounded-xl glass-hover cursor-pointer">
+          <div onClick={() => navigate('/profile')} className="flex items-center space-x-3 px-4 py-3 rounded-xl glass-hover cursor-pointer">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
               {user?.username?.substring(0, 2).toUpperCase() || 'FW'}
             </div>
@@ -139,7 +139,7 @@ const Sidebar = () => {
                   <p className="text-xs text-slate-400 whitespace-nowrap">Level {user?.lvl || 1} • {user?.xp_points || 0} XP</p>
                 </motion.div>
                 <button
-                  onClick={handleLogout}
+                  onClick={(e) => { e.stopPropagation(); handleLogout(); }}
                   className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
                   title="Logout"
                 >
