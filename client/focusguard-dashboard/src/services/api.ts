@@ -71,6 +71,14 @@ export interface LeaderboardEntry {
   lvl?: number;
 }
 
+export interface TeamLeaderboardEntry {
+  rank: number;
+  team_id: string;
+  team_name: string;
+  value: number; // team metric (xp / focus_time / sessions)
+  members?: number;
+}
+
 export interface DailyStats {
   date: string;
   focus_min: number;
@@ -449,19 +457,30 @@ export const statsAPI = {
     }>(response);
   },
 
-  async getLeaderboard(metric: 'xp' | 'sessions' | 'focus_time' | 'streak' = 'xp', limit: number = 10) {
-    const response = await fetch(
-      `${API_BASE_URL}/stats/leaderboard?metric=${metric}&limit=${limit}`,
-      {
-        headers: getAuthHeader(),
-      }
-    );
+  async getLeaderboard(metric: 'xp' | 'sessions' | 'focus_time' | 'streak' = 'xp', limit: number = 10, teamId?: string) {
+    const params = new URLSearchParams({ metric, limit: String(limit) })
+    if (teamId) params.set('team_id', teamId)
+    const response = await fetch(`${API_BASE_URL}/stats/leaderboard?${params.toString()}`, {
+      headers: getAuthHeader(),
+    });
     return handleResponse<{
       leaderboard: LeaderboardEntry[];
       current_user_rank?: number;
       total_users: number;
       metric: string;
     }>(response);
+  },
+
+  async getTeamLeaderboard(metric: 'xp' | 'sessions' | 'focus_time' | 'streak' = 'xp', limit: number = 10) {
+    const response = await fetch(`${API_BASE_URL}/stats/leaderboard/teams?metric=${metric}&limit=${limit}`, {
+      headers: getAuthHeader(),
+    })
+
+    return handleResponse<{
+      leaderboard: TeamLeaderboardEntry[];
+      total_teams?: number;
+      metric: string;
+    }>(response)
   },
 
   async getUserRank(metric: 'xp' | 'focus_time' | 'streak' = 'xp') {

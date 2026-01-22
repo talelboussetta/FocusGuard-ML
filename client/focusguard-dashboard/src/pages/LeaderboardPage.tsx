@@ -10,21 +10,39 @@ const LeaderboardPage = () => {
   const { user } = useAuth()
   const [metric, setMetric] = useState<'xp' | 'sessions' | 'focus_time' | 'streak'>('xp')
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
+  const [viewMode, setViewMode] = useState<'users' | 'teams'>('users')
+  const [teamLeaderboard, setTeamLeaderboard] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [teamFilter, setTeamFilter] = useState<string>('')
+  const [showTeamInput, setShowTeamInput] = useState(false)
 
   useEffect(() => {
-    loadLeaderboard()
-  }, [metric])
+    if (viewMode === 'users') loadLeaderboard()
+    else loadTeamLeaderboard()
+  }, [metric, teamFilter, viewMode])
 
   const loadLeaderboard = async () => {
     try {
       setLoading(true)
       setError(null)
-      const data = await statsAPI.getLeaderboard(metric, 20)
+      const data = await statsAPI.getLeaderboard(metric, 20, teamFilter || undefined)
       setLeaderboard(data.leaderboard)
     } catch (err: any) {
       setError(getErrorMessage(err, 'Failed to load leaderboard'))
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const loadTeamLeaderboard = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const data = await statsAPI.getTeamLeaderboard(metric, 20)
+      setTeamLeaderboard(data.leaderboard)
+    } catch (err: any) {
+      setError(getErrorMessage(err, 'Failed to load team leaderboard'))
     } finally {
       setLoading(false)
     }
@@ -76,7 +94,7 @@ const LeaderboardPage = () => {
         </div>
 
         {/* Content */}
-        <div className="relative z-10 p-8 max-w-4xl mx-auto">
+        <div className="relative z-10 p-10 max-w-6xl mx-auto">
           {/* Header */}
           <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -84,39 +102,52 @@ const LeaderboardPage = () => {
             className="mb-8"
           >
             <div className="flex items-center gap-3 mb-2">
-              <Trophy className="w-10 h-10 text-yellow-400" />
-              <h1 className="text-4xl font-display font-bold gradient-text">Leaderboard</h1>
+              <Trophy className="w-12 h-12 text-yellow-400" />
+              <h1 className="text-5xl font-display font-bold gradient-text">Leaderboard</h1>
             </div>
             <p className="text-slate-400">
               See how you rank against other Focus Warriors
             </p>
           </motion.div>
 
-          {/* Metric Selector */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6 flex gap-3"
-          >
-            {[
-              { value: 'xp', label: 'Total XP' },
-              { value: 'sessions', label: 'Sessions' },
-              { value: 'focus_time', label: 'Focus Time' },
-              { value: 'streak', label: 'Streak' },
-            ].map((option) => (
-              <button
-                key={option.value}
-                onClick={() => setMetric(option.value as any)}
-                className={`px-6 py-3 rounded-xl font-medium transition-all ${
-                  metric === option.value
-                    ? 'bg-primary-500 text-white shadow-lg shadow-primary-500/30'
-                    : 'glass text-slate-300 hover:bg-white/10'
-                }`}
-              >
-                {option.label}
-              </button>
-            ))}
+          {/* Controls: metrics, view toggle and team filter (tidy) */}
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="mb-6 flex flex-col md:flex-row md:items-center gap-4 justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2 bg-slate-800/30 p-1 rounded-xl">
+                {[
+                  { value: 'xp', label: 'XP' },
+                  { value: 'sessions', label: 'Sessions' },
+                  { value: 'focus_time', label: 'Focus' },
+                  { value: 'streak', label: 'Streak' },
+                ].map(o => (
+                  <button key={o.value} onClick={() => setMetric(o.value as any)} className={`px-4 py-3 text-base rounded-lg font-medium transition ${metric === o.value ? 'bg-primary-500 text-white shadow' : 'text-slate-300 hover:bg-white/5'}`}>
+                    {o.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button onClick={() => setViewMode('users')} className={`px-4 py-3 rounded-lg text-base font-medium ${viewMode === 'users' ? 'bg-primary-500 text-white' : 'glass text-slate-300'}`}>Users</button>
+                <button onClick={() => setViewMode('teams')} className={`px-4 py-3 rounded-lg text-base font-medium ${viewMode === 'teams' ? 'bg-primary-500 text-white' : 'glass text-slate-300'}`}>Teams</button>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {viewMode === 'teams' && (
+                <>
+                  {showTeamInput ? (
+                    <div className="flex items-center gap-2">
+                      <input value={teamFilter} onChange={e => setTeamFilter(e.target.value)} placeholder="Team ID or name" className="px-3 py-2 rounded-md bg-slate-900 border border-slate-800/40 text-sm" />
+                      <button onClick={() => { setTeamFilter(''); setShowTeamInput(false); }} className="btn-secondary text-sm">Clear</button>
+                    </div>
+                  ) : (
+                    <button onClick={() => setShowTeamInput(true)} className="btn-secondary text-sm">Filter Team</button>
+                  )}
+                </>
+              )}
+
+              {teamFilter && <div className="text-sm text-slate-400">Showing: <span className="text-slate-200 font-medium ml-2">{teamFilter}</span></div>}
+            </div>
           </motion.div>
 
           {/* Error Display */}
@@ -146,58 +177,78 @@ const LeaderboardPage = () => {
               transition={{ delay: 0.2 }}
               className="space-y-3"
             >
-              {leaderboard.length === 0 ? (
-                <div className="text-center py-12 text-slate-400">
-                  No data available yet. Be the first to climb the ranks!
-                </div>
-              ) : (
-                leaderboard.map((entry, index) => {
-                  const isCurrentUser = entry.user_id === user?.user_id
-                  
-                  return (
-                    <motion.div
-                      key={entry.user_id}
-                      initial={{ opacity: 0, x: -20 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: index * 0.05 }}
-                      className={`glass rounded-xl p-5 flex items-center gap-4 ${
-                        isCurrentUser ? 'ring-2 ring-primary-500 bg-primary-500/5' : ''
-                      }`}
-                    >
-                      {/* Rank */}
-                      <div className="flex-shrink-0 w-12 flex items-center justify-center">
-                        {getRankIcon(entry.rank)}
-                      </div>
+              {viewMode === 'users' ? (
+                leaderboard.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">
+                    No data available yet. Be the first to climb the ranks!
+                  </div>
+                ) : (
+                  leaderboard.map((entry, index) => {
+                    const isCurrentUser = entry.user_id === user?.user_id
+                    
+                    return (
+                      <motion.div
+                        key={entry.user_id}
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.05 }}
+                        className={`glass rounded-xl p-7 flex items-center gap-6 ${
+                          isCurrentUser ? 'ring-2 ring-primary-500 bg-primary-500/5' : ''
+                        }`}
+                      >
+                        {/* Rank */}
+                          <div className="flex-shrink-0 w-16 flex items-center justify-center">
+                            {getRankIcon(entry.rank)}
+                          </div>
 
-                      {/* User Info */}
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-semibold text-lg">
-                            {entry.username}
-                            {isCurrentUser && (
-                              <span className="ml-2 text-xs text-primary-400 font-normal">
-                                (You)
+                        {/* User Info */}
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2">
+                            <p className="font-semibold text-xl">
+                              {entry.username}
+                              {isCurrentUser && (
+                                <span className="ml-2 text-xs text-primary-400 font-normal">
+                                  (You)
+                                </span>
+                              )}
+                            </p>
+                            {entry.lvl && (
+                              <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">
+                                Level {entry.lvl}
                               </span>
                             )}
-                          </p>
-                          {entry.lvl && (
-                            <span className="text-xs bg-slate-800 px-2 py-0.5 rounded-full text-slate-400">
-                              Level {entry.lvl}
-                            </span>
-                          )}
+                          </div>
                         </div>
-                      </div>
 
-                      {/* Score */}
-                      <div className="text-right">
-                        <div className="text-2xl font-bold gradient-text">
-                          {formatValue(entry.value, metric)}
+                        {/* Score */}
+                        <div className="text-right">
+                          <div className="text-4xl font-bold gradient-text">
+                            {formatValue(entry.value, metric)}
+                          </div>
+                          <div className="text-xs text-slate-400">{getMetricLabel()}</div>
                         </div>
-                        <div className="text-xs text-slate-400">{getMetricLabel()}</div>
-                      </div>
-                    </motion.div>
-                  )
-                })
+                      </motion.div>
+                    )
+                  })
+                )
+              ) : (
+                teamLeaderboard.length === 0 ? (
+                  <div className="text-center py-12 text-slate-400">No team data available yet.</div>
+                ) : (
+                  teamLeaderboard.map((t, idx) => (
+                      <motion.div key={t.team_id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.05 }} className="glass rounded-xl p-7 flex items-center gap-6">
+                        <div className="flex-shrink-0 w-16 flex items-center justify-center">{getRankIcon(t.rank)}</div>
+                        <div className="flex-1">
+                          <p className="font-semibold text-xl">{t.team_name}</p>
+                          <div className="text-sm text-slate-400">{t.members ? `${t.members} members` : 'Members: —'}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-4xl font-bold gradient-text">{formatValue(t.value, metric)}</div>
+                          <div className="text-xs text-slate-400">{getMetricLabel()}</div>
+                        </div>
+                      </motion.div>
+                    ))
+                )
               )}
             </motion.div>
           )}
