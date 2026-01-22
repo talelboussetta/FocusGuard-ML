@@ -1,12 +1,30 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Users, PlusCircle, UserPlus } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useState } from 'react'
 
 const TeamPage = () => {
 	const navigate = useNavigate()
 	const { user } = useAuth()
+	const [showCreateModal, setShowCreateModal] = useState(false)
+	const [showJoinModal, setShowJoinModal] = useState(false)
+	const [teamName, setTeamName] = useState('')
+	const [teamIdInput, setTeamIdInput] = useState('')
+
+	const submitCreate = () => {
+		// placeholder: will call backend to create team and return uuid
+		// for now just close modal and reset
+		setShowCreateModal(false)
+		setTeamName('')
+	}
+
+	const submitJoin = () => {
+		// placeholder: will call backend to join by ID
+		setShowJoinModal(false)
+		setTeamIdInput('')
+	}
 
 	return (
 		<div className="min-h-screen flex">
@@ -29,18 +47,11 @@ const TeamPage = () => {
 					<motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="mb-6">
 						<div className="flex justify-between items-start">
 							<div>
-								<h1 className="text-4xl font-display font-bold mb-2">
-									Guilds & Teams
-								</h1>
-								<p className="text-slate-400 max-w-2xl">
-									Bring your friends and study together in guilds — compete, share progress, and motivate each other to stay focused. Join an existing team or create a new one to get started.
-								</p>
+								<h1 className="text-4xl font-display font-bold mb-2">Guilds & Teams</h1>
+								<p className="text-slate-400 max-w-2xl">Bring your friends and study together in guilds — compete, share progress, and motivate each other to stay focused. Join an existing team or create a new one to get started.</p>
 							</div>
 							<div className="flex gap-3">
-								<button
-									onClick={() => navigate('/dashboard')}
-									className="btn-secondary flex items-center space-x-2"
-								>
+								<button onClick={() => navigate('/dashboard')} className="btn-secondary flex items-center space-x-2">
 									<Users className="w-5 h-5" />
 									<span>Back</span>
 								</button>
@@ -54,22 +65,12 @@ const TeamPage = () => {
 								<h2 className="text-2xl font-display font-semibold mb-2">Study together, level up together</h2>
 								<p className="text-slate-400 mb-4">Form guilds to create friendly competition and collaborate during study sessions. Teams can earn collective XP and climb the leaderboard.</p>
 								<div className="flex gap-3">
-									<motion.button
-										onClick={() => {/* placeholder for join team action */}}
-										className="btn-primary flex items-center space-x-2"
-										whileHover={{ scale: 1.03 }}
-										whileTap={{ scale: 0.97 }}
-									>
+									<motion.button onClick={() => setShowJoinModal(true)} className="btn-primary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
 										<UserPlus className="w-5 h-5" />
 										<span>Join a Team</span>
 									</motion.button>
 
-									<motion.button
-										onClick={() => {/* placeholder for create team action */}}
-										className="btn-secondary flex items-center space-x-2"
-										whileHover={{ scale: 1.03 }}
-										whileTap={{ scale: 0.97 }}
-									>
+									<motion.button onClick={() => setShowCreateModal(true)} className="btn-secondary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
 										<PlusCircle className="w-5 h-5" />
 										<span>Create a Team</span>
 									</motion.button>
@@ -88,6 +89,40 @@ const TeamPage = () => {
 							</div>
 						</div>
 					</motion.div>
+
+					{/* Modals */}
+					<AnimatePresence>
+						{showCreateModal && (
+							<motion.div className="fixed inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+								<div className="absolute inset-0 bg-black/50" onClick={() => setShowCreateModal(false)} />
+								<motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative glass rounded-2xl p-6 w-full max-w-md">
+									<h3 className="text-lg font-semibold mb-2">Create a Team</h3>
+									<p className="text-sm text-slate-400 mb-4">Choose a name for your team. After creation we'll provide the team's UUID.</p>
+									<input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="Team name" className="w-full p-3 rounded-md bg-slate-900 border border-slate-800/40 mb-4" />
+									<div className="flex justify-end gap-3">
+										<button onClick={() => setShowCreateModal(false)} className="btn-secondary">Cancel</button>
+										<button onClick={submitCreate} className="btn-primary">Create</button>
+									</div>
+								</motion.div>
+							</motion.div>
+						)}
+
+						{showJoinModal && (
+							<motion.div className="fixed inset-0 z-50 flex items-center justify-center" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+								<div className="absolute inset-0 bg-black/50" onClick={() => setShowJoinModal(false)} />
+								<motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="relative glass rounded-2xl p-6 w-full max-w-md">
+									<h3 className="text-lg font-semibold mb-2">Join a Team</h3>
+									<p className="text-sm text-slate-400 mb-4">Enter the Team ID (UUID) you received from the team owner.</p>
+									<input value={teamIdInput} onChange={e => setTeamIdInput(e.target.value)} placeholder="Team ID (UUID)" className="w-full p-3 rounded-md bg-slate-900 border border-slate-800/40 mb-4" />
+									<div className="flex justify-end gap-3">
+										<button onClick={() => setShowJoinModal(false)} className="btn-secondary">Cancel</button>
+										<button onClick={submitJoin} className="btn-primary">Join</button>
+									</div>
+								</motion.div>
+							</motion.div>
+						)}
+					</AnimatePresence>
+
 				</div>
 			</div>
 		</div>
