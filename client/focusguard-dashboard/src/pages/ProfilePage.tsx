@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
 import { userAPI } from '../services/api'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 
 const quotes = [
   "Focus is the bridge between goals and accomplishment.",
@@ -31,6 +32,9 @@ const ProfilePage = () => {
   const [rotation, setRotation] = useState(0)
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
   const wheelRef = useRef<HTMLDivElement | null>(null)
+  const navigate = useNavigate()
+  const [readyVisible, setReadyVisible] = useState(false)
+  // START popup is shown on the Dashboard after navigation
 
   useEffect(() => {
     let mounted = true
@@ -61,22 +65,36 @@ const ProfilePage = () => {
   const colors = ['#06B6D4', '#F97316', '#A78BFA', '#F43F5E', '#10B981']
 
   const startChallenge = () => {
-    if (!challenge) return
-    setAttempting(true)
-    setProgress(0)
-    const total = 4000 // 4s simulation
-    const start = Date.now()
-    const t = setInterval(() => {
-      const elapsed = Date.now() - start
-      const pct = Math.min(100, Math.round((elapsed / total) * 100))
-      setProgress(pct)
-      if (pct >= 100) {
+    if (!challenge || attempting) return
+
+    // Show "Get readyy!!" message with pop animation (longer for emphasis)
+    setReadyVisible(true)
+    setTimeout(() => setReadyVisible(false), 1400)
+
+    // start progress after a short lead
+    setTimeout(() => {
+      setAttempting(true)
+      setProgress(0)
+      const total = 3400 // progress duration
+      const start = Date.now()
+      const t = setInterval(() => {
+        const elapsed = Date.now() - start
+        const pct = Math.min(100, Math.round((elapsed / total) * 100))
+        setProgress(pct)
+        if (pct >= 100) {
         clearInterval(t)
         setAttempting(false)
         setShowConfetti(true)
-        setTimeout(() => setShowConfetti(false), 2400)
-      }
-    }, 80)
+        // keep confetti visible longer for better feedback
+        setTimeout(() => setShowConfetti(false), 2600)
+
+        // navigate to dashboard after a short breather so user sees success
+        setTimeout(() => {
+          navigate('/dashboard', { state: { showChallengeStart: true, challenge } })
+        }, 1000)
+        }
+      }, 60)
+    }, 600)
   }
 
   const spinWheel = () => {
@@ -237,6 +255,20 @@ const ProfilePage = () => {
                 </div>
               </div>
             </div>
+
+              {/* Ready message */}
+              {readyVisible && (
+                <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.25 }} className="fixed inset-0 left-[5rem] z-40 flex items-center justify-center pointer-events-auto">
+                  <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm" />
+                  <motion.div initial={{ scale: 0.92, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.45 }} className="relative glass px-8 py-6 rounded-3xl text-center max-w-xl mx-4">
+                    <div className="text-2xl font-semibold">Get readyy!!</div>
+                    <div className="text-sm text-slate-400 mt-1">Preparing your challenge...</div>
+                  </motion.div>
+                </motion.div>
+              )}
+
+              {/* START popup */}
+              {/* START popup is now shown by Dashboard after navigation */}
 
             <div className="mt-6 flex items-center gap-4">
               <div>

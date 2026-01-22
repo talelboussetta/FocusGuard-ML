@@ -1,5 +1,6 @@
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
 import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
@@ -32,6 +33,9 @@ const Dashboard = () => {
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const location = useLocation()
+  const [showStartPopup, setShowStartPopup] = useState(false)
+  const [popupChallenge, setPopupChallenge] = useState<string | null>(null)
 
   // Calculate real-time stats including current session progress
   const liveStats = {
@@ -51,6 +55,19 @@ const Dashboard = () => {
   // Load dashboard data on mount
   useEffect(() => {
     loadDashboardData()
+    // If navigated here with a challenge start request, show the START popup briefly
+    if ((location as any)?.state?.showChallengeStart) {
+      const st = (location as any).state
+      setPopupChallenge(st.challenge || null)
+      // Clear history state so refresh doesn't re-trigger popup
+      try { window.history.replaceState({}, '') } catch (e) {}
+      // show after a small delay so the page is visibly loaded
+      setTimeout(() => {
+        setShowStartPopup(true)
+        // show START popup longer and with smoother exit
+        setTimeout(() => setShowStartPopup(false), 3200)
+      }, 200)
+    }
   }, [])
 
   const loadDashboardData = async () => {
@@ -191,6 +208,20 @@ const Dashboard = () => {
             }}
           />
         </div>
+
+        {/* START popup overlay when coming from ProfilePage */}
+        <AnimatePresence>
+          {showStartPopup && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 left-[5rem] z-40 flex items-center justify-center pointer-events-auto">
+              <div className="absolute inset-0 bg-slate-900/90 backdrop-blur-sm" />
+              <motion.div initial={{ scale: 0.94, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.98, opacity: 0 }} transition={{ duration: 0.45 }} className="relative bg-gradient-to-br from-primary-600 to-primary-500 text-white px-8 py-6 rounded-3xl shadow-2xl pointer-events-auto max-w-3xl mx-4">
+                <div className="text-lg font-bold mb-2">START your challenge</div>
+                <div className="text-2xl font-display">{popupChallenge}</div>
+                <div className="mt-2 text-sm opacity-90">Good luck — heading to your dashboard!</div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Content */}
         <div className="relative z-10 p-8 max-w-7xl mx-auto">
