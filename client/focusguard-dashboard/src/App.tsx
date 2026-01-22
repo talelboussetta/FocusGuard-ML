@@ -11,6 +11,7 @@ import CameraPage from './pages/CameraPage'
 import AITutorPage from './pages/AITutorPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LeaderboardPage from './pages/LeaderboardPage'
+import TeamPage from './pages/TeamPage'
 import ErrorPage from './pages/ErrorPage'
 import TimerOverlay from './components/TimerOverlay'
 
@@ -86,6 +87,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <AnalyticsPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams"
+          element={
+            <ProtectedRoute>
+              <TeamPage />
             </ProtectedRoute>
           }
         />

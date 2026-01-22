@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Leaf, Home, Camera, Brain, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight } from 'lucide-react'
+import { Leaf, Home, Camera, Brain, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight, Users } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -16,6 +16,7 @@ const Sidebar = () => {
     { icon: <Camera className="w-5 h-5" />, label: 'Camera', path: '/camera' },
     { icon: <MessageSquare className="w-5 h-5" />, label: 'AI Tutor', path: '/ai-tutor' },
     { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', path: '/analytics' },
+    { icon: <Users className="w-5 h-5" />, label: 'Teams', path: '/teams' },
     { icon: <Trophy className="w-5 h-5" />, label: 'Leaderboard', path: '/leaderboard' },
   ]
 
