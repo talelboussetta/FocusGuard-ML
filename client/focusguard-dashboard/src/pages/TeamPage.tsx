@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect } from 'react'
+import { teamAPI, getErrorMessage } from '../services/api'
 
 // Animation variants
 const overlayVariants = {
@@ -37,6 +38,8 @@ const TeamPage = () => {
 	const joinInputRef = useRef<HTMLInputElement | null>(null)
 	const [createFocused, setCreateFocused] = useState(false)
 	const [joinFocused, setJoinFocused] = useState(false)
+	const [error, setError] = useState<string | null>(null)
+	const [loading, setLoading] = useState(false)
 
 	useEffect(() => {
 		if (showCreateModal) {
@@ -50,21 +53,20 @@ const TeamPage = () => {
 		}
 	}, [showJoinModal])
 
-	const generateUUID = () => {
-		// lightweight client-side uuid v4-like generator for UI placeholder
-		return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-			const r = (Math.random() * 16) | 0
-			const v = c === 'x' ? r : (r & 0x3) | 0x8
-			return v.toString(16)
-		})
-	}
-
-	const submitCreate = () => {
+	const submitCreate = async () => {
 		if (!teamName.trim()) return
-		// simulate backend-created id
-		const id = generateUUID()
-		setCreatedTeamId(id)
-		setCreateSuccess(true)
+		setLoading(true)
+		setError(null)
+		
+		try {
+			const team = await teamAPI.createTeam(teamName.trim())
+			setCreatedTeamId(team.team_id)
+			setCreateSuccess(true)
+		} catch (err: any) {
+			setError(getErrorMessage(err, 'Failed to create team'))
+		} finally {
+			setLoading(false)
+		}
 	}
 
 	const copyCreatedId = async () => {
@@ -76,15 +78,23 @@ const TeamPage = () => {
 		}
 	}
 
-	const submitJoin = () => {
+	const submitJoin = async () => {
 		if (!teamIdInput.trim()) return
-		// simulate join success
-		setJoinSuccess(true)
-		setTimeout(() => {
-			setJoinSuccess(false)
-			setShowJoinModal(false)
-			setTeamIdInput('')
-		}, 1200)
+		setLoading(true)
+		setError(null)
+		
+		try {
+			await teamAPI.joinTeam(teamIdInput.trim())
+			setJoinSuccess(true)
+			setTimeout(() => {
+				setJoinSuccess(false)
+				setShowJoinModal(false)
+				setTeamIdInput('')
+			}, 1200)
+		} catch (err: any) {
+			setError(getErrorMessage(err, 'Failed to join team'))
+			setLoading(false)
+		}
 	}
 
 	return (
@@ -155,13 +165,19 @@ const TeamPage = () => {
 					<AnimatePresence>
 						{showCreateModal && (
 							<motion.div className="fixed inset-0 z-50 flex items-center justify-center" variants={overlayVariants} initial="hidden" animate="visible" exit="exit">
-								<motion.div className="absolute inset-0 bg-black/50" variants={overlayVariants} onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); }} />
+								<motion.div className="absolute inset-0 bg-black/50" variants={overlayVariants} onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); setError(null); }} />
 								<motion.div variants={cardVariants} initial="hidden" animate="visible" exit="exit" className="relative glass rounded-2xl p-6 w-full max-w-md">
-									<button aria-label="Close" onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-200">
+									<button aria-label="Close" onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); setError(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-200">
 										<X className="w-5 h-5" />
 									</button>
 									<h3 className="text-lg font-semibold mb-2">Create a Team</h3>
 									<p className="text-sm text-slate-400 mb-4">Choose a name for your team. After creation we'll provide the team's UUID.</p>
+
+									{error && (
+										<div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
+											{error}
+										</div>
+									)}
 
 									{!createSuccess ? (
 										<>
@@ -169,8 +185,8 @@ const TeamPage = () => {
 												<input ref={createInputRef} value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="Team name" onFocus={() => setCreateFocused(true)} onBlur={() => setCreateFocused(false)} className="w-full p-3 rounded-md bg-slate-900 border border-slate-800/40" />
 											</motion.div>
 											<div className="flex justify-end gap-3">
-												<motion.button whileHover={{ scale: 1.02 }} onClick={() => { setShowCreateModal(false); setTeamName(''); }} className="btn-secondary">Cancel</motion.button>
-												<motion.button whileTap={{ scale: 0.98 }} onClick={submitCreate} disabled={!teamName.trim()} className={`btn-primary ${!teamName.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>Create</motion.button>
+												<motion.button whileHover={{ scale: 1.02 }} onClick={() => { setShowCreateModal(false); setTeamName(''); setError(null); }} className="btn-secondary">Cancel</motion.button>
+												<motion.button whileTap={{ scale: 0.98 }} onClick={submitCreate} disabled={!teamName.trim() || loading} className={`btn-primary ${(!teamName.trim() || loading) ? 'opacity-60 cursor-not-allowed' : ''}`}>{loading ? 'Creating...' : 'Create'}</motion.button>
 											</div>
 										</>
 									) : (
@@ -182,7 +198,7 @@ const TeamPage = () => {
 												<p className="text-sm text-slate-400">Team created (UUID placeholder). Copy and share with members.</p>
 												<div className="flex items-center gap-2">
 													<motion.button whileHover={{ scale: 1.03 }} onClick={copyCreatedId} className="btn-secondary flex items-center gap-2"><Copy className="w-4 h-4" /> Copy</motion.button>
-													<motion.button whileHover={{ scale: 1.03 }} onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); setTeamName(''); }} className="btn-primary">Done</motion.button>
+													<motion.button whileHover={{ scale: 1.03 }} onClick={() => { setShowCreateModal(false); setCreatedTeamId(null); setCreateSuccess(false); setTeamName(''); setError(null); }} className="btn-primary">Done</motion.button>
 												</div>
 											</div>
 										</motion.div>
@@ -193,21 +209,28 @@ const TeamPage = () => {
 
 						{showJoinModal && (
 							<motion.div className="fixed inset-0 z-50 flex items-center justify-center" variants={overlayVariants} initial="hidden" animate="visible" exit="exit">
-								<motion.div className="absolute inset-0 bg-black/50" variants={overlayVariants} onClick={() => { setShowJoinModal(false); setJoinSuccess(false); setTeamIdInput(''); }} />
+								<motion.div className="absolute inset-0 bg-black/50" variants={overlayVariants} onClick={() => { setShowJoinModal(false); setJoinSuccess(false); setTeamIdInput(''); setError(null); }} />
 								<motion.div variants={cardVariants} initial="hidden" animate="visible" exit="exit" className="relative glass rounded-2xl p-6 w-full max-w-md">
-									<button aria-label="Close" onClick={() => { setShowJoinModal(false); setJoinSuccess(false); setTeamIdInput(''); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-200">
+									<button aria-label="Close" onClick={() => { setShowJoinModal(false); setJoinSuccess(false); setTeamIdInput(''); setError(null); }} className="absolute top-3 right-3 text-slate-400 hover:text-slate-200">
 										<X className="w-5 h-5" />
 									</button>
 									<h3 className="text-lg font-semibold mb-2">Join a Team</h3>
 									<p className="text-sm text-slate-400 mb-4">Enter the Team ID (UUID) you received from the team owner.</p>
+									
+									{error && (
+										<div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded-lg text-red-300 text-sm">
+											{error}
+										</div>
+									)}
+									
 									<motion.div animate={joinFocused ? { boxShadow: '0 8px 24px rgba(99,102,241,0.06)' } : { boxShadow: 'none' }} transition={{ duration: 0.18 }} className="mb-4 rounded-md">
 										<input ref={joinInputRef} value={teamIdInput} onChange={e => setTeamIdInput(e.target.value)} placeholder="Team ID (UUID)" onFocus={() => setJoinFocused(true)} onBlur={() => setJoinFocused(false)} className="w-full p-3 rounded-md bg-slate-900 border border-slate-800/40" />
 									</motion.div>
 
 									<div className="flex justify-between items-center">
 										<div className="flex gap-3">
-											<motion.button whileHover={{ scale: 1.02 }} onClick={() => { setShowJoinModal(false); setTeamIdInput(''); }} className="btn-secondary">Cancel</motion.button>
-											<motion.button whileTap={{ scale: 0.98 }} onClick={submitJoin} disabled={!teamIdInput.trim()} className={`btn-primary ${!teamIdInput.trim() ? 'opacity-60 cursor-not-allowed' : ''}`}>Join</motion.button>
+											<motion.button whileHover={{ scale: 1.02 }} onClick={() => { setShowJoinModal(false); setTeamIdInput(''); setError(null); }} className="btn-secondary">Cancel</motion.button>
+											<motion.button whileTap={{ scale: 0.98 }} onClick={submitJoin} disabled={!teamIdInput.trim() || loading} className={`btn-primary ${(!teamIdInput.trim() || loading) ? 'opacity-60 cursor-not-allowed' : ''}`}>{loading ? 'Joining...' : 'Join'}</motion.button>
 										</div>
 										{joinSuccess && (
 											<motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: [1.02, 0.98, 1], opacity: 1 }} transition={{ duration: 0.6 }} className="text-sm text-nature-400">Joined ✔</motion.div>

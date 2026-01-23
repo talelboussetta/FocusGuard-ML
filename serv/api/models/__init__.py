@@ -9,6 +9,7 @@ from .session import Session
 from .garden import Garden
 from .user_stats import UserStats
 from .distraction import DistractionEvent
+from .team import Team, TeamMember
 
 __all__ = [
     "User",
@@ -16,4 +17,6 @@ __all__ = [
     "Garden",
     "UserStats",
     "DistractionEvent",
+    "Team",
+    "TeamMember",
 ]

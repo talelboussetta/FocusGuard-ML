@@ -6,6 +6,8 @@ Endpoints for user statistics and leaderboards.
 
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
+from uuid import UUID
+from typing import Optional
 
 from ..database import get_db
 from ..schemas.stats import (
@@ -15,6 +17,7 @@ from ..schemas.stats import (
     LeaderboardResponse,
     UserRankResponse
 )
+from ..schemas.team import TeamLeaderboardResponse
 from ..services import stats_service
 from ..middleware.auth_middleware import get_current_user_id
 
@@ -117,6 +120,7 @@ async def get_leaderboard(
         pattern="^(xp|focus_time|sessions|streak)$"
     ),
     limit: int = Query(10, ge=1, le=100, description="Number of top users to return"),
+    team_id: Optional[str] = Query(None, description="Optional team ID to filter by team members"),
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -128,10 +132,19 @@ async def get_leaderboard(
       - `sessions`: Ranked by total sessions completed
       - `streak`: Ranked by current streak
     - **limit**: Number of top users (default 10, max 100)
+    - **team_id**: Optional UUID to show only members of a specific team
     
     Returns list of top users with rank, username, level, and stats.
     """
-    leaderboard = await stats_service.get_leaderboard(db, metric, limit)
+    # Parse team_id if provided
+    team_uuid = None
+    if team_id:
+        try:
+            team_uuid = UUID(team_id)
+        except ValueError:
+            pass
+    
+    leaderboard = await stats_service.get_leaderboard(db, metric, limit, team_uuid)
     
     return LeaderboardResponse(
         metric=metric,
@@ -165,3 +178,39 @@ async def get_user_rank(
     """
     rank_data = await stats_service.get_user_rank(db, user_id, metric)
     return UserRankResponse(**rank_data)
+
+
+@router.get(
+    "/stats/leaderboard/teams",
+    response_model=TeamLeaderboardResponse,
+    summary="Get team leaderboard",
+    description="Get team rankings"
+)
+async def get_team_leaderboard(
+    metric: str = Query(
+        "xp",
+        description="Ranking metric: xp, focus_time, sessions, or streak",
+        pattern="^(xp|focus_time|sessions|streak)$"
+    ),
+    limit: int = Query(10, ge=1, le=100, description="Number of top teams to return"),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Get team leaderboard rankings.
+    
+    - **metric**: Ranking metric
+      - `xp`: Ranked by total team XP
+      - `focus_time`: Ranked by total focus minutes of all members
+      - `sessions`: Ranked by total sessions completed by team
+      - `streak`: Ranked by average streak of team members
+    - **limit**: Number of top teams (default 10, max 100)
+    
+    Returns list of top teams with rank, name, members, and stats.
+    """
+    leaderboard = await stats_service.get_team_leaderboard(db, metric, limit)
+    
+    return TeamLeaderboardResponse(
+        metric=metric,
+        leaderboard=leaderboard,
+        total_teams=len(leaderboard)
+    )

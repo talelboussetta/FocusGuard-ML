@@ -510,3 +510,91 @@ export const healthAPI = {
     }>(response);
   },
 };
+
+// ============================================================================
+// Team API
+// ============================================================================
+
+export interface Team {
+  team_id: string;
+  team_name: string;
+  created_at: string;
+  updated_at: string;
+  total_members: number;
+  total_xp: number;
+  total_sessions_completed: number;
+}
+
+export interface TeamMember {
+  user_id: string;
+  username: string;
+  joined_at: string;
+}
+
+export interface TeamDetail extends Team {
+  members: TeamMember[];
+}
+
+export interface UserTeam {
+  team_id: string;
+  team_name: string;
+  joined_at: string;
+  total_members: number;
+  total_xp: number;
+  total_sessions_completed: number;
+}
+
+export const teamAPI = {
+  async createTeam(team_name: string) {
+    const response = await fetch(`${API_BASE_URL}/teams`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ team_name }),
+    });
+    return handleResponse<Team>(response);
+  },
+
+  async joinTeam(team_id: string) {
+    const response = await fetch(`${API_BASE_URL}/teams/join`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify({ team_id }),
+    });
+    return handleResponse<Team>(response);
+  },
+
+  async leaveTeam(team_id: string) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return response.ok;
+  },
+
+  async getTeam(team_id: string) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<TeamDetail>(response);
+  },
+
+  async getMyTeam() {
+    const response = await fetch(`${API_BASE_URL}/teams/me/current`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<UserTeam>(response);
+  },
+
+  async listTeams(limit: number = 20, offset: number = 0) {
+    const response = await fetch(`${API_BASE_URL}/teams?limit=${limit}&offset=${offset}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<Team[]>(response);
+  },
+};

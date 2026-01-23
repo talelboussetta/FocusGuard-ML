@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
-import { userAPI } from '../services/api'
+import { userAPI, teamAPI } from '../services/api'
 import { motion, AnimatePresence } from 'framer-motion'
 
 const quotes = [
@@ -45,10 +45,24 @@ const ProfilePage = () => {
       } catch (e) {
         // ignore
       }
+      
+      // Fetch team info from backend
+      try {
+        const team = await teamAPI.getMyTeam()
+        if (mounted) {
+          setTeamInfo({
+            name: team.team_name,
+            members: team.total_members,
+            total_xp: team.total_xp
+          })
+        }
+      } catch (e) {
+        // User not in a team
+        if (mounted) {
+          setTeamInfo({ name: 'No team yet', members: 0, total_xp: 0 })
+        }
+      }
     })()
-
-    // For now team info is placeholder until backend implemented
-    setTeamInfo({ name: 'No team yet', members: 0, total_xp: 0 })
 
     return () => { mounted = false }
   }, [])

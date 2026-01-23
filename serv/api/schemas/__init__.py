@@ -58,7 +58,19 @@ from .stats import (
     TrendsResponse,
     PlatformSummary,
     LeaderboardEntry,
-    LeaderboardResponse
+    LeaderboardResponse,
+    UserRankResponse
+)
+
+from .team import (
+    TeamCreate,
+    TeamJoin,
+    TeamMemberResponse,
+    TeamResponse,
+    TeamDetailResponse,
+    UserTeamResponse,
+    TeamLeaderboardEntry,
+    TeamLeaderboardResponse
 )
 
 from .distraction import (
@@ -127,6 +139,17 @@ __all__ = [
     "PlatformSummary",
     "LeaderboardEntry",
     "LeaderboardResponse",
+    "UserRankResponse",
+    
+    # Team schemas
+    "TeamCreate",
+    "TeamJoin",
+    "TeamMemberResponse",
+    "TeamResponse",
+    "TeamDetailResponse",
+    "UserTeamResponse",
+    "TeamLeaderboardEntry",
+    "TeamLeaderboardResponse",
     
     # Distraction schemas
     "EventType",

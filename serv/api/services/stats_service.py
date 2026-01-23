@@ -4,12 +4,14 @@ FocusGuard API - Statistics Service
 Business logic for user statistics and leaderboards.
 """
 
-from typing import List
+from typing import List, Optional
 from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, and_, desc
+from uuid import UUID
 
 from ..models import User, UserStats, Session
+from ..models.team import Team, TeamMember
 from ..utils import UserNotFoundException
 
 
@@ -169,7 +171,8 @@ async def get_user_trends(
 async def get_leaderboard(
     db: AsyncSession,
     metric: str = "xp",
-    limit: int = 10
+    limit: int = 10,
+    team_id: Optional[UUID] = None
 ) -> List[dict]:
     """
     Get leaderboard rankings.
@@ -178,47 +181,56 @@ async def get_leaderboard(
         db: Database session
         metric: Ranking metric ("xp", "focus_time", "sessions", "streak")
         limit: Number of top users to return
+        team_id: Optional team ID to filter by team members only
         
     Returns:
         List of leaderboard entries
     """
+    # Base query
+    base_query = select(User, UserStats).join(UserStats, User.id == UserStats.user_id)
+    
+    # Add team filter if provided
+    if team_id:
+        base_query = base_query.join(
+            TeamMember,
+            and_(
+                TeamMember.user_id == User.id,
+                TeamMember.team_id == team_id
+            )
+        )
+    
     if metric == "xp":
         # Rank by XP points
         result = await db.execute(
-            select(User, UserStats)
-            .join(UserStats, User.id == UserStats.user_id)
+            base_query
             .order_by(desc(User.xp_points))
             .limit(limit)
         )
     elif metric == "focus_time":
         # Rank by total focus minutes
         result = await db.execute(
-            select(User, UserStats)
-            .join(UserStats, User.id == UserStats.user_id)
+            base_query
             .order_by(desc(UserStats.total_focus_min))
             .limit(limit)
         )
     elif metric == "sessions":
         # Rank by total sessions completed
         result = await db.execute(
-            select(User, UserStats)
-            .join(UserStats, User.id == UserStats.user_id)
+            base_query
             .order_by(desc(UserStats.total_sessions))
             .limit(limit)
         )
     elif metric == "streak":
         # Rank by current streak
         result = await db.execute(
-            select(User, UserStats)
-            .join(UserStats, User.id == UserStats.user_id)
+            base_query
             .order_by(desc(UserStats.current_streak))
             .limit(limit)
         )
     else:
         # Default to XP
         result = await db.execute(
-            select(User, UserStats)
-            .join(UserStats, User.id == UserStats.user_id)
+            base_query
             .order_by(desc(User.xp_points))
             .limit(limit)
         )
@@ -312,3 +324,114 @@ async def get_user_rank(
         "rank": rank,
         "metric": metric
     }
+
+
+async def get_team_leaderboard(
+    db: AsyncSession,
+    metric: str = "xp",
+    limit: int = 10
+) -> List[dict]:
+    """
+    Get team leaderboard rankings.
+    
+    Args:
+        db: Database session
+        metric: Ranking metric ("xp", "focus_time", "sessions", "streak")
+        limit: Number of top teams to return
+        
+    Returns:
+        List of team leaderboard entries
+    """
+    if metric == "xp":
+        # Rank by total XP
+        result = await db.execute(
+            select(Team)
+            .order_by(desc(Team.total_xp))
+            .limit(limit)
+        )
+    elif metric == "sessions":
+        # Rank by total sessions completed
+        result = await db.execute(
+            select(Team)
+            .order_by(desc(Team.total_sessions_completed))
+            .limit(limit)
+        )
+    elif metric == "focus_time":
+        # For focus time, we need to calculate from team members' stats
+        # Get teams with aggregated focus time from their members
+        result = await db.execute(
+            select(
+                Team,
+                func.coalesce(func.sum(UserStats.total_focus_min), 0).label('total_focus')
+            )
+            .outerjoin(TeamMember, Team.team_id == TeamMember.team_id)
+            .outerjoin(UserStats, TeamMember.user_id == UserStats.user_id)
+            .group_by(Team.team_id)
+            .order_by(desc('total_focus'))
+            .limit(limit)
+        )
+        
+        # Format results for focus_time
+        leaderboard = []
+        for rank, (team, total_focus) in enumerate(result.all(), start=1):
+            leaderboard.append({
+                "rank": rank,
+                "team_id": str(team.team_id),
+                "team_name": team.team_name,
+                "total_members": team.total_members,
+                "value": int(total_focus)
+            })
+        return leaderboard
+        
+    elif metric == "streak":
+        # For streak, use average streak of team members
+        result = await db.execute(
+            select(
+                Team,
+                func.coalesce(func.avg(UserStats.current_streak), 0).label('avg_streak')
+            )
+            .outerjoin(TeamMember, Team.team_id == TeamMember.team_id)
+            .outerjoin(UserStats, TeamMember.user_id == UserStats.user_id)
+            .group_by(Team.team_id)
+            .order_by(desc('avg_streak'))
+            .limit(limit)
+        )
+        
+        # Format results for streak
+        leaderboard = []
+        for rank, (team, avg_streak) in enumerate(result.all(), start=1):
+            leaderboard.append({
+                "rank": rank,
+                "team_id": str(team.team_id),
+                "team_name": team.team_name,
+                "total_members": team.total_members,
+                "value": int(avg_streak)
+            })
+        return leaderboard
+    else:
+        # Default to XP
+        result = await db.execute(
+            select(Team)
+            .order_by(desc(Team.total_xp))
+            .limit(limit)
+        )
+    
+    # Format results for xp and sessions
+    leaderboard = []
+    for rank, team in enumerate(result.scalars().all(), start=1):
+        if metric == "xp":
+            value = team.total_xp
+        elif metric == "sessions":
+            value = team.total_sessions_completed
+        else:
+            value = team.total_xp
+        
+        leaderboard.append({
+            "rank": rank,
+            "team_id": str(team.team_id),
+            "team_name": team.team_name,
+            "total_members": team.total_members,
+            "value": value
+        })
+    
+    return leaderboard
