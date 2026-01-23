@@ -1,7 +1,7 @@
-from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey, Integer, Float
+from sqlalchemy import Column, String, Boolean, TIMESTAMP, ForeignKey, Integer, Float,CheckConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
+from sqlalchemy.sql import func 
 import uuid
 
 from ..database import Base
@@ -64,3 +64,4 @@ class TeamMessage(Base):
         # Ensure message content is not empty
         CheckConstraint("length(content) > 0", name="check_message_content_not_empty"),
     )
+    
