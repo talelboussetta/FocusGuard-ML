@@ -44,6 +44,47 @@ FocusGuard is a productivity platform that combines the Pomodoro technique, loca
 ## 📦 Database / Migrations
 
 - New migrations add the `team` table and `team_members` join table (see `database/init/007_add_session_duration.sql` and project migration files). The team join table is used for team membership and leaderboard aggregation.
+# 🌱 FocusGuard
+
+> Grow your focus. One session at a time.
+
+FocusGuard is a productivity platform combining the Pomodoro technique, local browser-based computer vision, and gamified progress tracking to help users build sustainable focus habits.
+
+![FocusGuard Banner](https://github.com/talelboussetta/FocusGuard-ML/blob/main/client/focusguard-dashboard/src/assets/images/banner.png)
+
+## ✨ Highlights (recent)
+
+- Teams: create and join teams, view team members, and a team leaderboard.
+- Team Detail View: per-team member list, basic member stats, and an in-page team chat UI (UI-only; backend chat planned).
+- Leaderboard Enhancements: per-team filtering and new endpoints for team leaderboards.
+- Backend: new FastAPI routes and services for team management following existing project patterns.
+
+## 🏗 Architecture
+
+![Architecture diagram](https://github.com/talelboussetta/FocusGuard-ML/blob/ff855b0244f2816073903d2bebcafc1d0700ab33/Excalidraw_architecture_progress/services_update.png)
+
+_High-level architecture and services diagram (see `Excalidraw_architecture_progress/architecture.png`)._
+
+## 🚩 New / Changed Files (developer overview)
+
+- Backend (serv/api):
+	- `serv/api/models/team.py` — Team and TeamMember ORM models
+	- `serv/api/schemas/team.py` — Pydantic request/response schemas
+	- `serv/api/services/team_service.py` — Business logic (create/join/leave/update)
+	- `serv/api/routes/team.py` — Team-related HTTP endpoints
+	- `serv/api/services/stats_service.py` — leaderboard changes + team filters
+	- `serv/api/utils/exceptions.py` — added common API exceptions
+
+- Frontend (client/focusguard-dashboard/src):
+	- `pages/TeamPage.tsx` — Create / Join UI
+	- `pages/TeamDetailPage.tsx` — Team member list, stats cards, and local chat UI
+	- `pages/ProfilePage.tsx` — profile widget linking to user's team
+	- `services/api.ts` — `teamAPI` client methods (create/join/get/list)
+	- `App.tsx` — routing for `/teams/:teamId`
+
+## 📦 Database / Migrations
+
+- New migrations add the `team` table and `team_members` join table (see `database/init/007_add_session_duration.sql` and project migration files). The team join table is used for team membership and leaderboard aggregation.
 
 ## 📡 API Endpoints (examples)
 
@@ -55,7 +96,7 @@ FocusGuard is a productivity platform that combines the Pomodoro technique, loca
 
 Refer to `serv/api/routes/team.py` and `serv/api/routes/stats.py` for full request/response schemas.
 
-## 🚀 Developer Quick Start (unchanged)
+## 🚀 Developer Quick Start
 
 Prereqs: Node.js 18+, Python 3.10+, Git
 
@@ -82,8 +123,8 @@ Environment variables are the same as before (`VITE_API_URL`, `SECRET_KEY`, `DAT
 
 ## 🔧 Notes for Contributors
 
-- Team chat is currently a UI-only feature in `TeamDetailPage.tsx`. Implementing persistent/team chat will require a messages table and either WebSocket or polling endpoints.
-- Member stats shown in the Team Detail view currently display placeholders in some cases; backend endpoints to aggregate per-member stats are present in `stats_service.py` but may need further tuning.
+- Team chat is currently a UI-only feature in `client/focusguard-dashboard/src/pages/TeamDetailPage.tsx`. Implementing persistent/team chat will require a messages table and either WebSocket or polling endpoints.
+- Member stats shown in the Team Detail view currently display placeholders in some cases; backend endpoints to aggregate per-member stats are present in `serv/api/services/stats_service.py` but may need further tuning.
 - There are new custom exceptions in `serv/api/utils/exceptions.py` used across services — keep the pattern when adding new services.
 
 If you're testing the team flows, try these actions in sequence:
@@ -104,5 +145,9 @@ For more details, inspect the listed files and follow the code patterns used acr
 
 <p align="center">Made with 💚 for focused minds everywhere</p>
 
-```
-#### Backend (.env)
+
+---
+
+For more details, inspect the listed files and follow the code patterns used across `serv/api/*` and `client/focusguard-dashboard/src/*`.
+
+<p align="center">Made with 💚 for focused minds everywhere</p>
