@@ -6,7 +6,8 @@ CREATE TABLE IF NOT EXISTS team_messages (
     content TEXT NOT NULL,
     type TEXT NOT NULL DEFAULT 'text',
     is_edited BOOLEAN DEFAULT FALSE,
-    sent_at TIMESTAMPTZ DEFAULT NOW()
+    sent_at TIMESTAMPTZ DEFAULT NOW(),
+    CONSTRAINT check_message_content_not_empty CHECK (char_length(content) > 0)
 );
 
 CREATE INDEX IF NOT EXISTS idx_team_messages_team_id ON team_messages (team_id);
