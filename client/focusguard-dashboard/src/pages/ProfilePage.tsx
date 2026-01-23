@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
 import { userAPI, teamAPI } from '../services/api'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion } from 'framer-motion'
 
 const quotes = [
   "Focus is the bridge between goals and accomplishment.",
@@ -23,6 +23,7 @@ const ProfilePage = () => {
   const { user } = useAuth()
   const [stats, setStats] = useState<any>(null)
   const [teamInfo, setTeamInfo] = useState<any>(null)
+  const [teamId, setTeamId] = useState<string | null>(null)
   const [challenge, setChallenge] = useState<string | null>(null)
   const [attempting, setAttempting] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -55,11 +56,13 @@ const ProfilePage = () => {
             members: team.total_members,
             total_xp: team.total_xp
           })
+          setTeamId(team.team_id)
         }
       } catch (e) {
         // User not in a team
         if (mounted) {
           setTeamInfo({ name: 'No team yet', members: 0, total_xp: 0 })
+          setTeamId(null)
         }
       }
     })()
@@ -167,16 +170,33 @@ const ProfilePage = () => {
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-2xl p-6">
               <h2 className="text-lg font-semibold mb-2">Your Team</h2>
               <p className="text-slate-400 mb-3">{teamInfo?.name || '—'}</p>
-              <div className="flex gap-3">
-                <div className="p-3 bg-slate-900 rounded-md">
-                  <p className="text-sm text-slate-400">Members</p>
-                  <p className="text-xl font-bold">{teamInfo?.members ?? 0}</p>
-                </div>
-                <div className="p-3 bg-slate-900 rounded-md">
-                  <p className="text-sm text-slate-400">Team XP</p>
-                  <p className="text-xl font-bold">{teamInfo?.total_xp ?? 0}</p>
-                </div>
-              </div>
+              {teamId ? (
+                <>
+                  <div className="flex gap-3 mb-3">
+                    <div className="p-3 bg-slate-900 rounded-md">
+                      <p className="text-sm text-slate-400">Members</p>
+                      <p className="text-xl font-bold">{teamInfo?.members ?? 0}</p>
+                    </div>
+                    <div className="p-3 bg-slate-900 rounded-md">
+                      <p className="text-sm text-slate-400">Team XP</p>
+                      <p className="text-xl font-bold">{teamInfo?.total_xp ?? 0}</p>
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/teams/${teamId}`)}
+                    className="btn-primary w-full text-sm"
+                  >
+                    View Team
+                  </button>
+                </>
+              ) : (
+                <button 
+                  onClick={() => navigate('/teams')}
+                  className="btn-secondary w-full text-sm mt-3"
+                >
+                  Join a Team
+                </button>
+              )}
             </motion.div>
 
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-2xl p-6">

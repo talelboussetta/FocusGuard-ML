@@ -1,0 +1,321 @@
+import { motion } from 'framer-motion'
+import { Users, Crown, MessageSquare, Send, ArrowLeft, Trophy, Target, Flame } from 'lucide-react'
+import Sidebar from '../components/Sidebar'
+import { useNavigate, useParams } from 'react-router-dom'
+import { useAuth } from '../contexts/AuthContext'
+import { useState, useEffect, useRef } from 'react'
+import { teamAPI, getErrorMessage, type TeamDetail } from '../services/api'
+
+const TeamDetailPage = () => {
+	const navigate = useNavigate()
+	const { user } = useAuth()
+	const { teamId } = useParams<{ teamId: string }>()
+	const [team, setTeam] = useState<TeamDetail | null>(null)
+	const [loading, setLoading] = useState(true)
+	const [error, setError] = useState<string | null>(null)
+	const [message, setMessage] = useState('')
+	const [messages, setMessages] = useState<Array<{ id: number; username: string; text: string; timestamp: Date }>>([])
+	const chatEndRef = useRef<HTMLDivElement>(null)
+
+	useEffect(() => {
+		loadTeamDetails()
+	}, [teamId])
+
+	useEffect(() => {
+		chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+	}, [messages])
+
+	const loadTeamDetails = async () => {
+		if (!teamId) return
+		setLoading(true)
+		setError(null)
+		try {
+			const teamData = await teamAPI.getTeam(teamId)
+			setTeam(teamData)
+		} catch (err: any) {
+			setError(getErrorMessage(err, 'Failed to load team details'))
+		} finally {
+			setLoading(false)
+		}
+	}
+
+	const sendMessage = () => {
+		if (!message.trim() || !user) return
+		
+		// For now, just add to local state (backend integration later)
+		setMessages([...messages, {
+			id: Date.now(),
+			username: user.username,
+			text: message.trim(),
+			timestamp: new Date()
+		}])
+		setMessage('')
+	}
+
+	const handleKeyPress = (e: React.KeyboardEvent) => {
+		if (e.key === 'Enter' && !e.shiftKey) {
+			e.preventDefault()
+			sendMessage()
+		}
+	}
+
+	if (loading) {
+		return (
+			<div className="min-h-screen flex">
+				<Sidebar />
+				<div className="flex-1 flex items-center justify-center">
+					<div className="text-slate-400">Loading team details...</div>
+				</div>
+			</div>
+		)
+	}
+
+	if (error || !team) {
+		return (
+			<div className="min-h-screen flex">
+				<Sidebar />
+				<div className="flex-1 flex items-center justify-center">
+					<div className="text-center">
+						<div className="text-red-400 mb-4">{error || 'Team not found'}</div>
+						<button onClick={() => navigate('/teams')} className="btn-primary">
+							Back to Teams
+						</button>
+					</div>
+				</div>
+			</div>
+		)
+	}
+
+	return (
+		<div className="min-h-screen flex">
+			<Sidebar />
+
+			<div className="flex-1 overflow-y-auto">
+				{/* Animated Background */}
+				<div className="fixed inset-0 z-0 pointer-events-none">
+					<div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+					<motion.div
+						className="absolute top-20 right-20 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
+						animate={{
+							scale: [1, 1.15, 1],
+							opacity: [0.15, 0.35, 0.15]
+						}}
+						transition={{ duration: 8, repeat: Infinity }}
+					/>
+				</div>
+
+				{/* Content */}
+				<div className="relative z-10 p-8 max-w-7xl mx-auto">
+					{/* Header */}
+					<motion.div
+						initial={{ opacity: 0, y: -10 }}
+						animate={{ opacity: 1, y: 0 }}
+						className="mb-6"
+					>
+						<button
+							onClick={() => navigate('/teams')}
+							className="flex items-center gap-2 text-slate-400 hover:text-slate-200 mb-4 transition"
+						>
+							<ArrowLeft className="w-5 h-5" />
+							Back to Teams
+						</button>
+						<div className="flex items-start justify-between">
+							<div>
+								<div className="flex items-center gap-3 mb-2">
+									<Users className="w-10 h-10 text-primary-500" />
+									<h1 className="text-4xl font-display font-bold">{team.team_name}</h1>
+								</div>
+								<p className="text-slate-400">
+									{team.total_members} {team.total_members === 1 ? 'member' : 'members'} • {team.total_xp.toLocaleString()} Total XP • {team.total_sessions_completed} Sessions
+								</p>
+							</div>
+						</div>
+					</motion.div>
+
+					{/* Main Content Grid */}
+					<div className="grid lg:grid-cols-3 gap-6">
+						{/* Team Members - Left Side (2 columns) */}
+						<div className="lg:col-span-2">
+							<motion.div
+								initial={{ opacity: 0, scale: 0.98 }}
+								animate={{ opacity: 1, scale: 1 }}
+								className="glass rounded-2xl p-6"
+							>
+								<h2 className="text-2xl font-display font-semibold mb-4 flex items-center gap-2">
+									<Trophy className="w-6 h-6 text-yellow-500" />
+									Team Members
+								</h2>
+								<div className="space-y-3">
+									{team.members.map((member, idx) => (
+										<motion.div
+											key={member.user_id}
+											initial={{ opacity: 0, x: -20 }}
+											animate={{ opacity: 1, x: 0 }}
+											transition={{ delay: idx * 0.05 }}
+											className="flex items-center justify-between p-4 bg-slate-900/50 rounded-xl border border-slate-800/40 hover:border-primary-500/30 transition"
+										>
+											<div className="flex items-center gap-4">
+												<div className="w-12 h-12 rounded-full bg-gradient-to-br from-primary-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg">
+													{member.username.charAt(0).toUpperCase()}
+												</div>
+												<div>
+													<div className="flex items-center gap-2">
+														<p className="font-semibold text-lg">{member.username}</p>
+														{idx === 0 && (
+															<span title="Team Creator">
+																<Crown className="w-4 h-4 text-yellow-500" />
+															</span>
+														)}
+													</div>
+													<p className="text-sm text-slate-400">
+														Joined {new Date(member.joined_at).toLocaleDateString()}
+													</p>
+												</div>
+											</div>
+											{/* Placeholder for member stats - will be fetched from backend later */}
+											<div className="flex gap-4">
+												<div className="text-right">
+													<div className="flex items-center gap-1 text-primary-400">
+														<Target className="w-4 h-4" />
+														<span className="text-sm">Level ?</span>
+													</div>
+												</div>
+												<div className="text-right">
+													<div className="flex items-center gap-1 text-yellow-500">
+														<Trophy className="w-4 h-4" />
+														<span className="text-sm">? XP</span>
+													</div>
+												</div>
+												<div className="text-right">
+													<div className="flex items-center gap-1 text-orange-500">
+														<Flame className="w-4 h-4" />
+														<span className="text-sm">? streak</span>
+													</div>
+												</div>
+											</div>
+										</motion.div>
+									))}
+								</div>
+							</motion.div>
+						</div>
+
+						{/* Team Chat - Right Side (1 column) */}
+						<div className="lg:col-span-1">
+							<motion.div
+								initial={{ opacity: 0, scale: 0.98 }}
+								animate={{ opacity: 1, scale: 1 }}
+								className="glass rounded-2xl p-6 flex flex-col h-[600px]"
+							>
+								<h2 className="text-xl font-display font-semibold mb-4 flex items-center gap-2">
+									<MessageSquare className="w-5 h-5 text-primary-500" />
+									Team Chat
+								</h2>
+								
+								{/* Chat Messages */}
+								<div className="flex-1 overflow-y-auto mb-4 space-y-3 pr-2">
+									{messages.length === 0 ? (
+										<div className="flex items-center justify-center h-full text-slate-400 text-sm">
+											No messages yet. Start the conversation!
+										</div>
+									) : (
+										messages.map((msg) => (
+											<div
+												key={msg.id}
+												className={`p-3 rounded-lg ${
+													msg.username === user?.username
+														? 'bg-primary-500/20 ml-4'
+														: 'bg-slate-800/50 mr-4'
+												}`}
+											>
+												<div className="flex items-center gap-2 mb-1">
+													<span className="font-semibold text-sm">{msg.username}</span>
+													<span className="text-xs text-slate-500">
+														{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+													</span>
+												</div>
+												<p className="text-sm text-slate-200">{msg.text}</p>
+											</div>
+										))
+									)}
+									<div ref={chatEndRef} />
+								</div>
+
+								{/* Chat Input */}
+								<div className="flex gap-2">
+									<input
+										type="text"
+										value={message}
+										onChange={(e) => setMessage(e.target.value)}
+										onKeyPress={handleKeyPress}
+										placeholder="Type a message..."
+										className="flex-1 p-3 rounded-lg bg-slate-900 border border-slate-800/40 focus:border-primary-500/50 focus:outline-none transition"
+									/>
+									<button
+										onClick={sendMessage}
+										disabled={!message.trim()}
+										className={`btn-primary px-4 ${
+											!message.trim() ? 'opacity-50 cursor-not-allowed' : ''
+										}`}
+									>
+										<Send className="w-5 h-5" />
+									</button>
+								</div>
+								
+								<p className="text-xs text-slate-500 mt-2 text-center">
+									Chat is currently local only. Backend integration coming soon.
+								</p>
+							</motion.div>
+						</div>
+					</div>
+
+					{/* Team Stats Cards */}
+					<div className="grid md:grid-cols-3 gap-6 mt-6">
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.2 }}
+							className="glass rounded-xl p-6"
+						>
+							<div className="flex items-center gap-3 mb-2">
+								<Trophy className="w-8 h-8 text-yellow-500" />
+								<h3 className="text-lg font-semibold">Total XP</h3>
+							</div>
+							<p className="text-3xl font-bold gradient-text">{team.total_xp.toLocaleString()}</p>
+							<p className="text-sm text-slate-400 mt-1">Combined team experience</p>
+						</motion.div>
+
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.3 }}
+							className="glass rounded-xl p-6"
+						>
+							<div className="flex items-center gap-3 mb-2">
+								<Target className="w-8 h-8 text-primary-500" />
+								<h3 className="text-lg font-semibold">Sessions Completed</h3>
+							</div>
+							<p className="text-3xl font-bold gradient-text">{team.total_sessions_completed}</p>
+							<p className="text-sm text-slate-400 mt-1">Total focus sessions</p>
+						</motion.div>
+
+						<motion.div
+							initial={{ opacity: 0, y: 20 }}
+							animate={{ opacity: 1, y: 0 }}
+							transition={{ delay: 0.4 }}
+							className="glass rounded-xl p-6"
+						>
+							<div className="flex items-center gap-3 mb-2">
+								<Users className="w-8 h-8 text-emerald-500" />
+								<h3 className="text-lg font-semibold">Team Size</h3>
+							</div>
+							<p className="text-3xl font-bold gradient-text">{team.total_members}</p>
+							<p className="text-sm text-slate-400 mt-1">Active members</p>
+						</motion.div>
+					</div>
+				</div>
+			</div>
+		</div>
+	)
+}
+
+export default TeamDetailPage

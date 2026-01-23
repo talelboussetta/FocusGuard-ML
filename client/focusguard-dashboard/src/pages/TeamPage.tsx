@@ -26,7 +26,6 @@ const successPulse = {
 
 const TeamPage = () => {
 	const navigate = useNavigate()
-	const { user } = useAuth()
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [showJoinModal, setShowJoinModal] = useState(false)
 	const [teamName, setTeamName] = useState('')
@@ -40,6 +39,21 @@ const TeamPage = () => {
 	const [joinFocused, setJoinFocused] = useState(false)
 	const [error, setError] = useState<string | null>(null)
 	const [loading, setLoading] = useState(false)
+	const [currentTeamId, setCurrentTeamId] = useState<string | null>(null)
+
+	useEffect(() => {
+		// Check if user is already in a team
+		const checkUserTeam = async () => {
+			try {
+				const team = await teamAPI.getMyTeam()
+				setCurrentTeamId(team.team_id)
+			} catch (err) {
+				// User not in a team
+				setCurrentTeamId(null)
+			}
+		}
+		checkUserTeam()
+	}, [])
 
 	useEffect(() => {
 		if (showCreateModal) {
@@ -62,6 +76,10 @@ const TeamPage = () => {
 			const team = await teamAPI.createTeam(teamName.trim())
 			setCreatedTeamId(team.team_id)
 			setCreateSuccess(true)
+			// Navigate to team detail after short delay
+			setTimeout(() => {
+				navigate(`/teams/${team.team_id}`)
+			}, 2000)
 		} catch (err: any) {
 			setError(getErrorMessage(err, 'Failed to create team'))
 		} finally {
@@ -84,12 +102,11 @@ const TeamPage = () => {
 		setError(null)
 		
 		try {
-			await teamAPI.joinTeam(teamIdInput.trim())
+			const team = await teamAPI.joinTeam(teamIdInput.trim())
 			setJoinSuccess(true)
 			setTimeout(() => {
-				setJoinSuccess(false)
-				setShowJoinModal(false)
-				setTeamIdInput('')
+				// Navigate to team detail page
+				navigate(`/teams/${team.team_id}`)
 			}, 1200)
 		} catch (err: any) {
 			setError(getErrorMessage(err, 'Failed to join team'))
@@ -136,15 +153,29 @@ const TeamPage = () => {
 								<h2 className="text-2xl font-display font-semibold mb-2">Study together, level up together</h2>
 								<p className="text-slate-400 mb-4">Form guilds to create friendly competition and collaborate during study sessions. Teams can earn collective XP and climb the leaderboard.</p>
 								<div className="flex gap-3">
-									<motion.button onClick={() => setShowJoinModal(true)} className="btn-primary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-										<UserPlus className="w-5 h-5" />
-										<span>Join a Team</span>
-									</motion.button>
+									{currentTeamId ? (
+										<motion.button 
+											onClick={() => navigate(`/teams/${currentTeamId}`)} 
+											className="btn-primary flex items-center space-x-2" 
+											whileHover={{ scale: 1.03 }} 
+											whileTap={{ scale: 0.97 }}
+										>
+											<Users className="w-5 h-5" />
+											<span>View My Team</span>
+										</motion.button>
+									) : (
+										<>
+											<motion.button onClick={() => setShowJoinModal(true)} className="btn-primary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+												<UserPlus className="w-5 h-5" />
+												<span>Join a Team</span>
+											</motion.button>
 
-									<motion.button onClick={() => setShowCreateModal(true)} className="btn-secondary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-										<PlusCircle className="w-5 h-5" />
-										<span>Create a Team</span>
-									</motion.button>
+											<motion.button onClick={() => setShowCreateModal(true)} className="btn-secondary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
+												<PlusCircle className="w-5 h-5" />
+												<span>Create a Team</span>
+											</motion.button>
+										</>
+									)}
 								</div>
 							</div>
 

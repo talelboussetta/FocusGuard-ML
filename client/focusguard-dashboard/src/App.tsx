@@ -12,6 +12,7 @@ import AITutorPage from './pages/AITutorPage'
 import AnalyticsPage from './pages/AnalyticsPage'
 import LeaderboardPage from './pages/LeaderboardPage'
 import TeamPage from './pages/TeamPage'
+import TeamDetailPage from './pages/TeamDetailPage'
 import ProfilePage from './pages/ProfilePage'
 import ErrorPage from './pages/ErrorPage'
 import TimerOverlay from './components/TimerOverlay'
@@ -44,8 +45,6 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 }
 
 function AppRoutes() {
-  const { user } = useAuth();
-  
   return (
     <AnimatePresence mode="wait">
       <Routes>
@@ -96,6 +95,14 @@ function AppRoutes() {
           element={
             <ProtectedRoute>
               <TeamPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/teams/:teamId"
+          element={
+            <ProtectedRoute>
+              <TeamDetailPage />
             </ProtectedRoute>
           }
         />
