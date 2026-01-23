@@ -30,7 +30,10 @@ from .exceptions import (
     ActiveSessionExistsException,
     GardenNotFoundException,
     ForbiddenException,
-    ValidationException
+    ValidationException,
+    BadRequestException,
+    NotFoundException,
+    DuplicateException
 )
 
 __all__ = [
@@ -64,4 +67,7 @@ __all__ = [
     "GardenNotFoundException",
     "ForbiddenException",
     "ValidationException",
+    "BadRequestException",
+    "NotFoundException",
+    "DuplicateException",
 ]

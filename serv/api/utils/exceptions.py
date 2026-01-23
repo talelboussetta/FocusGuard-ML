@@ -174,3 +174,40 @@ class ValidationException(APIException):
             error_code="VALIDATION_ERROR",
             details={"field": field, **(details or {})} if field else details
         )
+
+
+class BadRequestException(APIException):
+    """Raised when request is malformed or invalid."""
+    
+    def __init__(self, message: str = "Bad request"):
+        super().__init__(
+            message=message,
+            status_code=400,
+            error_code="BAD_REQUEST"
+        )
+
+
+# ============================================================================
+# Generic Exceptions
+# ============================================================================
+
+class NotFoundException(APIException):
+    """Raised when a resource is not found."""
+    
+    def __init__(self, message: str = "Resource not found"):
+        super().__init__(
+            message=message,
+            status_code=404,
+            error_code="NOT_FOUND"
+        )
+
+
+class DuplicateException(APIException):
+    """Raised when trying to create a duplicate resource."""
+    
+    def __init__(self, message: str = "Resource already exists"):
+        super().__init__(
+            message=message,
+            status_code=409,
+            error_code="DUPLICATE"
+        )
