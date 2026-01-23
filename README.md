@@ -5,6 +5,7 @@
 FocusGuard is a modern productivity platform that combines the Pomodoro technique with AI-powered focus insights and gamification. Build better study habits while growing your personal digital garden.
 
 ![FocusGuard Banner](https://github.com/talelboussetta/FocusGuard-ML/blob/main/client/focusguard-dashboard/src/assets/images/banner.png)
+![FocusGuard Architecture](https://github.com/talelboussetta/FocusGuard-ML/blob/main/Excalidraw_architecture_progress/services_update.png)
 
 ## ✨ Features
 
