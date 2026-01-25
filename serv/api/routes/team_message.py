@@ -8,7 +8,7 @@ from ..schemas.team_message import (
     TeamMessageResponse,
     TeamMessagesListResponse
 )
-from ..services import team_message_service
+from ..services import team_message_service, team_service
 from ..middleware.auth_middleware import get_current_user_id
 router = APIRouter(prefix="/teams/{team_id}/messages", tags=["Team Messages"])
 @router.post(
@@ -31,6 +31,9 @@ async def create_team_message(
         message_data: Message content and type
         user_id: ID of the authenticated user (sender)
         db: Database session"""
+    # Membership check
+    if not await team_service.is_team_member(db, team_id, user_id):
+        raise HTTPException(status_code=403, detail="Not a member of this team")
     message = await team_message_service.create_team_message(
         db=db,
         team_id=team_id,
@@ -61,6 +64,9 @@ async def get_team_messages(
         user_id: ID of the authenticated user
         db: Database session
     """
+    # Membership check
+    if not await team_service.is_team_member(db, team_id, user_id):
+        raise HTTPException(status_code=403, detail="Not a member of this team")
     messages = await team_message_service.get_team_messages(
         db=db,
         team_id=team_id,
@@ -89,13 +95,15 @@ async def get_team_message_by_id(
         user_id: ID of the authenticated user
         db: Database session
     """
+    # Membership check
+    if not await team_service.is_team_member(db, team_id, user_id):
+        raise HTTPException(status_code=403, detail="Not a member of this team")
     message = await team_message_service.get_team_message_by_id(
         db=db,
         message_id=message_id
     )
     if not message or message.team_id != team_id:
         raise HTTPException(status_code=404, detail="Message not found in the specified team")
-    
     return TeamMessageResponse.model_validate(message)
 @router.delete(
     "/{message_id}",
@@ -118,13 +126,18 @@ async def delete_team_message(
         user_id: ID of the authenticated user
         db: Database session
     """
+    # Membership check
+    if not await team_service.is_team_member(db, team_id, user_id):
+        raise HTTPException(status_code=403, detail="Not a member of this team")
     message = await team_message_service.get_team_message_by_id(
         db=db,
         message_id=message_id
     )
     if not message or message.team_id != team_id:
         raise HTTPException(status_code=404, detail="Message not found in the specified team")
-    
+    # Sender check (only sender can delete)
+    if str(message.sender_id) != str(user_id):
+        raise HTTPException(status_code=403, detail="You are not allowed to delete this message")
     await team_message_service.delete_team_message(
         db=db,
         message_id=message_id
@@ -150,8 +163,12 @@ async def delete_messages_older_than(
         user_id: ID of the authenticated user
         db: Database session
     """
+    # Membership check
+    if not await team_service.is_team_member(db, team_id, user_id):
+        raise HTTPException(status_code=403, detail="Not a member of this team")
     await team_message_service.delete_messages_older_than(
         db=db,
         days=days
     )
+
 # End of serv/api/routes/team_message.py

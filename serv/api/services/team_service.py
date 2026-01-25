@@ -357,3 +357,19 @@ async def update_team_stats(
         )
     )
     await db.commit()
+
+
+# =============================
+# Membership Utility
+# =============================
+async def is_team_member(db: AsyncSession, team_id: UUID, user_id: str) -> bool:
+    """
+    Returns True if the user is a member of the team, else False.
+    """
+    result = await db.execute(
+        select(TeamMember).where(
+            TeamMember.team_id == team_id,
+            TeamMember.user_id == user_id
+        )
+    )
+    return result.scalar_one_or_none() is not None
