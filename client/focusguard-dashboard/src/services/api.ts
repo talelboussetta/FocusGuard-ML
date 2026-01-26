@@ -544,6 +544,25 @@ export interface UserTeam {
   total_sessions_completed: number;
 }
 
+export interface TeamMessage {
+  message_id: string;
+  team_id: string;
+  sender_id: string;
+  content: string;
+  sent_at: string;
+  type: string;
+  is_edited: boolean;
+}
+
+export interface TeamMessageCreate {
+  content: string;
+  type?: string;
+}
+
+export interface TeamMessagesListResponse {
+  messages: TeamMessage[];
+}
+
 export const teamAPI = {
   async createTeam(team_name: string) {
     const response = await fetch(`${API_BASE_URL}/teams`, {
@@ -596,5 +615,48 @@ export const teamAPI = {
       headers: getAuthHeader(),
     });
     return handleResponse<Team[]>(response);
+  },
+
+  // Team Messages
+  async sendMessage(team_id: string, data: TeamMessageCreate) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}/messages`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<TeamMessage>(response);
+  },
+
+  async getMessages(team_id: string, limit: number = 50, offset: number = 0) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}/messages?limit=${limit}&offset=${offset}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<TeamMessagesListResponse>(response);
+  },
+
+  async getMessageById(team_id: string, message_id: string) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}/messages/${message_id}`, {
+      headers: getAuthHeader(),
+    });
+    return handleResponse<TeamMessage>(response);
+  },
+
+  async deleteMessage(team_id: string, message_id: string) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}/messages/${message_id}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return response.ok;
+  },
+
+  async cleanupOldMessages(team_id: string, days: number) {
+    const response = await fetch(`${API_BASE_URL}/teams/${team_id}/messages/cleanup/older-than/${days}`, {
+      method: 'DELETE',
+      headers: getAuthHeader(),
+    });
+    return response.ok;
   },
 };

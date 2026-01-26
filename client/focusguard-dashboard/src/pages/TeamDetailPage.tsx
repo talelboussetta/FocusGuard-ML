@@ -4,7 +4,7 @@ import Sidebar from '../components/Sidebar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect, useRef } from 'react'
-import { teamAPI, getErrorMessage, type TeamDetail } from '../services/api'
+import { teamAPI, getErrorMessage, type TeamDetail, type TeamMessage } from '../services/api'
 
 const TeamDetailPage = () => {
 	const navigate = useNavigate()
@@ -14,11 +14,21 @@ const TeamDetailPage = () => {
 	const [loading, setLoading] = useState(true)
 	const [error, setError] = useState<string | null>(null)
 	const [message, setMessage] = useState('')
-	const [messages, setMessages] = useState<Array<{ id: number; username: string; text: string; timestamp: Date }>>([])
+	const [messages, setMessages] = useState<TeamMessage[]>([])
+	const [sendingMessage, setSendingMessage] = useState(false)
+	const [messageError, setMessageError] = useState<string | null>(null)
 	const chatEndRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
 		loadTeamDetails()
+		if (teamId) {
+			loadMessages()
+			// Poll for new messages every 5 seconds
+			const interval = setInterval(() => {
+				loadMessages(true)
+			}, 5000)
+			return () => clearInterval(interval)
+		}
 	}, [teamId])
 
 	useEffect(() => {
@@ -39,17 +49,46 @@ const TeamDetailPage = () => {
 		}
 	}
 
-	const sendMessage = () => {
-		if (!message.trim() || !user) return
+	const loadMessages = async (silent: boolean = false) => {
+		if (!teamId) return
+		try {
+			const response = await teamAPI.getMessages(teamId, 50, 0)
+			setMessages(response.messages.reverse()) // Reverse to show oldest first
+			setMessageError(null)
+		} catch (err: any) {
+			if (!silent) {
+				setMessageError(getErrorMessage(err, 'Failed to load messages'))
+			}
+		}
+	}
+
+	const sendMessage = async () => {
+		if (!message.trim() || !user || !teamId || sendingMessage) return
 		
-		// For now, just add to local state (backend integration later)
-		setMessages([...messages, {
-			id: Date.now(),
-			username: user.username,
-			text: message.trim(),
-			timestamp: new Date()
-		}])
-		setMessage('')
+		setSendingMessage(true)
+		setMessageError(null)
+		
+		try {
+			await teamAPI.sendMessage(teamId, {
+				content: message.trim(),
+				type: 'text'
+			})
+			setMessage('')
+			// Reload messages to show the new one
+			await loadMessages()
+		} catch (err: any) {
+			const errorMsg = getErrorMessage(err, 'Failed to send message')
+			setMessageError(errorMsg)
+			
+			// Show user-friendly error for rate limiting
+			if (errorMsg.includes('rate limit') || errorMsg.includes('too many messages')) {
+				setMessageError('You are sending messages too quickly. Please wait a moment.')
+			} else if (errorMsg.includes('duplicate')) {
+				setMessageError('This message was already sent recently.')
+			}
+		} finally {
+			setSendingMessage(false)
+		}
 	}
 
 	const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -218,27 +257,41 @@ const TeamDetailPage = () => {
 											No messages yet. Start the conversation!
 										</div>
 									) : (
-										messages.map((msg) => (
-											<div
-												key={msg.id}
-												className={`p-3 rounded-lg ${
-													msg.username === user?.username
-														? 'bg-primary-500/20 ml-4'
-														: 'bg-slate-800/50 mr-4'
-												}`}
-											>
-												<div className="flex items-center gap-2 mb-1">
-													<span className="font-semibold text-sm">{msg.username}</span>
-													<span className="text-xs text-slate-500">
-														{msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-													</span>
+										messages.map((msg) => {
+											// Find sender username from team members
+											const sender = team.members.find(m => m.user_id === msg.sender_id)
+											const senderUsername = sender?.username || 'Unknown'
+											const isOwnMessage = msg.sender_id === user?.user_id
+											
+											return (
+												<div
+													key={msg.message_id}
+													className={`p-3 rounded-lg ${
+														isOwnMessage
+															? 'bg-primary-500/20 ml-4'
+															: 'bg-slate-800/50 mr-4'
+													}`}
+												>
+													<div className="flex items-center gap-2 mb-1">
+														<span className="font-semibold text-sm">{senderUsername}</span>
+														<span className="text-xs text-slate-500">
+															{new Date(msg.sent_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+														</span>
+													</div>
+													<p className="text-sm text-slate-200">{msg.content}</p>
 												</div>
-												<p className="text-sm text-slate-200">{msg.text}</p>
-											</div>
-										))
+											)
+										})
 									)}
 									<div ref={chatEndRef} />
 								</div>
+
+								{/* Error Message */}
+								{messageError && (
+									<div className="mb-2 p-2 bg-red-500/10 border border-red-500/30 rounded text-sm text-red-400 text-center">
+										{messageError}
+									</div>
+								)}
 
 								{/* Chat Input */}
 								<div className="flex gap-2">
@@ -248,21 +301,26 @@ const TeamDetailPage = () => {
 										onChange={(e) => setMessage(e.target.value)}
 										onKeyPress={handleKeyPress}
 										placeholder="Type a message..."
-										className="flex-1 p-3 rounded-lg bg-slate-900 border border-slate-800/40 focus:border-primary-500/50 focus:outline-none transition"
+										disabled={sendingMessage}
+										className="flex-1 p-3 rounded-lg bg-slate-900 border border-slate-800/40 focus:border-primary-500/50 focus:outline-none transition disabled:opacity-50 disabled:cursor-not-allowed"
 									/>
 									<button
 										onClick={sendMessage}
-										disabled={!message.trim()}
+										disabled={!message.trim() || sendingMessage}
 										className={`btn-primary px-4 ${
-											!message.trim() ? 'opacity-50 cursor-not-allowed' : ''
+											!message.trim() || sendingMessage ? 'opacity-50 cursor-not-allowed' : ''
 										}`}
 									>
-										<Send className="w-5 h-5" />
+										{sendingMessage ? (
+											<div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+										) : (
+											<Send className="w-5 h-5" />
+										)}
 									</button>
 								</div>
 								
 								<p className="text-xs text-slate-500 mt-2 text-center">
-									Chat is currently local only. Backend integration coming soon.
+									Messages refresh every 5 seconds
 								</p>
 							</motion.div>
 						</div>
