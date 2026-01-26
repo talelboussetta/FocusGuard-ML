@@ -9,6 +9,12 @@ from ..schemas.team_message import (
     TeamMessagesListResponse
 )
 from ..services import team_message_service, team_service
+from ..utils.exceptions import (
+    MessageNotFoundException,
+    DuplicateMessageException,
+    MessagePermissionException,
+    MessageRateLimitException
+)
 from ..middleware.auth_middleware import get_current_user_id
 router = APIRouter(prefix="/teams/{team_id}/messages", tags=["Team Messages"])
 @router.post(
@@ -34,13 +40,18 @@ async def create_team_message(
     # Membership check
     if not await team_service.is_team_member(db, team_id, user_id):
         raise HTTPException(status_code=403, detail="Not a member of this team")
-    message = await team_message_service.create_team_message(
-        db=db,
-        team_id=team_id,
-        sender_id=UUID(user_id),
-        message_data=message_data
-    )
-    return TeamMessageResponse.model_validate(message)
+    try:
+        message = await team_message_service.create_team_message(
+            db=db,
+            team_id=team_id,
+            sender_id=UUID(user_id),
+            message_data=message_data
+        )
+        return TeamMessageResponse.model_validate(message)
+    except MessageRateLimitException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
+    except DuplicateMessageException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 @router.get(
     "/",
     response_model=TeamMessagesListResponse,
@@ -98,13 +109,16 @@ async def get_team_message_by_id(
     # Membership check
     if not await team_service.is_team_member(db, team_id, user_id):
         raise HTTPException(status_code=403, detail="Not a member of this team")
-    message = await team_message_service.get_team_message_by_id(
-        db=db,
-        message_id=message_id
-    )
-    if not message or message.team_id != team_id:
-        raise HTTPException(status_code=404, detail="Message not found in the specified team")
-    return TeamMessageResponse.model_validate(message)
+    try:
+        message = await team_message_service.get_team_message_by_id(
+            db=db,
+            message_id=message_id
+        )
+        if not message or message.team_id != team_id:
+            raise HTTPException(status_code=404, detail="Message not found in the specified team")
+        return TeamMessageResponse.model_validate(message)
+    except MessageNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 @router.delete(
     "/{message_id}",
     response_model=None,
@@ -129,19 +143,22 @@ async def delete_team_message(
     # Membership check
     if not await team_service.is_team_member(db, team_id, user_id):
         raise HTTPException(status_code=403, detail="Not a member of this team")
-    message = await team_message_service.get_team_message_by_id(
-        db=db,
-        message_id=message_id
-    )
-    if not message or message.team_id != team_id:
-        raise HTTPException(status_code=404, detail="Message not found in the specified team")
-    # Sender check (only sender can delete)
-    if str(message.sender_id) != str(user_id):
-        raise HTTPException(status_code=403, detail="You are not allowed to delete this message")
-    await team_message_service.delete_team_message(
-        db=db,
-        message_id=message_id
-    )
+    try:
+        message = await team_message_service.get_team_message_by_id(
+            db=db,
+            message_id=message_id
+        )
+        if not message or message.team_id != team_id:
+            raise HTTPException(status_code=404, detail="Message not found in the specified team")
+        # Sender check (only sender can delete)
+        if str(message.sender_id) != str(user_id):
+            raise HTTPException(status_code=403, detail="You are not allowed to delete this message")
+        await team_message_service.delete_team_message(
+            db=db,
+            message_id=message_id
+        )
+    except MessageNotFoundException as e:
+        raise HTTPException(status_code=e.status_code, detail=e.message)
 @router.delete(
     "/cleanup/older-than/{days}",
     response_model=None,
