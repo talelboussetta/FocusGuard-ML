@@ -14,6 +14,7 @@ const CameraPage = () => {
   const [confidence, setConfidence] = useState(0)
   const [blinkRate, setBlinkRate] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
+  const [showRefreshNotification, setShowRefreshNotification] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -68,7 +69,7 @@ const CameraPage = () => {
         console.log('✅ MediaPipe Detectors initialized (Pose + Face)')
       } catch (error) {
         console.error('Failed to initialize MediaPipe:', error)
-        alert('Failed to load detection models. Please refresh the page.')
+        setShowRefreshNotification(true)
       } finally {
         setIsLoading(false)
       }
@@ -405,8 +406,22 @@ const CameraPage = () => {
 
   return (
     <div className="min-h-screen flex bg-gradient-to-br from-slate-950 via-purple-950 to-slate-950">
+      {/* Hard Refresh Notification */}
+      {showRefreshNotification && (
+        <div className="fixed top-0 left-0 w-full z-50 flex justify-center">
+          <div className="bg-red-600 text-white px-6 py-3 rounded-b-lg shadow-lg flex items-center gap-4 mt-0 animate-fade-in">
+            <span className="font-semibold">Failed to load AI models.</span>
+            <span>Please <b>hard refresh</b> (Ctrl+Shift+R or Cmd+Shift+R) to fix this issue.</span>
+            <button
+              className="ml-4 px-3 py-1 bg-red-800 rounded hover:bg-red-700 transition"
+              onClick={() => setShowRefreshNotification(false)}
+            >
+              Dismiss
+            </button>
+          </div>
+        </div>
+      )}
       <Sidebar />
-      
       <div className="flex-1 p-8 ml-64">
         {/* Header */}
         <motion.div

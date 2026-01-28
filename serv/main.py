@@ -18,7 +18,8 @@ from api.routes import (
     garden_router,
     stats_router,
     distraction_router,
-    team_router
+    team_router,
+    team_message_router
 )
 from api.middleware.error_handler import register_exception_handlers
 from api.middleware.rate_limiter import limiter
@@ -124,6 +125,7 @@ app.include_router(garden_router)
 app.include_router(stats_router)
 app.include_router(distraction_router)
 app.include_router(team_router)
+app.include_router(team_message_router)
 
 
 @app.get(
