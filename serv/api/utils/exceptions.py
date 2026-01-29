@@ -211,43 +211,52 @@ class DuplicateException(APIException):
             status_code=409,
             error_code="DUPLICATE"
         )
-    # ============================================================================
-    # Team Message Exceptions
-    # ============================================================================
 
-    class MessageNotFoundException(APIException):
-        """Raised when a team message is not found."""
-        def __init__(self, message: str = "Message not found", message_id: Optional[str] = None):
-            super().__init__(
-                message=message,
-                status_code=404,
-                error_code="MESSAGE_NOT_FOUND",
-                details={"message_id": message_id} if message_id else None
-            )
 
-    class DuplicateMessageException(APIException):
-        """Raised when trying to create a duplicate team message."""
-        def __init__(self, message: str = "Duplicate message detected"):
-            super().__init__(
-                message=message,
-                status_code=409,
-                error_code="DUPLICATE_MESSAGE"
-            )
+# ============================================================================
+# Team Message Exceptions
+# ============================================================================
 
-    class MessagePermissionException(APIException):
-        """Raised when user does not have permission for a message action."""
-        def __init__(self, message: str = "You don't have permission for this message"):
-            super().__init__(
-                message=message,
-                status_code=403,
-                error_code="MESSAGE_FORBIDDEN"
-            )
+class MessageNotFoundException(APIException):
+    """Raised when a team message is not found."""
+    
+    def __init__(self, message: str = "Message not found", message_id: Optional[str] = None):
+        super().__init__(
+            message=message,
+            status_code=404,
+            error_code="MESSAGE_NOT_FOUND",
+            details={"message_id": message_id} if message_id else None
+        )
 
-    class MessageRateLimitException(APIException):
-        """Raised when user sends too many messages in a short period (rate limit)."""
-        def __init__(self, message: str = "Message rate limit exceeded. Please wait before sending more messages."):
-            super().__init__(
-                message=message,
-                status_code=429,
-                error_code="MESSAGE_RATE_LIMIT"
-            )
+
+class DuplicateMessageException(APIException):
+    """Raised when trying to create a duplicate team message."""
+    
+    def __init__(self, message: str = "Duplicate message detected"):
+        super().__init__(
+            message=message,
+            status_code=409,
+            error_code="DUPLICATE_MESSAGE"
+        )
+
+
+class MessagePermissionException(APIException):
+    """Raised when user does not have permission for a message action."""
+    
+    def __init__(self, message: str = "You don't have permission for this message"):
+        super().__init__(
+            message=message,
+            status_code=403,
+            error_code="MESSAGE_FORBIDDEN"
+        )
+
+
+class MessageRateLimitException(APIException):
+    """Raised when user sends too many messages in a short period (rate limit)."""
+    
+    def __init__(self, message: str = "Message rate limit exceeded. Please wait before sending more messages."):
+        super().__init__(
+            message=message,
+            status_code=429,
+            error_code="MESSAGE_RATE_LIMIT"
+        )

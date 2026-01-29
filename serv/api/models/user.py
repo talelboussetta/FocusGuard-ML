@@ -119,5 +119,11 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
+    team_messages = relationship(
+        "TeamMessage",
+        back_populates="sender",
+        cascade="all, delete-orphan"
+    )
+    
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, lvl={self.lvl})>"

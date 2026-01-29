@@ -34,29 +34,29 @@ async def lifespan(app: FastAPI):
     Handles startup and shutdown events.
     """
     # Startup
-    print("🚀 Starting FocusGuard API...")
+    print("[*] Starting FocusGuard API...")
     
     # Initialize database
     await init_db()
-    print("✅ Database connection initialized")
+    print("[OK] Database connection initialized")
     
     # Check database connection
     is_connected = await check_db_connection()
     if is_connected:
-        print("✅ Database connection verified")
+        print("[OK] Database connection verified")
     else:
-        print("⚠️  Warning: Database connection check failed")
+        print("[WARNING] Database connection check failed")
     
-    print(f"📊 API running at: http://localhost:8000")
-    print(f"📚 Swagger UI: http://localhost:8000/docs")
-    print(f"📖 ReDoc: http://localhost:8000/redoc")
+    print(f"[INFO] API running at: http://localhost:8000")
+    print(f"[INFO] Swagger UI: http://localhost:8000/docs")
+    print(f"[INFO] ReDoc: http://localhost:8000/redoc")
     
     yield
     
     # Shutdown
-    print("👋 Shutting down FocusGuard API...")
+    print("[*] Shutting down FocusGuard API...")
     await close_db()
-    print("✅ Database connection closed")
+    print("[OK] Database connection closed")
 
 
 # Create FastAPI application

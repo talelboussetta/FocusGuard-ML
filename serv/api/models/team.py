@@ -86,6 +86,7 @@ class Team(Base):
     
     # Relationships
     members = relationship("TeamMember", back_populates="team", cascade="all, delete-orphan")
+    messages = relationship("TeamMessage", back_populates="team", cascade="all, delete-orphan")
 
 
 class TeamMember(Base):

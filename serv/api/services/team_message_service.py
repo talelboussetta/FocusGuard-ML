@@ -72,7 +72,7 @@ async def create_team_message(
         team_id=team_id,
         sender_id=sender_id,
         content=message_data.content,
-        type=message_data.type,
+        message_type=message_data.type,
         sent_at=datetime.now(timezone.utc),
     )
 

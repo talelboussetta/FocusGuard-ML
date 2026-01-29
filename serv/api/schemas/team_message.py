@@ -31,18 +31,21 @@ class TeamMessageResponse(BaseModel):
     sender_id: UUID = Field(..., description="Sender's User UUID")
     content: str = Field(..., description="Message content")
     sent_at: datetime = Field(..., description="Timestamp when the message was sent")
-    type: str = Field(..., description="Message type")  
-    is_edited:bool=Field(...,description="Indicates if the message has been edited")
+    type: str = Field(..., description="Message type", alias="message_type")
+    is_edited: bool = Field(..., description="Indicates if the message has been edited")
     
     model_config = {
         "from_attributes": True,
+        "populate_by_name": True,
         "json_schema_extra": {
             "examples": [{
                 "message_id": "123e4567-e89b-12d3-a456-426614174000",
                 "team_id": "223e4567-e89b-12d3-a456-426614174000",
                 "sender_id": "323e4567-e89b-12d3-a456-426614174000",
                 "content": "Don't forget to submit your assignments!",
-                "sent_at": "2026-01-20T10:15:30Z"
+                "sent_at": "2026-01-20T10:15:30Z",
+                "type": "text",
+                "is_edited": False
             }]
         }
     }
@@ -53,7 +56,10 @@ class TeamMessageInDB(BaseModel):
     team_id: UUID
     sender_id: Optional[UUID]
     content: str
+    message_type: str  # Mapped from 'type' column
+    is_edited: bool
     sent_at: datetime
+    edited_at: Optional[datetime] = None
     
     model_config = {
         "from_attributes": True

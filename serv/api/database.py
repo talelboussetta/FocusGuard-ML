@@ -30,8 +30,8 @@ except ImportError:
 # ============================================================================
 
 # Debug: print URL being used
-print(f"🔍 DEBUG: Creating async engine with URL: {settings.database_url}")
-print(f"🔍 DEBUG: asyncpg available: {asyncpg is not None}")
+print(f"[DEBUG] Creating async engine with URL: {settings.database_url}")
+print(f"[DEBUG] asyncpg available: {asyncpg is not None}")
 
 # Create async engine for PostgreSQL
 engine = create_async_engine(
@@ -41,7 +41,7 @@ engine = create_async_engine(
     poolclass=NullPool if settings.debug else None,  # Disable pooling in debug mode
 )
 
-print(f"✅ DEBUG: Engine created successfully: {engine.dialect.name}")
+print(f"[OK] Engine created successfully: {engine.dialect.name}")
 
 # ============================================================================
 # Session Factory

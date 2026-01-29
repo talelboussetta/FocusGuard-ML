@@ -43,6 +43,23 @@ class TeamMessage(Base):
         nullable=False,
         comment="Content of the team message"
     )
+    
+    # Message type (using Column name string to avoid Python 'type' keyword)
+    message_type = Column(
+        'type',
+        String(50),
+        nullable=False,
+        server_default='text',
+        comment="Type of the message (text, system, etc.)"
+    )
+    
+    # Message edited flag
+    is_edited = Column(
+        Boolean,
+        nullable=False,
+        server_default='false',
+        comment="Whether the message has been edited"
+    )
 
     # Timestamps
     sent_at = Column(
