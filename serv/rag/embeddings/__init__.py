@@ -1,14 +1,43 @@
 """
 Embeddings Module
 
-Converts text into dense vector representations for semantic search.
+Converts text into dense vector representations for semantic search using OpenAI.
 
-Common approaches:
-- OpenAI Embeddings API (text-embedding-3-small, text-embedding-3-large)
-- HuggingFace models (sentence-transformers/all-MiniLM-L6-v2)
-- Local models for privacy (all-mpnet-base-v2)
+Features:
+- OpenAI text-embedding-3-small (1536 dimensions) - Recommended
+- OpenAI text-embedding-3-large (3072 dimensions) - Higher quality
+- Automatic batching for efficiency
+- Retry logic for reliability
+- Token usage tracking
 
 Example usage:
-    embedder = OpenAIEmbedder(model="text-embedding-3-small")
-    vector = embedder.embed("How to improve focus during work?")
+    ```python
+    from rag.embeddings import get_embedder
+    
+    # Get singleton instance (uses config from .env)
+    embedder = get_embedder()
+    
+    # Single text
+    vector = await embedder.embed_text("How to improve focus?")
+    
+    # Batch processing
+    vectors = await embedder.embed_batch([
+        "Focus tip 1",
+        "Focus tip 2",
+        "Focus tip 3"
+    ])
+    ```
 """
+
+from .base_embedder import BaseEmbedder
+from .openai_embedder import OpenAIEmbedder
+from .config import get_embedder, initialize_embedder, reset_embedder
+
+
+__all__ = [
+    "BaseEmbedder",
+    "OpenAIEmbedder",
+    "get_embedder",
+    "initialize_embedder",
+    "reset_embedder",
+]
