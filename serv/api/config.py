@@ -163,6 +163,25 @@ class Settings(BaseSettings):
     )
     
     # ========================================================================
+    # Sentence Transformers Settings (Local Embeddings)
+    # ========================================================================
+    
+    use_local_embeddings: bool = Field(
+        default=False,
+        description="Use local sentence-transformers instead of OpenAI (free, offline)"
+    )
+    
+    sentence_transformer_model: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Sentence transformer model name (all-MiniLM-L6-v2, all-mpnet-base-v2)"
+    )
+    
+    sentence_transformer_device: str = Field(
+        default="cpu",
+        description="Device for sentence transformers (cpu, cuda, mps)"
+    )
+    
+    # ========================================================================
     # Pydantic Settings Configuration
     # ========================================================================
     

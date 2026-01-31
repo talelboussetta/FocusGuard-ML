@@ -4,32 +4,35 @@ Embeddings Configuration & Initialization
 Provides singleton access to the embedder using app config.
 """
 
-from typing import Optional
+from typing import Optional, Union
 import logging
 
 from api.config import settings
 from .openai_embedder import OpenAIEmbedder
+from .sentence_transformer_embedder import SentenceTransformerEmbedder
+from .base_embedder import BaseEmbedder
 
 
 logger = logging.getLogger(__name__)
 
 
 # Singleton instance
-_embedder: Optional[OpenAIEmbedder] = None
+_embedder: Optional[Union[OpenAIEmbedder, SentenceTransformerEmbedder]] = None
 
 
-def get_embedder() -> OpenAIEmbedder:
+def get_embedder() -> BaseEmbedder:
     """
     Get or create the global embedder instance.
     
     Uses configuration from api.config.settings.
+    Chooses between OpenAI (cloud) or SentenceTransformer (local) based on config.
     Thread-safe singleton pattern.
     
     Returns:
-        Configured OpenAIEmbedder instance
+        Configured embedder instance (OpenAI or SentenceTransformer)
         
     Raises:
-        ValueError: If OpenAI API key is not configured
+        ValueError: If configuration is invalid
         
     Example:
         ```python
@@ -42,22 +45,34 @@ def get_embedder() -> OpenAIEmbedder:
     global _embedder
     
     if _embedder is None:
-        if not settings.openai_api_key:
-            raise ValueError(
-                "OPENAI_API_KEY not configured. "
-                "Please set it in your .env file."
+        if settings.use_local_embeddings:
+            # Use free local embeddings (sentence-transformers)
+            _embedder = SentenceTransformerEmbedder(
+                model_name=settings.sentence_transformer_model,
+                device=settings.sentence_transformer_device,
+                batch_size=32,
             )
-        
-        _embedder = OpenAIEmbedder(
-            api_key=settings.openai_api_key,
-            model=settings.openai_embedding_model,
-            batch_size=100,  # Default batch size
-        )
-        
-        logger.info(
-            f"Created embedder: {settings.openai_embedding_model} "
-            f"(dimension: {_embedder.dimension})"
-        )
+            logger.info(
+                f"Created LOCAL embedder: {settings.sentence_transformer_model} "
+                f"(dimension: {_embedder.dimension}, device: {settings.sentence_transformer_device})"
+            )
+        else:
+            # Use OpenAI embeddings (requires API key)
+            if not settings.openai_api_key:
+                raise ValueError(
+                    "OPENAI_API_KEY not configured. "
+                    "Please set it in your .env file or set USE_LOCAL_EMBEDDINGS=True"
+                )
+            
+            _embedder = OpenAIEmbedder(
+                api_key=settings.openai_api_key,
+                model=settings.openai_embedding_model,
+                batch_size=100,
+            )
+            logger.info(
+                f"Created OPENAI embedder: {settings.openai_embedding_model} "
+                f"(dimension: {_embedder.dimension})"
+            )
     
     return _embedder
 

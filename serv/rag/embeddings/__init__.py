@@ -31,12 +31,14 @@ Example usage:
 
 from .base_embedder import BaseEmbedder
 from .openai_embedder import OpenAIEmbedder
+from .sentence_transformer_embedder import SentenceTransformerEmbedder
 from .config import get_embedder, initialize_embedder, reset_embedder
 
 
 __all__ = [
     "BaseEmbedder",
     "OpenAIEmbedder",
+    "SentenceTransformerEmbedder",
     "get_embedder",
     "initialize_embedder",
     "reset_embedder",

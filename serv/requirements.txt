@@ -57,6 +57,7 @@ python-dotenv>=1.0.0
 # RAG & Vector Store
 qdrant-client>=1.7.0            # Qdrant vector database client
 openai>=1.10.0                  # OpenAI API for embeddings and LLM
+sentence-transformers>=2.3.0    # Local embeddings (HuggingFace)
 
 # Development
 pytest>=7.4.0
