@@ -120,6 +120,49 @@ class Settings(BaseSettings):
     )
     
     # ========================================================================
+    # RAG & Vector Store Settings (Qdrant)
+    # ========================================================================
+    
+    qdrant_url: str = Field(
+        default="http://localhost:6333",
+        description="Qdrant server URL (local Docker or cloud)"
+    )
+    
+    qdrant_api_key: str = Field(
+        default="",
+        description="Qdrant API key (required for Qdrant Cloud, leave empty for local)"
+    )
+    
+    qdrant_collection_name: str = Field(
+        default="focusguard_knowledge",
+        description="Qdrant collection name for RAG documents"
+    )
+    
+    qdrant_vector_size: int = Field(
+        default=1536,
+        description="Vector embedding dimension (1536 for OpenAI text-embedding-3-small)"
+    )
+    
+    # ========================================================================
+    # OpenAI Settings
+    # ========================================================================
+    
+    openai_api_key: str = Field(
+        default="",
+        description="OpenAI API key for embeddings and LLM"
+    )
+    
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        description="OpenAI embedding model (text-embedding-3-small, text-embedding-3-large)"
+    )
+    
+    openai_chat_model: str = Field(
+        default="gpt-4",
+        description="OpenAI chat model for generation (gpt-4, gpt-3.5-turbo)"
+    )
+    
+    # ========================================================================
     # Pydantic Settings Configuration
     # ========================================================================
     
