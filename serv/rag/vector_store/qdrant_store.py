@@ -8,6 +8,7 @@ Supports both local Docker and Qdrant Cloud deployments.
 from typing import List, Dict, Any, Optional
 from datetime import datetime
 import logging
+import uuid
 
 from qdrant_client import QdrantClient, AsyncQdrantClient
 from qdrant_client.models import (
@@ -25,6 +26,35 @@ from .base_store import BaseVectorStore, Document, SearchResult
 
 
 logger = logging.getLogger(__name__)
+
+
+def _ensure_uuid(doc_id: str) -> str:
+    """
+    Convert document ID to valid UUID format.
+    
+    Qdrant requires point IDs to be either unsigned integers or UUIDs.
+    This function ensures string IDs are converted to valid UUIDs.
+    
+    Args:
+        doc_id: Document ID (can be UUID string or any string)
+        
+    Returns:
+        Valid UUID string
+        
+    Example:
+        >>> _ensure_uuid("doc-1")
+        '3d9e1e5a-...'  # Deterministic UUID v5
+        >>> _ensure_uuid("550e8400-e29b-41d4-a716-446655440000")
+        '550e8400-e29b-41d4-a716-446655440000'  # Already valid UUID
+    """
+    try:
+        # Try to parse as UUID - if valid, return as-is
+        uuid.UUID(doc_id)
+        return doc_id
+    except ValueError:
+        # Not a valid UUID - generate deterministic UUID v5 from string
+        # Using DNS namespace for consistency
+        return str(uuid.uuid5(uuid.NAMESPACE_DNS, doc_id))
 
 
 class QdrantVectorStore(BaseVectorStore):
@@ -172,6 +202,7 @@ class QdrantVectorStore(BaseVectorStore):
         for doc, embedding in zip(documents, embeddings):
             # Prepare payload (metadata + content)
             payload = {
+                "document_id": doc.id,  # Store original ID in payload
                 "content": doc.content,
                 "created_at": datetime.utcnow().isoformat(),
             }
@@ -187,9 +218,12 @@ class QdrantVectorStore(BaseVectorStore):
                 
                 payload.update(metadata)
             
+            # Convert ID to valid UUID format for Qdrant
+            point_id = _ensure_uuid(doc.id)
+            
             points.append(
                 PointStruct(
-                    id=doc.id,  # Use document ID as point ID
+                    id=point_id,
                     vector=embedding,
                     payload=payload,
                 )
@@ -245,18 +279,21 @@ class QdrantVectorStore(BaseVectorStore):
                 qdrant_filter = Filter(must=conditions)
         
         # Perform vector search
-        search_results = await self.client.search(
+        search_results = await self.client.query_points(
             collection_name=self.collection_name,
-            query_vector=query_embedding,
+            query=query_embedding,
             limit=top_k,
             query_filter=qdrant_filter,
+            with_payload=True,
+            with_vectors=False,  # Don't return vectors (save bandwidth)
         )
         
         # Convert Qdrant results to SearchResult objects
         results = []
-        for rank, hit in enumerate(search_results):
+        for rank, point in enumerate(search_results.points):
             # Extract payload
-            payload = hit.payload
+            payload = point.payload.copy() if point.payload else {}
+            document_id = payload.pop("document_id", str(point.id))  # Use original ID
             content = payload.pop("content", "")
             created_at = payload.pop("created_at", None)
             
@@ -266,7 +303,7 @@ class QdrantVectorStore(BaseVectorStore):
                 metadata["created_at"] = created_at
             
             document = Document(
-                id=str(hit.id),
+                id=document_id,  # Return original document ID
                 content=content,
                 embedding=None,  # Don't return embeddings (large)
                 metadata=metadata,
@@ -275,7 +312,7 @@ class QdrantVectorStore(BaseVectorStore):
             results.append(
                 SearchResult(
                     document=document,
-                    score=hit.score,
+                    score=point.score if hasattr(point, 'score') and point.score else 1.0,
                     rank=rank,
                 )
             )
@@ -298,10 +335,13 @@ class QdrantVectorStore(BaseVectorStore):
             True if deleted, False if not found
         """
         try:
+            # Convert ID to UUID format
+            point_id = _ensure_uuid(document_id)
+            
             # Attempt to delete point by ID
             await self.client.delete(
                 collection_name=self.collection_name,
-                points_selector=[document_id],
+                points_selector=[point_id],
             )
             logger.info(f"Deleted document '{document_id}'")
             return True
