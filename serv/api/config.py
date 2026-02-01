@@ -144,7 +144,7 @@ class Settings(BaseSettings):
     )
     
     # ========================================================================
-    # OpenAI Settings
+    # OpenAI Settings (Embeddings)
     # ========================================================================
     
     openai_api_key: str = Field(
@@ -155,11 +155,6 @@ class Settings(BaseSettings):
     openai_embedding_model: str = Field(
         default="text-embedding-3-small",
         description="OpenAI embedding model (text-embedding-3-small, text-embedding-3-large)"
-    )
-    
-    openai_chat_model: str = Field(
-        default="gpt-4",
-        description="OpenAI chat model for generation (gpt-4, gpt-3.5-turbo)"
     )
     
     # ========================================================================
@@ -179,6 +174,94 @@ class Settings(BaseSettings):
     sentence_transformer_device: str = Field(
         default="cpu",
         description="Device for sentence transformers (cpu, cuda, mps)"
+    )
+    
+    # ========================================================================
+    # LLM Generation Settings
+    # ========================================================================
+    
+    use_local_llm: bool = Field(
+        default=False,
+        description="Use local LLM instead of API-based models (Ollama, LlamaCpp)"
+    )
+    
+    # OpenAI LLM Settings
+    openai_chat_model: str = Field(
+        default="gpt-3.5-turbo",
+        description="OpenAI chat model for generation (gpt-4, gpt-3.5-turbo, gpt-4-turbo)"
+    )
+    
+    openai_temperature: float = Field(
+        default=0.7,
+        ge=0.0,
+        le=2.0,
+        description="Sampling temperature for OpenAI (0.0=deterministic, 2.0=very creative)"
+    )
+    
+    openai_max_tokens: int = Field(
+        default=500,
+        ge=1,
+        le=4096,
+        description="Maximum tokens in generated response"
+    )
+    
+    # Anthropic Claude Settings (Alternative)
+    anthropic_api_key: str = Field(
+        default="",
+        description="Anthropic API key for Claude models (optional alternative to OpenAI)"
+    )
+    
+    anthropic_model: str = Field(
+        default="claude-3-sonnet-20240229",
+        description="Anthropic model (claude-3-opus, claude-3-sonnet, claude-3-haiku)"
+    )
+    
+    # Local LLM Settings (Ollama, LlamaCpp)
+    ollama_base_url: str = Field(
+        default="http://localhost:11434",
+        description="Ollama server URL for local LLM inference"
+    )
+    
+    ollama_model: str = Field(
+        default="llama3:8b",
+        description="Ollama model name (llama3:8b, mistral, phi3, etc.)"
+    )
+    
+    llm_timeout_seconds: int = Field(
+        default=30,
+        ge=5,
+        le=300,
+        description="Timeout for LLM API calls in seconds"
+    )
+    
+    llm_max_retries: int = Field(
+        default=2,
+        ge=0,
+        le=5,
+        description="Maximum retry attempts for failed LLM requests"
+    )
+    
+    # ========================================================================
+    # RAG Pipeline Settings
+    # ========================================================================
+    
+    rag_retrieval_top_k: int = Field(
+        default=5,
+        ge=1,
+        le=20,
+        description="Number of documents to retrieve for RAG context"
+    )
+    
+    rag_score_threshold: float = Field(
+        default=0.3,
+        ge=0.0,
+        le=1.0,
+        description="Minimum similarity score for retrieved documents"
+    )
+    
+    rag_enable_reranking: bool = Field(
+        default=False,
+        description="Enable cross-encoder reranking of retrieved documents"
     )
     
     # ========================================================================
