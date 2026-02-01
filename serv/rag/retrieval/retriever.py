@@ -265,26 +265,3 @@ class Retriever:
         # TODO: Implement actual reranking with cross-encoder
         # For now, just return top-k from the initial results
         return results[:top_k]
-    def _build_filter(self, context: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Convert user context to vector store filter.
-        
-        Example:
-            context = {"user_id": "123", "category": "focus_tips"}
-            → filter = {"metadata.user_id": "123", "metadata.category": "focus_tips"}
-        """
-        # TODO: Implement filter building logic
-        return {}
-    
-    def _post_process(self, results: List[Any]) -> List[Any]:
-        """
-        Apply post-processing to search results.
-        
-        Possible enhancements:
-        - Re-rank with cross-encoder model
-        - Remove duplicates
-        - Filter by quality score
-        - Diversify results (MMR - Maximal Marginal Relevance)
-        """
-        # TODO: Implement post-processing
-        return results
