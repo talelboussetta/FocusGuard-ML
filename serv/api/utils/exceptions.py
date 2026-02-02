@@ -260,3 +260,18 @@ class MessageRateLimitException(APIException):
             status_code=429,
             error_code="MESSAGE_RATE_LIMIT"
         )
+
+
+# ============================================================================
+# RAG Exceptions
+# ============================================================================
+
+class RAGServiceException(APIException):
+    """Raised when RAG service encounters an error."""
+    
+    def __init__(self, message: str = "RAG service error"):
+        super().__init__(
+            message=message,
+            status_code=500,
+            error_code="RAG_SERVICE_ERROR"
+        )

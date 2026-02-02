@@ -57,6 +57,7 @@ python-dotenv>=1.0.0
 # RAG & Vector Store
 qdrant-client>=1.7.0            # Qdrant vector database client
 sentence-transformers>=2.3.0    # Local embeddings (HuggingFace)
+PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
 
 # LLM & Generation
 openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
