@@ -216,7 +216,18 @@ class Settings(BaseSettings):
         description="Anthropic model (claude-3-opus, claude-3-sonnet, claude-3-haiku)"
     )
     
-    # Local LLM Settings (Ollama, LlamaCpp)
+    # Hugging Face Inference API Settings (Recommended - Free & Easy)
+    huggingface_api_key: str = Field(
+        default="",
+        description="Hugging Face API key for Inference API (free tier available)"
+    )
+    
+    huggingface_model: str = Field(
+        default="mistralai/Mistral-7B-Instruct-v0.2",
+        description="HuggingFace model ID (mistralai/Mistral-7B-Instruct-v0.2, meta-llama/Meta-Llama-3-8B-Instruct)"
+    )
+    
+    # Local LLM Settings (Ollama, LlamaCpp) - Optional Alternative
     ollama_base_url: str = Field(
         default="http://localhost:11434",
         description="Ollama server URL for local LLM inference"

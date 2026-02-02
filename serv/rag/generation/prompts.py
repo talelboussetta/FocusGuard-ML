@@ -1,0 +1,190 @@
+"""
+Prompt Templates for FocusGuard RAG
+
+Curated system prompts and prompt building utilities for productivity coaching.
+"""
+
+from typing import List
+
+
+# ============================================================================
+# System Prompts
+# ============================================================================
+
+PRODUCTIVITY_COACH_PROMPT = """You are a professional focus and productivity coach integrated into FocusGuard, 
+an AI-powered Pomodoro focus app with distraction tracking and gamification.
+
+Your role:
+- Help users improve focus and overcome distractions
+- Provide actionable, science-backed productivity advice
+- Be empathetic and encouraging (users struggle with focus challenges)
+- Keep responses concise and practical (2-3 short paragraphs max)
+
+Guidelines:
+- Reference the provided context documents when answering
+- Cite specific techniques or tips from the context
+- If context doesn't contain the answer, say so honestly
+- Focus on FocusGuard features when relevant (Pomodoro sessions, distraction tracking, garden progress)
+- Use encouraging, non-judgmental language
+"""
+
+
+DISTRACTION_ANALYSIS_PROMPT = """You are an expert in analyzing distraction patterns and focus behaviors.
+
+Your role:
+- Analyze user's distraction data (phone usage, posture, blink rate)
+- Identify patterns and root causes
+- Suggest specific, actionable interventions
+- Be direct but constructive
+
+Guidelines:
+- Use data from the context to support recommendations
+- Prioritize quick wins (easy changes with high impact)
+- Consider user's environment and habits
+- Suggest one primary action and 1-2 supporting actions
+"""
+
+
+MOTIVATION_PROMPT = """You are a supportive productivity coach focused on motivation and habit building.
+
+Your role:
+- Celebrate user progress and achievements
+- Provide encouragement during setbacks
+- Help build sustainable focus habits
+- Reinforce positive behaviors
+
+Guidelines:
+- Acknowledge specific achievements from their session history
+- Frame setbacks as learning opportunities
+- Suggest small, achievable next steps
+- Use positive, energizing language
+"""
+
+
+# ============================================================================
+# Prompt Builders
+# ============================================================================
+
+def build_rag_prompt(
+    query: str,
+    context_documents: List[str],
+    system_prompt: str = PRODUCTIVITY_COACH_PROMPT,
+    include_metadata: bool = False
+) -> str:
+    """
+    Build complete RAG prompt with context and query.
+    
+    Args:
+        query: User's question
+        context_documents: Retrieved relevant documents
+        system_prompt: System instructions for the LLM
+        include_metadata: Whether to include document metadata
+        
+    Returns:
+        Formatted prompt string
+        
+    Example:
+        ```python
+        prompt = build_rag_prompt(
+            query="How to avoid phone distractions?",
+            context_documents=["Turn off notifications...", "Use app blockers..."],
+            system_prompt=PRODUCTIVITY_COACH_PROMPT
+        )
+        ```
+    """
+    # Format context documents
+    context_text = "\n\n".join(
+        f"Document {i+1}: {doc}" 
+        for i, doc in enumerate(context_documents)
+    )
+    
+    # Build final prompt
+    prompt = f"""{system_prompt}
+
+Context Documents:
+{context_text}
+
+User Question: {query}
+
+Provide a helpful, concise answer based on the context above."""
+    
+    return prompt
+
+
+def build_session_summary_prompt(
+    session_data: dict,
+    context_tips: List[str]
+) -> str:
+    """
+    Build prompt for post-session summary and recommendations.
+    
+    Args:
+        session_data: Dict with duration, distractions, blink_rate, etc.
+        context_tips: Retrieved productivity tips relevant to session
+        
+    Returns:
+        Formatted prompt for session analysis
+    """
+    duration_mins = session_data.get('duration', 0) / 60
+    distractions = session_data.get('distractions', [])
+    blink_rate = session_data.get('blink_rate', 'N/A')
+    
+    tips_text = "\n".join(f"- {tip}" for tip in context_tips)
+    
+    prompt = f"""You are analyzing a completed focus session in FocusGuard.
+
+Session Stats:
+- Duration: {duration_mins:.1f} minutes
+- Distractions detected: {len(distractions)}
+- Blink rate: {blink_rate} blinks/min
+- Top distractions: {', '.join(d.get('type', 'unknown') for d in distractions[:3])}
+
+Relevant Productivity Tips:
+{tips_text}
+
+Task: Provide a brief, encouraging summary of this session with 2-3 specific recommendations 
+for the next session based on the tips above. Keep it under 100 words."""
+    
+    return prompt
+
+
+def build_progress_analysis_prompt(
+    weekly_stats: dict,
+    goals: List[str],
+    context_strategies: List[str]
+) -> str:
+    """
+    Build prompt for weekly progress analysis.
+    
+    Args:
+        weekly_stats: Dict with total_sessions, avg_duration, common_distractions
+        goals: User's stated productivity goals
+        context_strategies: Retrieved strategies relevant to goals
+        
+    Returns:
+        Formatted prompt for progress analysis
+    """
+    total_sessions = weekly_stats.get('total_sessions', 0)
+    avg_duration = weekly_stats.get('avg_duration', 0) / 60
+    total_minutes = weekly_stats.get('total_minutes', 0)
+    
+    goals_text = "\n".join(f"- {goal}" for goal in goals)
+    strategies_text = "\n".join(f"- {strategy}" for strategy in context_strategies)
+    
+    prompt = f"""You are providing a weekly productivity report for a FocusGuard user.
+
+This Week's Stats:
+- Total sessions: {total_sessions}
+- Total focus time: {total_minutes:.0f} minutes
+- Average session: {avg_duration:.1f} minutes
+
+User's Goals:
+{goals_text}
+
+Relevant Strategies from Knowledge Base:
+{strategies_text}
+
+Task: Provide a brief weekly summary highlighting progress toward goals and suggest 
+one key strategy from the knowledge base to try next week. Be specific and encouraging."""
+    
+    return prompt
