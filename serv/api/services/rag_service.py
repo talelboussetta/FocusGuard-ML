@@ -103,13 +103,34 @@ class RAGService:
             filter_metadata=filter_metadata
         )
         
-        if not search_results:
-            logger.warning("No relevant documents found")
+        # Check if this is a conversational/greeting query (low relevance scores)
+        is_conversational = not search_results or (search_results and search_results[0].score < 0.5)
+        
+        if not search_results or is_conversational:
+            # For conversational queries or no matches, use LLM without context
+            logger.info(f"Handling conversational/general query (best score: {search_results[0].score if search_results else 'N/A'})")
+            
+            # Import here to avoid circular dependency
+            from rag.generation.prompts import PRODUCTIVITY_COACH_PROMPT
+            
+            # Create a simple prompt for conversational queries
+            conversational_prompt = f"""{PRODUCTIVITY_COACH_PROMPT}
+
+User Message: {query}
+
+Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. If it's a question you can help with, provide guidance."""
+            
+            answer = await self.generator.generate(
+                query=query,
+                context_documents=[conversational_prompt],
+                system_prompt=""
+            )
+            
             return RAGQueryResponse(
-                answer="I couldn't find relevant information to answer your question. Could you rephrase or provide more details?",
+                answer=answer,
                 sources=[] if include_sources else None,
                 query=query,
-                model_used=self.generator.model if self.generator else "none"
+                model_used=self.generator.model if self.generator else "conversational"
             )
         
         logger.info(f"Retrieved {len(search_results)} documents (scores: {[f'{r.score:.3f}' for r in search_results]})")

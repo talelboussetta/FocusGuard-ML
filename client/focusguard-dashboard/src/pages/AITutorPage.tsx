@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { api, getErrorMessage } from '../services/api'
+import { ragAPI, getErrorMessage, type SourceDocument } from '../services/api'
 
 interface Message {
   id: string
@@ -20,7 +20,7 @@ const AITutorPage = () => {
     {
       id: '1',
       role: 'assistant',
-      content: "Hi! I'm your AI Focus Coach. I can help you improve your productivity, analyze your focus patterns, and provide personalized tips. What would you like to work on today?",
+      content: "Hi! I'm your AI Focus Coach in FocusGuard. 👋 I'm here to help you improve your focus, overcome distractions, and build better study habits. Feel free to ask me anything about productivity, study techniques, time management, or just chat with me! What would you like to work on today?",
       timestamp: new Date(),
     },
   ])
@@ -59,7 +59,7 @@ const AITutorPage = () => {
 
     try {
       // Call RAG API
-      const ragResponse = await api.queryRAG({
+      const ragResponse = await ragAPI.query({
         query: input,
         top_k: 3,
         include_sources: true,
@@ -70,7 +70,7 @@ const AITutorPage = () => {
         role: 'assistant',
         content: ragResponse.answer,
         timestamp: new Date(),
-        sources: ragResponse.sources?.map(s => ({
+        sources: ragResponse.sources?.map((s: SourceDocument) => ({
           section_title: s.section_title,
           score: s.score,
         })),

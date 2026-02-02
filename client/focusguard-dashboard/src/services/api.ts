@@ -681,9 +681,14 @@ export const teamAPI = {
     });
     return response.ok;
   },
+};
 
-  // RAG (AI Assistant)
-  async queryRAG(data: RAGQueryRequest) {
+// ============================================================================
+// RAG (AI Assistant) API
+// ============================================================================
+
+export const ragAPI = {
+  async query(data: RAGQueryRequest) {
     const response = await fetch(`${API_BASE_URL}/rag/query`, {
       method: 'POST',
       headers: {
