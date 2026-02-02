@@ -63,6 +63,7 @@ openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
 tiktoken>=0.5.0                 # Token counting for OpenAI models
 anthropic>=0.18.0               # Anthropic Claude API (optional alternative)
 ollama>=0.1.0                   # Local LLM via Ollama (optional free alternative)
+huggingface-hub>=0.20.0         # Hugging Face Hub client (for inference API)
 
 # HTTP Client
 aiohttp>=3.9.0                  # Async HTTP client for API calls

@@ -24,9 +24,14 @@ async def test_basic_generation():
     print("="*70)
     
     # Check configuration
-    if not settings.huggingface_api_key:
+    print(f"Debug: API key value: '{settings.huggingface_api_key}'")
+    print(f"Debug: API key length: {len(settings.huggingface_api_key)}")
+    
+    if not settings.huggingface_api_key or settings.huggingface_api_key == "your-hf-api-key-here":
         print("❌ HUGGINGFACE_API_KEY not set in .env")
         print("   Get free key: https://huggingface.co/settings/tokens")
+        print(f"   Current working directory: {Path.cwd()}")
+        print(f"   Looking for .env at: {Path(__file__).parent.parent.parent / '.env'}")
         return False
     
     print(f"✓ Using model: {settings.huggingface_model}")
