@@ -257,8 +257,8 @@ Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. 
         from api.models.user_stats import UserStats
         
         try:
-            # Get user info
-            user_result = await db.execute(select(User).where(User.user_id == user_id))
+            # Get user info (User model uses 'id' not 'user_id')
+            user_result = await db.execute(select(User).where(User.id == user_id))
             user = user_result.scalar_one_or_none()
             
             if not user:
