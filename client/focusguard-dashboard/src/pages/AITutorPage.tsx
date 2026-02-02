@@ -5,12 +5,14 @@ import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
+import { api, getErrorMessage } from '../services/api'
 
 interface Message {
   id: string
   role: 'user' | 'assistant'
   content: string
   timestamp: Date
+  sources?: { section_title: string; score: number }[]
 }
 
 const AITutorPage = () => {
@@ -55,25 +57,37 @@ const AITutorPage = () => {
     setInput('')
     setIsTyping(true)
 
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponses = [
-        "That's a great question! Based on your recent focus sessions, I notice you're most productive in the morning. Try scheduling your most challenging tasks between 9-11 AM.",
-        "I've analyzed your blink patterns and it seems you're experiencing eye strain. Consider the 20-20-20 rule: every 20 minutes, look at something 20 feet away for 20 seconds.",
-        "Your focus quality has improved by 15% this week! Keep up the great work. To maintain this momentum, try extending your sessions by 5 minutes gradually.",
-        "Based on cognitive science, taking strategic breaks is crucial. I recommend a 5-minute break after every 25 minutes of focused work (Pomodoro Technique).",
-      ]
+    try {
+      // Call RAG API
+      const ragResponse = await api.queryRAG({
+        query: input,
+        top_k: 3,
+        include_sources: true,
+      })
 
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: aiResponses[Math.floor(Math.random() * aiResponses.length)],
+        content: ragResponse.answer,
         timestamp: new Date(),
+        sources: ragResponse.sources?.map(s => ({
+          section_title: s.section_title,
+          score: s.score,
+        })),
       }
 
       setMessages((prev) => [...prev, aiMessage])
+    } catch (error) {
+      const errorMsg: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: `Sorry, I encountered an error: ${getErrorMessage(error)}. Please try again.`,
+        timestamp: new Date(),
+      }
+      setMessages((prev) => [...prev, errorMsg])
+    } finally {
       setIsTyping(false)
-    }, 1500)
+    }
   }
 
   const handleQuickPrompt = (text: string) => {
@@ -159,7 +173,17 @@ const AITutorPage = () => {
                           <span className="text-xs font-semibold text-primary-400">AI Coach</span>
                         </div>
                       )}
-                      <p className="text-sm">{message.content}</p>
+                      <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                      {message.sources && message.sources.length > 0 && (
+                        <div className="mt-3 pt-3 border-t border-slate-700">
+                          <p className="text-xs text-slate-400 mb-2">Sources:</p>
+                          {message.sources.map((source, idx) => (
+                            <div key={idx} className="text-xs text-slate-500 ml-2">
+                              • {source.section_title} ({Math.round(source.score * 100)}% match)
+                            </div>
+                          ))}
+                        </div>
+                      )}
                       <p className={`text-xs mt-1 ${message.role === 'user' ? 'text-white/70' : 'text-slate-500'}`}>
                         {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                       </p>

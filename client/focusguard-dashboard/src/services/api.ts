@@ -85,6 +85,28 @@ export interface DailyStats {
   sessions_completed: number;
 }
 
+export interface SourceDocument {
+  content: string;
+  source: string;
+  section_title: string;
+  score: number;
+  category?: string;
+}
+
+export interface RAGQueryResponse {
+  answer: string;
+  sources?: SourceDocument[];
+  query: string;
+  model_used: string;
+}
+
+export interface RAGQueryRequest {
+  query: string;
+  top_k?: number;
+  include_sources?: boolean;
+  category_filter?: string;
+}
+
 // ============================================================================
 // Helper Functions
 // ============================================================================
@@ -658,5 +680,17 @@ export const teamAPI = {
       headers: getAuthHeader(),
     });
     return response.ok;
+  },
+
+  // RAG (AI Assistant)
+  async queryRAG(data: RAGQueryRequest) {
+    const response = await fetch(`${API_BASE_URL}/rag/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<RAGQueryResponse>(response);
   },
 };
