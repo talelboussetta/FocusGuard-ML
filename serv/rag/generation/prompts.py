@@ -68,6 +68,26 @@ Guidelines:
 """
 
 
+STATS_ANALYSIS_PROMPT = """You are an expert productivity analyst helping users understand their focus patterns and progress.
+
+Your role:
+- Analyze user's session data, trends, and statistics
+- Identify patterns in focus time, streaks, and productivity
+- Provide data-driven insights and recommendations
+- Be specific, quantitative, and actionable
+- Celebrate wins and progress
+- Suggest evidence-based improvements
+
+Guidelines:
+- Reference specific numbers from their stats (XP, sessions, streaks, etc.)
+- Compare current performance to past trends when available
+- Highlight both achievements and areas for improvement
+- Keep insights concise and actionable (2-3 key points)
+- End with one specific action they can take next
+- Be encouraging but honest about challenges
+"""
+
+
 # ============================================================================
 # Prompt Builders
 # ============================================================================
@@ -193,5 +213,66 @@ Relevant Strategies from Knowledge Base:
 
 Task: Provide a brief weekly summary highlighting progress toward goals and suggest 
 one key strategy from the knowledge base to try next week. Be specific and encouraging."""
+    
+    return prompt
+
+
+def build_stats_analysis_prompt(
+    query: str,
+    user_stats: dict,
+    context_documents: List[str] = None
+) -> str:
+    """
+    Build prompt for analyzing user statistics and trends.
+    
+    Args:
+        query: User's stats-related question
+        user_stats: Dictionary with user's performance data
+        context_documents: Optional relevant productivity tips from knowledge base
+        
+    Returns:
+        Formatted prompt for stats analysis
+    """
+    # Format user stats
+    stats_text = f"""User Profile:
+- Username: {user_stats.get('username', 'User')}
+- Level: {user_stats.get('level', 1)}
+- Total XP: {user_stats.get('xp_points', 0)} points
+- Current Streak: {user_stats.get('current_streak', 0)} days
+- Longest Streak: {user_stats.get('longest_streak', 0)} days
+
+Overall Performance:
+- Total Sessions: {user_stats.get('total_sessions', 0)}
+- Completed Sessions: {user_stats.get('completed_sessions', 0)}
+- Completion Rate: {user_stats.get('completion_rate', 0)}%
+- Total Focus Time: {user_stats.get('total_focus_minutes', 0)} minutes
+
+Last 7 Days:
+- Sessions Started: {user_stats.get('last_7_days', {}).get('sessions_count', 0)}
+- Sessions Completed: {user_stats.get('last_7_days', {}).get('completed_count', 0)}
+- Focus Minutes: {user_stats.get('last_7_days', {}).get('focus_minutes', 0)}
+"""
+    
+    if user_stats.get('last_7_days', {}).get('avg_blink_rate'):
+        stats_text += f"- Avg Blink Rate: {user_stats['last_7_days']['avg_blink_rate']} blinks/min (indicator of screen focus)\n"
+    
+    # Add context documents if available
+    context_section = ""
+    if context_documents:
+        context_text = "\n\n".join(f"Tip {i+1}: {doc}" for i, doc in enumerate(context_documents))
+        context_section = f"""
+
+Relevant Productivity Tips:
+{context_text}
+"""
+    
+    prompt = f"""{STATS_ANALYSIS_PROMPT}
+
+{stats_text}
+{context_section}
+
+User Question: {query}
+
+Provide a data-driven analysis with specific insights based on their stats. Be encouraging and actionable."""
     
     return prompt

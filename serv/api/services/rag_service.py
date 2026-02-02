@@ -6,7 +6,11 @@ Coordinates retrieval from vector store and generation from LLM.
 """
 
 import logging
+import re
 from typing import List, Optional, Dict, Any
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, func
+from datetime import datetime, timedelta
 
 from api.schemas.rag import RAGQueryResponse, SourceDocument
 
@@ -71,7 +75,9 @@ class RAGService:
         query: str,
         top_k: int = 3,
         category_filter: Optional[str] = None,
-        include_sources: bool = True
+        include_sources: bool = True,
+        user_id: Optional[str] = None,
+        db: Optional[AsyncSession] = None
     ) -> RAGQueryResponse:
         """
         Process RAG query: retrieve relevant docs + generate answer.
@@ -81,6 +87,8 @@ class RAGService:
             top_k: Number of context documents to retrieve
             category_filter: Optional category filter (e.g., 'focus_productivity')
             include_sources: Whether to include source documents in response
+            user_id: Optional authenticated user ID for personalized responses
+            db: Optional database session for fetching user stats
         
         Returns:
             RAGQueryResponse with generated answer and optional sources
@@ -88,7 +96,15 @@ class RAGService:
         if not self._initialized:
             await self.initialize()
         
-        logger.info(f"Processing RAG query: '{query}' (top_k={top_k})")
+        logger.info(f"Processing RAG query: '{query}' (top_k={top_k}, user_id={user_id})")
+        
+        # Check if this is a stats/analytics query
+        is_stats_query = self._is_stats_query(query)
+        user_stats_context = None
+        
+        if is_stats_query and user_id and db:
+            logger.info("Detected stats query - fetching user data")
+            user_stats_context = await self._fetch_user_stats(user_id, db)
         
         # Build metadata filter if category specified
         filter_metadata = None
@@ -138,12 +154,30 @@ Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. 
         # Extract context documents for LLM
         context_docs = [result.document.content for result in search_results]
         
-        # Generate answer using LLM
-        logger.info("Generating answer with LLM...")
-        answer = await self.generator.generate(
-            query=query,
-            context_documents=context_docs
-        )
+        # If stats query with user data, build specialized stats prompt
+        if is_stats_query and user_stats_context:
+            logger.info("Building stats analysis prompt with user data")
+            from rag.generation.prompts import build_stats_analysis_prompt
+            
+            stats_prompt = build_stats_analysis_prompt(
+                query=query,
+                user_stats=user_stats_context,
+                context_documents=context_docs[:2]  # Include top 2 relevant tips
+            )
+            
+            # Generate personalized stats analysis
+            answer = await self.generator.generate(
+                query=query,
+                context_documents=[stats_prompt],
+                system_prompt=""
+            )
+        else:
+            # Generate answer using LLM with knowledge base context
+            logger.info("Generating answer with LLM...")
+            answer = await self.generator.generate(
+                query=query,
+                context_documents=context_docs
+            )
         
         logger.info(f"Generated answer ({len(answer)} chars)")
         
@@ -188,6 +222,105 @@ Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. 
             "generator_ready": self.generator is not None,
             "documents_count": doc_count
         }
+    
+    def _is_stats_query(self, query: str) -> bool:
+        """
+        Detect if query is asking for personal stats/analytics.
+        
+        Keywords: analyze, stats, trends, progress, how am i doing, performance, etc.
+        """
+        stats_keywords = [
+            r'\b(analyze|analyse)\b.*\b(trend|stat|progress|performance)\b',
+            r'\b(my|mine)\b.*\b(trend|stat|progress|performance|session)\b',
+            r'\bhow\s+(am\s+i|have\s+i)\b.*\b(doing|performing|progressing)\b',
+            r'\b(show|give|tell)\s+me\s+my\b',
+            r'\bmy\s+(focus|productivity|distraction)\s+(pattern|trend|stat)\b',
+            r'\b(recent|latest)\s+(session|progress|performance)\b'
+        ]
+        
+        query_lower = query.lower()
+        return any(re.search(pattern, query_lower) for pattern in stats_keywords)
+    
+    async def _fetch_user_stats(self, user_id: str, db: AsyncSession) -> Dict[str, Any]:
+        """
+        Fetch comprehensive user statistics for personalized responses.
+        
+        Returns dict with:
+        - total_sessions, completed_sessions
+        - total_focus_minutes
+        - current level, XP
+        - recent session stats (last 7 days)
+        - distraction patterns (if available)
+        """
+        from api.models.user import User
+        from api.models.session import Session
+        from api.models.user_stats import UserStats
+        
+        try:
+            # Get user info
+            user_result = await db.execute(select(User).where(User.user_id == user_id))
+            user = user_result.scalar_one_or_none()
+            
+            if not user:
+                return {}
+            
+            # Get user stats
+            stats_result = await db.execute(select(UserStats).where(UserStats.user_id == user_id))
+            user_stats = stats_result.scalar_one_or_none()
+            
+            # Get session counts
+            total_sessions_result = await db.execute(
+                select(func.count(Session.id)).where(Session.user_id == user_id)
+            )
+            total_sessions = total_sessions_result.scalar() or 0
+            
+            completed_sessions_result = await db.execute(
+                select(func.count(Session.id)).where(
+                    Session.user_id == user_id,
+                    Session.completed == True
+                )
+            )
+            completed_sessions = completed_sessions_result.scalar() or 0
+            
+            # Get recent sessions (last 7 days)
+            seven_days_ago = datetime.utcnow() - timedelta(days=7)
+            recent_sessions_result = await db.execute(
+                select(Session).where(
+                    Session.user_id == user_id,
+                    Session.created_at >= seven_days_ago
+                ).order_by(Session.created_at.desc())
+            )
+            recent_sessions = recent_sessions_result.scalars().all()
+            
+            # Calculate focus time from recent sessions
+            recent_focus_minutes = sum(
+                (s.duration_minutes or 0) for s in recent_sessions if s.completed
+            )
+            
+            # Calculate average blink rate (indicator of screen time / focus quality)
+            blink_rates = [s.blink_rate for s in recent_sessions if s.blink_rate]
+            avg_blink_rate = sum(blink_rates) / len(blink_rates) if blink_rates else None
+            
+            return {
+                "username": user.username,
+                "level": user.lvl,
+                "xp_points": user.xp_points,
+                "total_sessions": total_sessions,
+                "completed_sessions": completed_sessions,
+                "completion_rate": round((completed_sessions / total_sessions * 100), 1) if total_sessions > 0 else 0,
+                "total_focus_minutes": user_stats.total_focus_time if user_stats else 0,
+                "current_streak": user_stats.current_streak if user_stats else 0,
+                "longest_streak": user_stats.longest_streak if user_stats else 0,
+                "last_7_days": {
+                    "sessions_count": len(recent_sessions),
+                    "completed_count": len([s for s in recent_sessions if s.completed]),
+                    "focus_minutes": recent_focus_minutes,
+                    "avg_blink_rate": round(avg_blink_rate, 2) if avg_blink_rate else None
+                }
+            }
+        except Exception as e:
+            logger.error(f"Error fetching user stats: {e}")
+            return {}
 
 
 # Singleton instance

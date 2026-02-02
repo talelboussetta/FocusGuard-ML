@@ -693,6 +693,7 @@ export const ragAPI = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...getAuthHeader(),  // Include auth for personalized responses
       },
       body: JSON.stringify(data),
     });

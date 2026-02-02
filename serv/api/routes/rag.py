@@ -5,13 +5,17 @@ Endpoints for RAG (Retrieval-Augmented Generation) system.
 Provides AI-powered answers to study and productivity questions.
 """
 
-from fastapi import APIRouter, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+from typing import Optional
 
 from api.schemas.rag import RAGQueryRequest, RAGQueryResponse, RAGHealthResponse
 from api.services.rag_service import get_rag_service
 from api.utils.exceptions import RAGServiceException
+from api.database import get_db
+from api.middleware.auth_middleware import optional_authentication
 
 
 router = APIRouter(prefix="/rag", tags=["RAG"])
@@ -22,16 +26,20 @@ limiter = Limiter(key_func=get_remote_address)
 @limiter.limit("20/minute")  # Prevent abuse of LLM API
 async def query_rag(
     request: Request,
-    query_request: RAGQueryRequest
+    query_request: RAGQueryRequest,
+    db: AsyncSession = Depends(get_db),
+    user_id: Optional[str] = Depends(optional_authentication)
 ):
     """
     Query the RAG system with a study/productivity question.
     
     The system will:
     1. Search the knowledge base for relevant information
-    2. Use an LLM to generate a helpful, contextualized answer
-    3. Return the answer with source citations
+    2. If authenticated, fetch user stats for personalized insights
+    3. Use an LLM to generate a helpful, contextualized answer
+    4. Return the answer with source citations
     
+    **Authentication:** Optional - provide Bearer token for personalized responses
     **Rate limit:** 20 requests/minute
     
     **Example Request:**
@@ -69,7 +77,9 @@ async def query_rag(
             query=query_request.query,
             top_k=query_request.top_k,
             category_filter=query_request.category_filter,
-            include_sources=query_request.include_sources
+            include_sources=query_request.include_sources,
+            user_id=user_id,
+            db=db
         )
         
         return response
