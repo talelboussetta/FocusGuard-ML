@@ -1,11 +1,14 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Camera, CameraOff, User, UserX, Activity, Eye } from 'lucide-react'
+import { Camera, CameraOff, User, UserX, Activity, Eye, AlertCircle, CheckCircle2, Brain, TrendingDown, TrendingUp } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+
+type FocusState = 'focused' | 'distracted' | 'neutral'
+type DistractionReason = 'out_of_frame' | 'looking_away' | 'head_down_too_long' | 'no_face' | null
 
 const CameraPage = () => {
   const [isCameraOn, setIsCameraOn] = useState(false)
@@ -15,6 +18,16 @@ const CameraPage = () => {
   const [blinkRate, setBlinkRate] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [showRefreshNotification, setShowRefreshNotification] = useState(false)
+  
+  // New focus tracking states
+  const [focusState, setFocusState] = useState<FocusState>('neutral')
+  const [headPitch, setHeadPitch] = useState(0) // Up/down (-90 to +90)
+  const [headYaw, setHeadYaw] = useState(0)     // Left/right (-90 to +90)
+  const [distractionReason, setDistractionReason] = useState<DistractionReason>(null)
+  const [focusedTime, setFocusedTime] = useState(0)
+  const [distractedTime, setDistractionTime] = useState(0)
+  const [totalDistractions, setTotalDistractions] = useState(0)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false)
   
   const videoRef = useRef<HTMLVideoElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -27,6 +40,41 @@ const CameraPage = () => {
   const blinkCountRef = useRef<number>(0)
   const blinkTimestampsRef = useRef<number[]>([])
   const lastEyeStateRef = useRef<'open' | 'closed'>('open')
+  
+  // New refs for focus tracking
+  const lastFocusStateRef = useRef<FocusState>('neutral')
+  const focusStartTimeRef = useRef<number>(Date.now())
+  const distractionStartTimeRef = useRef<number | null>(null)
+  const headDownStartTimeRef = useRef<number | null>(null)
+  const lastNotificationTimeRef = useRef<number>(0)
+
+  // Request notification permission
+  useEffect(() => {
+    const requestNotificationPermission = async () => {
+      if ('Notification' in window && Notification.permission === 'default') {
+        const permission = await Notification.requestPermission()
+        setNotificationsEnabled(permission === 'granted')
+      } else if (Notification.permission === 'granted') {
+        setNotificationsEnabled(true)
+      }
+    }
+    requestNotificationPermission()
+  }, [])
+
+  // Timer to track focus/distraction duration
+  useEffect(() => {
+    if (!isDetecting) return
+
+    const interval = setInterval(() => {
+      if (focusState === 'focused') {
+        setFocusedTime(prev => prev + 1)
+      } else if (focusState === 'distracted') {
+        setDistractionTime(prev => prev + 1)
+      }
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [isDetecting, focusState])
 
   // Initialize MediaPipe Detectors
   useEffect(() => {
@@ -159,7 +207,119 @@ const CameraPage = () => {
     blinkTimestampsRef.current = []
     lastEyeStateRef.current = 'open'
     
+    // Reset focus tracking
+    setFocusState('neutral')
+    setHeadPitch(0)
+    setHeadYaw(0)
+    setDistractionReason(null)
+    setFocusedTime(0)
+    setDistractionTime(0)
+    setTotalDistractions(0)
+    lastFocusStateRef.current = 'neutral'
+    focusStartTimeRef.current = Date.now()
+    distractionStartTimeRef.current = null
+    headDownStartTimeRef.current = null
+    
     console.log('✅ Camera stopped successfully')
+  }
+
+  // Show browser notification for distraction
+  const showDistractionNotification = (reason: string) => {
+    if (!notificationsEnabled) return
+    
+    const now = Date.now()
+    // Throttle notifications to max 1 per 10 seconds
+    if (now - lastNotificationTimeRef.current < 10000) return
+    
+    lastNotificationTimeRef.current = now
+    
+    new Notification('FocusGuard - Stay Focused! 🎯', {
+      body: reason,
+      icon: '/images/logo.png',
+      badge: '/images/logo.png',
+      tag: 'focus-distraction',
+      requireInteraction: false,
+    })
+  }
+
+  // Calculate head pose from face landmarks
+  const calculateHeadPose = (faceLandmarks: any[]): { pitch: number; yaw: number } => {
+    // Key face landmarks for pose estimation
+    // 1: Nose tip, 33: Left eye outer corner, 263: Right eye outer corner
+    // 152: Chin, 10: Upper lip
+    
+    const noseTip = faceLandmarks[1]
+    const leftEye = faceLandmarks[33]
+    const rightEye = faceLandmarks[263]
+    const chin = faceLandmarks[152]
+    const forehead = faceLandmarks[10]
+    
+    if (!noseTip || !leftEye || !rightEye || !chin || !forehead) {
+      return { pitch: 0, yaw: 0 }
+    }
+    
+    // Yaw (left-right rotation): based on eye symmetry
+    const eyeMidpoint = {
+      x: (leftEye.x + rightEye.x) / 2,
+      y: (leftEye.y + rightEye.y) / 2
+    }
+    const yaw = (noseTip.x - eyeMidpoint.x) * 180 // Scale to degrees
+    
+    // Pitch (up-down rotation): based on nose-chin distance
+    const verticalCenter = (forehead.y + chin.y) / 2
+    const pitch = (noseTip.y - verticalCenter) * 100 // Scale to degrees
+    
+    return { 
+      pitch: Math.max(-90, Math.min(90, pitch)), 
+      yaw: Math.max(-90, Math.min(90, yaw))
+    }
+  }
+
+  // Classify focus state based on head pose and presence
+  const classifyFocusState = (
+    faceDetected: boolean,
+    poseDetected: boolean,
+    pitch: number,
+    yaw: number,
+    faceInFrame: boolean
+  ): { state: FocusState; reason: DistractionReason } => {
+    const now = Date.now()
+    
+    // Priority 1: No face or pose detected
+    if (!poseDetected) {
+      return { state: 'distracted', reason: 'out_of_frame' }
+    }
+    
+    if (!faceDetected || !faceInFrame) {
+      return { state: 'distracted', reason: 'no_face' }
+    }
+    
+    // Priority 2: Looking away (yaw > 30 degrees left/right OR pitch up > 20)
+    if (Math.abs(yaw) > 30 || pitch > 20) {
+      return { state: 'distracted', reason: 'looking_away' }
+    }
+    
+    // Priority 3: Head down (reading/writing) - focused for short periods, distracted if too long
+    if (pitch < -15) {
+      if (!headDownStartTimeRef.current) {
+        headDownStartTimeRef.current = now
+      }
+      
+      const headDownDuration = (now - headDownStartTimeRef.current) / 1000
+      
+      // Head down for < 30 seconds = focused (studying)
+      // Head down for > 30 seconds = might be sleeping/distracted
+      if (headDownDuration < 30) {
+        return { state: 'focused', reason: null }
+      } else {
+        return { state: 'distracted', reason: 'head_down_too_long' }
+      }
+    } else {
+      headDownStartTimeRef.current = null
+    }
+    
+    // Default: Focused (looking at screen)
+    return { state: 'focused', reason: null }
   }
 
   const detectPose = async () => {
@@ -197,17 +357,23 @@ const CameraPage = () => {
     const startTimeMs = performance.now()
     const poseResults = poseLandmarkerRef.current.detectForVideo(video, startTimeMs)
     
-    // Run face detection for blink tracking
+    // Run face detection for blink tracking + head pose
     let faceResults = null
     if (faceLandmarkerRef.current) {
       faceResults = faceLandmarkerRef.current.detectForVideo(video, startTimeMs)
     }
 
     // Check if person detected
-    const detected = poseResults.landmarks && poseResults.landmarks.length > 0
-    setUserPresent(detected)
+    const poseDetected = poseResults.landmarks && poseResults.landmarks.length > 0
+    const faceDetected = !!(faceResults && faceResults.faceLandmarks && faceResults.faceLandmarks.length > 0)
+    
+    setUserPresent(poseDetected)
 
-    if (detected) {
+    let currentPitch = 0
+    let currentYaw = 0
+    let faceInFrame = false
+
+    if (poseDetected) {
       const landmark = poseResults.landmarks[0]
       
       // Calculate average confidence from key landmarks
@@ -226,6 +392,59 @@ const CameraPage = () => {
       if (Date.now() - lastDetectionTimeRef.current > 2000) {
         setConfidence(0)
       }
+    }
+
+    // Process face landmarks for head pose and blinks
+    if (faceDetected && faceResults && faceResults.faceLandmarks && faceResults.faceLandmarks[0]) {
+      const faceLandmarks = faceResults.faceLandmarks[0]
+      
+      // Check if face is reasonably centered in frame (x between 0.2 and 0.8)
+      const noseTip = faceLandmarks[1]
+      if (noseTip && noseTip.x > 0.15 && noseTip.x < 0.85 && noseTip.y > 0.1 && noseTip.y < 0.9) {
+        faceInFrame = true
+      }
+      
+      // Calculate head pose
+      const pose = calculateHeadPose(faceLandmarks)
+      currentPitch = pose.pitch
+      currentYaw = pose.yaw
+      setHeadPitch(pose.pitch)
+      setHeadYaw(pose.yaw)
+      
+      // Draw face landmarks
+      drawFaceLandmarks(ctx, faceLandmarks, canvas.width, canvas.height)
+    }
+
+    // Classify focus state
+    const { state: newFocusState, reason } = classifyFocusState(
+      faceDetected,
+      poseDetected,
+      currentPitch,
+      currentYaw,
+      faceInFrame
+    )
+    
+    setFocusState(newFocusState)
+    setDistractionReason(reason)
+    
+    // Track state changes
+    if (newFocusState !== lastFocusStateRef.current) {
+      if (newFocusState === 'distracted' && lastFocusStateRef.current === 'focused') {
+        setTotalDistractions(prev => prev + 1)
+        distractionStartTimeRef.current = Date.now()
+        
+        // Show notification
+        const reasonText = reason === 'out_of_frame' ? 'You moved out of frame!' :
+                          reason === 'looking_away' ? 'You\'re looking away from the screen' :
+                          reason === 'head_down_too_long' ? 'Head down for too long - take a break?' :
+                          reason === 'no_face' ? 'Face not detected' :
+                          'Stay focused!'
+        showDistractionNotification(reasonText)
+      } else if (newFocusState === 'focused' && lastFocusStateRef.current === 'distracted') {
+        distractionStartTimeRef.current = null
+      }
+      
+      lastFocusStateRef.current = newFocusState
     }
 
     // Detect blinks
@@ -263,6 +482,26 @@ const CameraPage = () => {
 
     // Continue detection loop
     animationFrameRef.current = requestAnimationFrame(detectPose)
+  }
+
+  const drawFaceLandmarks = (
+    ctx: CanvasRenderingContext2D,
+    landmarks: any[],
+    width: number,
+    height: number
+  ) => {
+    // Draw key face points (eyes, nose, mouth outline)
+    const keyPoints = [1, 33, 133, 263, 362, 61, 291] // Nose, eye corners, mouth corners
+    
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.7)' // Green
+    keyPoints.forEach(idx => {
+      const point = landmarks[idx]
+      if (point) {
+        ctx.beginPath()
+        ctx.arc(point.x * width, point.y * height, 3, 0, 2 * Math.PI)
+        ctx.fill()
+      }
+    })
   }
 
   const drawPoseVisualization = (
@@ -388,6 +627,17 @@ const CameraPage = () => {
       blinkCountRef.current = 0
       blinkTimestampsRef.current = []
       setBlinkRate(0)
+      
+      // Reset focus tracking
+      setFocusState('neutral')
+      setFocusedTime(0)
+      setDistractionTime(0)
+      setTotalDistractions(0)
+      lastFocusStateRef.current = 'neutral'
+      focusStartTimeRef.current = Date.now()
+      distractionStartTimeRef.current = null
+      headDownStartTimeRef.current = null
+      
       console.log('🚀 Calling detectPose() immediately')
       detectPose()
     } else {
@@ -401,6 +651,24 @@ const CameraPage = () => {
         const ctx = canvasRef.current.getContext('2d')
         ctx?.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height)
       }
+    }
+  }
+
+  // Helper to format time in MM:SS
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60)
+    const secs = seconds % 60
+    return `${mins}:${secs.toString().padStart(2, '0')}`
+  }
+
+  // Get distraction reason text
+  const getDistractionText = (reason: DistractionReason): string => {
+    switch (reason) {
+      case 'out_of_frame': return '📹 You moved out of frame'
+      case 'looking_away': return '👀 Looking away from screen'
+      case 'head_down_too_long': return '😴 Head down too long'
+      case 'no_face': return '👤 Face not detected'
+      default: return ''
     }
   }
 
@@ -477,7 +745,7 @@ const CameraPage = () => {
 
                 {/* Detection Status Badge */}
                 {isCameraOn && (
-                  <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="absolute top-4 right-4 flex gap-2 flex-col items-end">
                     <Badge
                       variant={userPresent ? 'success' : 'warning'}
                       className="text-sm px-4 py-2 flex items-center gap-2"
@@ -496,9 +764,41 @@ const CameraPage = () => {
                     </Badge>
                     
                     {isDetecting && (
-                      <Badge className="bg-purple-600 text-white px-3 py-2 animate-pulse">
-                        <Activity className="w-4 h-4" />
-                      </Badge>
+                      <>
+                        <Badge className="bg-purple-600 text-white px-3 py-2 animate-pulse">
+                          <Activity className="w-4 h-4" />
+                        </Badge>
+                        
+                        {/* Focus State Badge */}
+                        <motion.div
+                          animate={{
+                            scale: focusState === 'distracted' ? [1, 1.05, 1] : 1
+                          }}
+                          transition={{ duration: 0.5, repeat: focusState === 'distracted' ? Infinity : 0 }}
+                        >
+                          <Badge className={`text-sm px-4 py-2 flex items-center gap-2 font-semibold ${
+                            focusState === 'focused' 
+                              ? 'bg-green-600 text-white' 
+                              : focusState === 'distracted'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-slate-600 text-white'
+                          }`}>
+                            {focusState === 'focused' ? (
+                              <>
+                                <CheckCircle2 className="w-4 h-4" />
+                                Focused
+                              </>
+                            ) : focusState === 'distracted' ? (
+                              <>
+                                <AlertCircle className="w-4 h-4" />
+                                Distracted
+                              </>
+                            ) : (
+                              'Idle'
+                            )}
+                          </Badge>
+                        </motion.div>
+                      </>
                     )}
                   </div>
                 )}
@@ -559,11 +859,157 @@ const CameraPage = () => {
 
           {/* Stats Panel */}
           <div className="space-y-6">
+            {/* Focus State Card - NEW */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+            >
+              <Card className={`backdrop-blur-xl border-2 p-6 transition-all duration-300 ${
+                focusState === 'focused' 
+                  ? 'bg-green-900/30 border-green-500/50 shadow-green-500/20' 
+                  : focusState === 'distracted'
+                  ? 'bg-red-900/30 border-red-500/50 shadow-red-500/20'
+                  : 'bg-slate-900/50 border-purple-500/20'
+              }`}>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-white flex items-center gap-2">
+                    <Brain className={`w-5 h-5 ${
+                      focusState === 'focused' ? 'text-green-400' : 
+                      focusState === 'distracted' ? 'text-red-400' : 
+                      'text-purple-400'
+                    }`} />
+                    Focus Status
+                  </h3>
+                  {focusState === 'focused' ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-400 animate-pulse" />
+                  ) : focusState === 'distracted' ? (
+                    <AlertCircle className="w-6 h-6 text-red-400 animate-pulse" />
+                  ) : null}
+                </div>
+                
+                <div className={`text-3xl font-bold mb-2 ${
+                  focusState === 'focused' ? 'text-green-400' :
+                  focusState === 'distracted' ? 'text-red-400' :
+                  'text-slate-400'
+                }`}>
+                  {focusState === 'focused' ? '🎯 Focused' :
+                   focusState === 'distracted' ? '⚠️ Distracted' :
+                   '⏸️ Idle'}
+                </div>
+                
+                {distractionReason && (
+                  <p className="text-sm text-red-300 mb-3">
+                    {getDistractionText(distractionReason)}
+                  </p>
+                )}
+                
+                {/* Head Pose Indicators */}
+                {isDetecting && (
+                  <div className="grid grid-cols-2 gap-3 mt-4 pt-4 border-t border-slate-700">
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <div className="text-xs text-slate-400 mb-1">Head Tilt</div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          Math.abs(headYaw) < 15 ? 'bg-green-400' :
+                          Math.abs(headYaw) < 30 ? 'bg-yellow-400' :
+                          'bg-red-400'
+                        }`} />
+                        <span className="text-sm font-semibold text-white">
+                          {headYaw > 0 ? 'Right' : headYaw < 0 ? 'Left' : 'Center'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="bg-slate-800/50 rounded-lg p-3">
+                      <div className="text-xs text-slate-400 mb-1">Head Angle</div>
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full ${
+                          headPitch > -15 && headPitch < 20 ? 'bg-green-400' :
+                          'bg-yellow-400'
+                        }`} />
+                        <span className="text-sm font-semibold text-white">
+                          {headPitch < -15 ? 'Down' : headPitch > 20 ? 'Up' : 'Level'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </Card>
+            </motion.div>
+
+            {/* Productivity Stats - NEW */}
+            <Card className="bg-slate-900/50 backdrop-blur-xl border-purple-500/20 p-6">
+              <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                <TrendingUp className="w-5 h-5 text-purple-400" />
+                Session Stats
+              </h3>
+              
+              <div className="space-y-4">
+                {/* Focused Time */}
+                <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-4 border border-green-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-300 text-sm flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-green-400" />
+                      Focused Time
+                    </span>
+                    <TrendingUp className="w-4 h-4 text-green-400" />
+                  </div>
+                  <div className="text-2xl font-bold text-green-400">
+                    {formatTime(focusedTime)}
+                  </div>
+                </div>
+
+                {/* Distracted Time */}
+                <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 rounded-lg p-4 border border-red-500/20">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-300 text-sm flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-red-400" />
+                      Distracted Time
+                    </span>
+                    <TrendingDown className="w-4 h-4 text-red-400" />
+                  </div>
+                  <div className="text-2xl font-bold text-red-400">
+                    {formatTime(distractedTime)}
+                  </div>
+                </div>
+
+                {/* Distraction Count */}
+                <div className="bg-slate-800/50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-slate-400 text-sm">Total Distractions</span>
+                    <AlertCircle className="w-4 h-4 text-orange-400" />
+                  </div>
+                  <div className="text-3xl font-bold text-orange-400">{totalDistractions}</div>
+                </div>
+
+                {/* Focus Rate */}
+                {(focusedTime + distractedTime) > 0 && (
+                  <div className="pt-3 border-t border-slate-800">
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-slate-400">Focus Rate</span>
+                      <span className="font-semibold text-purple-400">
+                        {Math.round((focusedTime / (focusedTime + distractedTime)) * 100)}%
+                      </span>
+                    </div>
+                    <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div
+                        className="h-full bg-gradient-to-r from-purple-600 to-green-500"
+                        initial={{ width: 0 }}
+                        animate={{ 
+                          width: `${(focusedTime / (focusedTime + distractedTime)) * 100}%` 
+                        }}
+                        transition={{ duration: 0.5 }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </Card>
+            
             {/* Detection Stats */}
             <Card className="bg-slate-900/50 backdrop-blur-xl border-purple-500/20 p-6">
               <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
                 <Activity className="w-5 h-5 text-purple-400" />
-                Live Metrics
+                Detection Metrics
               </h3>
               
               <div className="space-y-4">
@@ -661,18 +1107,39 @@ const CameraPage = () => {
                   <span>Powered by Google MediaPipe</span>
                 </li>
               </ul>
+              
+              {/* Notification Toggle */}
+              <div className="mt-4 pt-4 border-t border-slate-700">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="text-sm font-semibold text-white">Browser Notifications</div>
+                    <div className="text-xs text-slate-400">Alert when distracted</div>
+                  </div>
+                  <div className={`relative inline-flex items-center cursor-pointer ${
+                    notificationsEnabled ? 'opacity-100' : 'opacity-50'
+                  }`}>
+                    <span className="text-xs text-slate-400 mr-2">
+                      {notificationsEnabled ? 'ON' : 'OFF'}
+                    </span>
+                    <div className={`w-2 h-2 rounded-full ${
+                      notificationsEnabled ? 'bg-green-400 animate-pulse' : 'bg-slate-600'
+                    }`} />
+                  </div>
+                </div>
+              </div>
             </Card>
 
             {/* Tips Card */}
             <Card className="bg-slate-900/30 backdrop-blur-xl border-slate-700/30 p-6">
               <h3 className="text-lg font-semibold text-white mb-3">
-                💡 Tips
+                💡 Focus Tips
               </h3>
               <ul className="space-y-2 text-sm text-slate-400">
-                <li>• Ensure good lighting for better detection</li>
-                <li>• Position yourself centered in frame</li>
-                <li>• Keep upper body visible</li>
-                <li>• Works best at arm's length distance</li>
+                <li>• Head down = Studying (focused)</li>
+                <li>• Looking at screen = Focused</li>
+                <li>• Looking away = Distracted</li>
+                <li>• Out of frame = Distracted</li>
+                <li>• Good lighting improves accuracy</li>
               </ul>
             </Card>
           </div>
