@@ -211,27 +211,6 @@ const TeamDetailPage = () => {
 													</p>
 												</div>
 											</div>
-											{/* Placeholder for member stats - will be fetched from backend later */}
-											<div className="flex gap-4">
-												<div className="text-right">
-													<div className="flex items-center gap-1 text-primary-400">
-														<Target className="w-4 h-4" />
-														<span className="text-sm">Level ?</span>
-													</div>
-												</div>
-												<div className="text-right">
-													<div className="flex items-center gap-1 text-yellow-500">
-														<Trophy className="w-4 h-4" />
-														<span className="text-sm">? XP</span>
-													</div>
-												</div>
-												<div className="text-right">
-													<div className="flex items-center gap-1 text-orange-500">
-														<Flame className="w-4 h-4" />
-														<span className="text-sm">? streak</span>
-													</div>
-												</div>
-											</div>
 										</motion.div>
 									))}
 								</div>

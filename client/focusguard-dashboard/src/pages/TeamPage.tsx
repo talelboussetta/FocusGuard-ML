@@ -183,7 +183,7 @@ const TeamPage = () => {
 								<div className="p-4 bg-slate-900 rounded-xl border border-slate-800/50">
 									<h3 className="text-sm text-slate-300 font-medium mb-2">Quick Tips</h3>
 									<ul className="text-slate-400 text-sm space-y-2">
-										<li>- Invite friends via profile → Teams (coming soon)</li>
+										<li>- Share your Team ID with friends to invite them</li>
 										<li>- Coordinate session times for group focus</li>
 										<li>- Earn team XP when members complete sessions</li>
 									</ul>

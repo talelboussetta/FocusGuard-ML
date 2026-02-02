@@ -248,7 +248,7 @@ const AITutorPage = () => {
                     AI-Powered Insights
                   </h4>
                   <p className="text-sm text-slate-400">
-                    This AI tutor analyzes your focus patterns, session history, and productivity metrics to provide personalized recommendations. Ready for integration with OpenAI or local LLM.
+                    Your AI Focus Coach analyzes your focus patterns, session history, and productivity metrics to provide personalized recommendations and evidence-based productivity tips.
                   </p>
                 </div>
               </div>
