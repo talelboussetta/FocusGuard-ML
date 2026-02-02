@@ -706,9 +706,10 @@ const CameraPage = () => {
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Camera Feed */}
-          <div className="lg:col-span-2">
+        {/* Main Layout - Camera and Right Side Stats */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Camera Feed - Takes 2/3 width on desktop */}
+          <div className="lg:col-span-3 space-y-6">
             <Card className="bg-slate-900/50 backdrop-blur-xl border-purple-500/20 p-6">
               <div className="relative aspect-video bg-slate-950 rounded-lg overflow-hidden">
                 {/* Video Element */}
@@ -855,10 +856,161 @@ const CameraPage = () => {
                 </Button>
               </div>
             </Card>
+
+            {/* Cards Below Camera - Two columns */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Productivity Stats */}
+              <Card className="bg-slate-900/50 backdrop-blur-xl border-purple-500/20 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-purple-400" />
+                  Session Stats
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* Focused Time */}
+                  <div className="bg-gradient-to-r from-green-900/30 to-emerald-900/30 rounded-lg p-4 border border-green-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-300 text-sm flex items-center gap-2">
+                        <CheckCircle2 className="w-4 h-4 text-green-400" />
+                        Focused Time
+                      </span>
+                      <TrendingUp className="w-4 h-4 text-green-400" />
+                    </div>
+                    <div className="text-2xl font-bold text-green-400">
+                      {formatTime(focusedTime)}
+                    </div>
+                  </div>
+
+                  {/* Distracted Time */}
+                  <div className="bg-gradient-to-r from-red-900/30 to-orange-900/30 rounded-lg p-4 border border-red-500/20">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-300 text-sm flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-400" />
+                        Distracted Time
+                      </span>
+                      <TrendingDown className="w-4 h-4 text-red-400" />
+                    </div>
+                    <div className="text-2xl font-bold text-red-400">
+                      {formatTime(distractedTime)}
+                    </div>
+                  </div>
+
+                  {/* Distraction Count */}
+                  <div className="bg-slate-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-400 text-sm">Total Distractions</span>
+                      <AlertCircle className="w-4 h-4 text-orange-400" />
+                    </div>
+                    <div className="text-3xl font-bold text-orange-400">{totalDistractions}</div>
+                  </div>
+
+                  {/* Focus Rate */}
+                  {(focusedTime + distractedTime) > 0 && (
+                    <div className="pt-3 border-t border-slate-800">
+                      <div className="flex justify-between text-sm mb-2">
+                        <span className="text-slate-400">Focus Rate</span>
+                        <span className="font-semibold text-purple-400">
+                          {Math.round((focusedTime / (focusedTime + distractedTime)) * 100)}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-slate-800 rounded-full overflow-hidden">
+                        <motion.div
+                          className="h-full bg-gradient-to-r from-purple-600 to-green-500"
+                          initial={{ width: 0 }}
+                          animate={{ 
+                            width: `${(focusedTime / (focusedTime + distractedTime)) * 100}%` 
+                          }}
+                          transition={{ duration: 0.5 }}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Card>
+
+              {/* Detection Metrics */}
+              <Card className="bg-slate-900/50 backdrop-blur-xl border-purple-500/20 p-6">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-purple-400" />
+                  Detection Metrics
+                </h3>
+                
+                <div className="space-y-4">
+                  {/* User Status */}
+                  <div className="bg-slate-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-400 text-sm">User Status</span>
+                      {userPresent ? (
+                        <User className="w-5 h-5 text-green-400" />
+                      ) : (
+                        <UserX className="w-5 h-5 text-slate-500" />
+                      )}
+                    </div>
+                    <div className="text-2xl font-bold">
+                      {userPresent ? (
+                        <span className="text-green-400">Detected</span>
+                      ) : (
+                        <span className="text-slate-500">Not Detected</span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Confidence */}
+                  <div>
+                    <div className="flex justify-between text-sm mb-2">
+                      <span className="text-slate-400">Detection Confidence</span>
+                      <span className={`font-semibold ${confidence > 60 ? 'text-green-400' : confidence > 30 ? 'text-yellow-400' : 'text-red-400'}`}>
+                        {confidence}%
+                      </span>
+                    </div>
+                    <div className="h-3 bg-slate-800 rounded-full overflow-hidden">
+                      <motion.div
+                        className={`h-full ${confidence > 60 ? 'bg-gradient-to-r from-green-600 to-green-400' : confidence > 30 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' : 'bg-gradient-to-r from-red-600 to-red-400'}`}
+                        initial={{ width: 0 }}
+                        animate={{ width: `${confidence}%` }}
+                        transition={{ duration: 0.3 }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Blink Rate */}
+                  <div className="bg-slate-800/50 rounded-lg p-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-slate-400 text-sm">Blink Rate</span>
+                      <Eye className="w-5 h-5 text-purple-400" />
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-3xl font-bold text-white">{blinkRate}</span>
+                      <span className="text-slate-400 text-sm">blinks/min</span>
+                    </div>
+                    <div className="mt-2 text-xs text-slate-500">
+                      {blinkRate < 10 ? '😴 Low' : blinkRate < 20 ? '👁️ Normal' : '😳 High'}
+                    </div>
+                  </div>
+
+                  {/* Detection Status */}
+                  <div className="pt-4 border-t border-slate-800">
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-400">Detection</span>
+                      <Badge variant={isDetecting ? 'success' : 'default'} className="text-sm">
+                        {isDetecting ? (
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></span>
+                            Active
+                          </span>
+                        ) : (
+                          'Inactive'
+                        )}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            </div>
           </div>
 
-          {/* Stats Panel */}
-          <div className="space-y-6">
+          {/* Right Side Stats Panel - Smaller width */}
+          <div className="lg:col-span-1 space-y-6">
             {/* Focus State Card - NEW */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
