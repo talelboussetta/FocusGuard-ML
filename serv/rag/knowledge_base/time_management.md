@@ -1,84 +1,75 @@
-# Time Management
+---
+category: time_management
+difficulty: beginner
+tags: [time_management, productivity, planning, focus]
+---
+
+# Time Management Strategies
 
 ## Pomodoro Technique
-Work in focused intervals:
-- 25 minutes work
-- 5 minutes break
-- After 4 cycles, take a longer break
 
-Used for:
-- Focus
-- Fighting procrastination
+Work in focused intervals with regular breaks to maintain peak concentration.
+
+**Standard Pomodoro Cycle:**
+- 25 minutes of focused work
+- 5 minutes break
+- After 4 cycles, take a longer break (15-30 minutes)
+
+**Best used for:**
+- Tasks requiring sustained concentration
+- Fighting procrastination on difficult work
+- Building focus stamina
+- Time-boxing to prevent perfectionism
+
+**Tips:**
+- During work intervals: No checking phone, email, or social media
+- During breaks: Physical movement, hydration, avoid screens
+- Adjust intervals to fit your energy levels (e.g., 50-10 for experienced users)
+- Track completed Pomodoros to quantify daily productivity
 
 ---
 
 ## Eisenhower Matrix
-Task prioritization framework:
-- Urgent & Important → Do now
-- Important & Not Urgent → Schedule
-- Urgent & Not Important → Delegate
-- Not Urgent & Not Important → Eliminate
+
+Prioritize tasks based on urgency and importance, not just deadlines.
+
+**Four Quadrants:**
+1. **Urgent & Important** → Do immediately (crises, deadlines, emergencies)
+2. **Important but Not Urgent** → Schedule dedicated time (planning, learning, relationships)
+3. **Urgent but Not Important** → Delegate or minimize (interruptions, some emails)
+4. **Neither Urgent nor Important** → Eliminate (time wasters, busywork)
+
+**Application Strategy:**
+- Spend most time in Quadrant 2 (Important/Not Urgent) to prevent crises
+- Reduce Quadrant 3 by setting boundaries and automating
+- Eliminate Quadrant 4 activities ruthlessly
+- Use this weekly to review your time allocation
 
 ---
 
 ## Weekly Planning
-Plan weekly, not daily only.
 
-Steps:
-1. Identify fixed commitments
-2. Define weekly goals
-3. Allocate deep work blocks
-4. Schedule breaks and buffer time
-5. Review and adjust weekly
-Benefits:
-- Big picture focus
-- Flexibility
-- Reduced decision fatigue
-- Better time allocation
-- Increased productivity
-- Enhanced work-life balance
-- Improved goal achievement
-- Reduced stress and burnout
-- Greater sense of control
-- More time for personal activities
-- Enhanced creativity and problem-solving
-- Better prioritization of tasks
-- Improved focus during work sessions
-- More effective use of energy levels
-- Increased motivation and satisfaction
-- Stronger professional reputation
-- Better relationships with colleagues and family
-- Greater opportunities for career advancement
-- Improved overall well-being
-- Enhanced ability to handle unexpected tasks
-- More consistent progress toward long-term goals
-- Better alignment with personal values and priorities
-- Increased adaptability to changing circumstances
-- Greater resilience to setbacks and challenges
-- Improved time estimation skills
-- More effective delegation of tasks
-- Enhanced ability to say no to non-essential tasks
-- Better use of technology and tools for time management
-- Increased awareness of time usage patterns
-- More intentional use of free time
-- Greater overall life satisfaction
-- Improved sleep quality due to reduced stress
-- Enhanced physical health from better time allocation for exercise and self-care
-- More opportunities for learning and personal growth
-- Stronger sense of accomplishment at the end of each week
-- Better financial management through planned time for budgeting and expenses
-- Increased ability to focus on high-impact activities
-- More time for hobbies and interests
-- Improved mental clarity and focus
-- Greater overall productivity and effectiveness in both personal and professional life
-- Enhanced ability to balance multiple roles and responsibilities
-- More meaningful social interactions and relationships
-- Improved ability to manage distractions and interruptions
-- Greater overall happiness and fulfillment in life
-- Better preparation for future challenges and opportunities
-- Increased ability to maintain a positive mindset
+Plan at the week level rather than day-by-day for better big-picture perspective.
 
-- More effective use of time during travel and commutes
-- Enhanced ability to set and achieve personal milestones
-- Greater overall efficiency in daily routines
-- Improved ability to manage stress and anxiety related to time pressures   
+**Weekly Planning Process:**
+1. **Review last week** - What worked? What didn't? Lessons learned?
+2. **Identify fixed commitments** - Classes, meetings, appointments
+3. **Define 3-5 weekly goals** - Most important outcomes for the week
+4. **Allocate deep work blocks** - Schedule hardest work during peak energy times
+5. **Schedule breaks and buffer time** - Build in flexibility for unexpected tasks
+6. **Daily micro-planning** - Quick 5-minute review each morning to adjust
+7. **Friday review** - Reflect on progress and plan next week
+
+**Key Benefits:**
+- See the big picture beyond daily urgencies
+- Flexibility to move tasks around within the week
+- Reduced decision fatigue from constant re-planning
+- Better time allocation based on energy patterns
+- Align daily actions with longer-term goals
+- Improved work-life balance through intentional scheduling
+
+**Common Pitfalls to Avoid:**
+- Over-scheduling (leave 40% of time unscheduled)
+- Ignoring energy levels (don't schedule hard work when you're exhausted)
+- Neglecting buffer time for unexpected tasks
+- Failing to review and adjust weekly plans   
