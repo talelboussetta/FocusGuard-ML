@@ -8,11 +8,6 @@ Coordinates retrieval from vector store and generation from LLM.
 import logging
 from typing import List, Optional, Dict, Any
 
-from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
-from rag.vector_store.qdrant_store import QdrantVectorStore
-from rag.retrieval.retriever import Retriever
-from rag.generation.config import get_generator
-from rag.generation.prompts import build_rag_prompt
 from api.schemas.rag import RAGQueryResponse, SourceDocument
 
 
@@ -23,9 +18,9 @@ class RAGService:
     """Handles RAG query processing."""
     
     def __init__(self):
-        self.embedder: Optional[SentenceTransformerEmbedder] = None
-        self.vector_store: Optional[QdrantVectorStore] = None
-        self.retriever: Optional[Retriever] = None
+        self.embedder = None
+        self.vector_store = None
+        self.retriever = None
         self.generator = None
         self._initialized = False
     
@@ -36,10 +31,15 @@ class RAGService:
         
         logger.info("Initializing RAG service...")
         
+        # Lazy import to avoid loading heavy dependencies at module import time
+        from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
+        from rag.vector_store.qdrant_store import QdrantVectorStore
+        from rag.retrieval.retriever import Retriever
+        from rag.generation.config import get_generator
+        
         # Initialize embedder
         logger.info("Loading embedder...")
         self.embedder = SentenceTransformerEmbedder()
-        await self.embedder.initialize()
         
         # Initialize vector store
         logger.info("Connecting to Qdrant...")
@@ -109,7 +109,7 @@ class RAGService:
                 answer="I couldn't find relevant information to answer your question. Could you rephrase or provide more details?",
                 sources=[] if include_sources else None,
                 query=query,
-                model_used=self.generator.model_name if self.generator else "none"
+                model_used=self.generator.model if self.generator else "none"
             )
         
         logger.info(f"Retrieved {len(search_results)} documents (scores: {[f'{r.score:.3f}' for r in search_results]})")
@@ -117,18 +117,11 @@ class RAGService:
         # Extract context documents for LLM
         context_docs = [result.document.content for result in search_results]
         
-        # Build prompt with retrieved context
-        prompt = build_rag_prompt(
-            query=query,
-            context_documents=context_docs
-        )
-        
         # Generate answer using LLM
         logger.info("Generating answer with LLM...")
         answer = await self.generator.generate(
-            prompt=prompt,
-            max_tokens=500,
-            temperature=0.7
+            query=query,
+            context_documents=context_docs
         )
         
         logger.info(f"Generated answer ({len(answer)} chars)")
@@ -151,7 +144,7 @@ class RAGService:
             answer=answer,
             sources=sources,
             query=query,
-            model_used=self.generator.model_name if self.generator else "unknown"
+            model_used=self.generator.model if self.generator else "unknown"
         )
     
     async def health_check(self) -> Dict[str, Any]:
