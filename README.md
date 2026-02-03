@@ -43,24 +43,24 @@ FocusGuard is a modern productivity platform that combines the Pomodoro techniqu
 - **State Management**: React Context / Zustand
 
 ### Backend
-- **Framework**: FastAPI (Python 3.10+)
-- **ML Models**: HuggingFace Transformers, OpenCV
-- **Database**: PostgreSQL / SQLite
-- **Authentication**: JWT
-- **API Documentation**: Swagger/OpenAPI
+- **Framework**: FastAPI (Python 3.11+)
+- **Database**: PostgreSQL 15+
+- **Authentication**: JWT with refresh token rotation
+- **API Documentation**: Swagger/OpenAPI (auto-generated)
+- **Async Runtime**: asyncpg for non-blocking DB operations
 
-### AI/ML
-- **Focus Detection**: MediaPipe Face Mesh
-- **Blink Detection**: Custom CV algorithms
-- **LLM Integration**: HuggingFace API / OpenAI
-- **Browser ML**: TensorFlow.js / ONNX Runtime
+### AI/ML (Browser-Based)
+- **Focus Detection**: MediaPipe Face + Pose Landmarker (100% browser inference)
+- **Blink Rate Analysis**: MediaPipe eye blendshapes
+- **RAG Pipeline**: Qdrant vector store + HuggingFace LLM API
 
 ## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js 18+ and npm/yarn
-- Python 3.10+
+- Python 3.11+
 - Git
+- Docker (for PostgreSQL database)
 
 ### Installation
 
@@ -87,10 +87,10 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 # Run the server
-python run.py
+python main.py
 ```
 
-The backend will be available at `http://localhost:5000`
+The backend will be available at `http://localhost:8000`
 
 #### 3. Set up the Frontend
 ```bash

@@ -4,7 +4,8 @@
 
 ### Prerequisites
 - Node.js 18+ and npm/yarn
-- Python 3.13+ (for ML backend)
+- Python 3.11+
+- Docker (for PostgreSQL)
 - Webcam (for focus detection)
 
 ### Frontend Setup
@@ -21,7 +22,7 @@ npm run dev
 
 The app will be available at `http://localhost:5173`
 
-### Backend Setup (ML Models)
+### Backend Setup (FastAPI)
 
 ```bash
 cd serv
@@ -33,11 +34,18 @@ python -m venv venv
 venv\Scripts\activate
 
 # Install dependencies
-pip install -r models/requirements.txt
+pip install -r requirements.txt
 
-# Run blink detector
-python models/blink_detector_opencv.py
+# Start database (from repo root)
+cd ..
+docker-compose up -d
+
+# Run FastAPI server
+cd serv
+python main.py
 ```
+
+The backend will be available at `http://localhost:8000` with Swagger UI at `/docs`
 
 ## 📱 Available Routes
 

@@ -29,19 +29,14 @@ except ImportError:
 # Database Engine
 # ============================================================================
 
-# Debug: print URL being used
-print(f"[DEBUG] Creating async engine with URL: {settings.database_url}")
-print(f"[DEBUG] asyncpg available: {asyncpg is not None}")
-
 # Create async engine for PostgreSQL
+# Note: Set DATABASE_ECHO=True in .env to log SQL queries during development
 engine = create_async_engine(
     settings.database_url,
     echo=settings.database_echo,  # Log SQL queries when True
     future=True,  # Use SQLAlchemy 2.0 style
     poolclass=NullPool if settings.debug else None,  # Disable pooling in debug mode
 )
-
-print(f"[OK] Engine created successfully: {engine.dialect.name}")
 
 # ============================================================================
 # Session Factory
