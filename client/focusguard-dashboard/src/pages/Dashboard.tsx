@@ -6,6 +6,7 @@ import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera } f
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
 import DistractionMonitor from '../components/DistractionMonitor'
+import CircularTimerPicker from '../components/CircularTimerPicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useSessionContext } from '../contexts/SessionContext'
 import { useNotificationContext } from '../contexts/NotificationContext'
@@ -289,45 +290,84 @@ const Dashboard = () => {
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h2 className="text-2xl font-display font-semibold mb-1">
-                      {activeSession ? 'Focus Session Active' : 'Start Focus Session'}
+                      {activeSession ? 'Focus Session Active' : 'Set Your Focus Time'}
                     </h2>
-                    <p className="text-slate-400 text-sm">
-                      {activeSession ? 'Stay focused and watch your garden grow' : 'Choose a duration and begin'}
+                    <p className="text-gray-600 text-sm">
+                      {activeSession ? 'Stay focused and watch your garden grow' : 'Drag the clock to choose your perfect session duration'}
                     </p>
                   </div>
                 </div>
 
-                {/* Timer Display */}
-                <div className="flex items-center justify-center my-12">
-                  <div className="relative">
-                    <motion.div
-                      className="text-8xl font-display font-bold gradient-text"
-                      animate={isTimerRunning ? { scale: [1, 1.02, 1] } : {}}
-                      transition={{ duration: 1, repeat: Infinity }}
-                    >
-                      {formatTime(timeLeft)}
-                    </motion.div>
-                  </div>
+                {/* Circular Timer Picker / Active Timer Display */}
+                <div className="flex items-center justify-center my-8">
+                  {!activeSession ? (
+                    <CircularTimerPicker
+                      duration={sessionDuration}
+                      onDurationChange={setPlannedDuration}
+                      disabled={false}
+                    />
+                  ) : (
+                    <div className="relative">
+                      {/* Running timer display with circular progress */}
+                      <svg width="320" height="320" viewBox="0 0 320 320">
+                        <defs>
+                          <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#606060" />
+                            <stop offset="50%" stopColor="#404040" />
+                            <stop offset="100%" stopColor="#202020" />
+                          </linearGradient>
+                        </defs>
+                        
+                        {/* Background circle */}
+                        <circle
+                          cx="160"
+                          cy="160"
+                          r="140"
+                          fill="none"
+                          stroke="#e0e0e0"
+                          strokeWidth="32"
+                          opacity="0.2"
+                        />
+                        
+                        {/* Progress circle */}
+                        <motion.circle
+                          cx="160"
+                          cy="160"
+                          r="140"
+                          fill="none"
+                          stroke="url(#timer-gradient)"
+                          strokeWidth="32"
+                          strokeLinecap="round"
+                          strokeDasharray={2 * Math.PI * 140}
+                          strokeDashoffset={2 * Math.PI * 140 * (1 - (timeLeft / (sessionDuration * 60)))}
+                          transform="rotate(-90 160 160)"
+                          animate={isTimerRunning ? { 
+                            strokeDashoffset: 2 * Math.PI * 140 * (1 - (timeLeft / (sessionDuration * 60)))
+                          } : {}}
+                          transition={{ duration: 1, ease: 'linear' }}
+                        />
+                        
+                        {/* Center time display */}
+                        <text
+                          x="160"
+                          y="150"
+                          textAnchor="middle"
+                          className="text-7xl font-display font-bold fill-gray-900"
+                        >
+                          {formatTime(timeLeft)}
+                        </text>
+                        <text
+                          x="160"
+                          y="185"
+                          textAnchor="middle"
+                          className="text-lg font-medium fill-gray-600"
+                        >
+                          {isTimerRunning ? 'In Progress' : 'Paused'}
+                        </text>
+                      </svg>
+                    </div>
+                  )}
                 </div>
-
-                {/* Duration Selector (only when no active session) */}
-                {!activeSession && (
-                  <div className="flex gap-3 mb-6">
-                    {[15, 25, 45, 60].map(duration => (
-                      <button
-                        key={duration}
-                        onClick={() => setPlannedDuration(duration)}
-                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-all ${
-                          sessionDuration === duration
-                            ? 'bg-primary-500 text-white'
-                            : 'bg-slate-800/50 text-slate-300 hover:bg-slate-800'
-                        }`}
-                      >
-                        {duration}m
-                      </button>
-                    ))}
-                  </div>
-                )}
 
                 {/* Timer Controls */}
                 <div className="flex gap-4">
