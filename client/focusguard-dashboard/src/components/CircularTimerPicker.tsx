@@ -16,6 +16,7 @@ const CircularTimerPicker = ({ duration, onDurationChange, disabled = false }: C
   const radius = 140
   const centerX = 160
   const centerY = 160
+  const viewBoxPadding = 24
   const strokeWidth = 32
 
   // Calculate angle from minutes (0 minutes = top, clockwise)
@@ -106,7 +107,7 @@ const CircularTimerPicker = ({ duration, onDurationChange, disabled = false }: C
         ref={svgRef}
         width="320"
         height="320"
-        viewBox="0 0 320 320"
+        viewBox={`${-viewBoxPadding} ${-viewBoxPadding} ${320 + viewBoxPadding * 2} ${320 + viewBoxPadding * 2}`}
         className={`${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'} select-none`}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -217,12 +218,12 @@ const CircularTimerPicker = ({ duration, onDurationChange, disabled = false }: C
           <motion.circle
             cx={endX}
             cy={endY}
-            r={strokeWidth / 2 + 4}
+            r={strokeWidth / 2 - 2}
             fill="white"
             stroke="#404040"
             strokeWidth="3"
             initial={{ scale: 0 }}
-            animate={{ scale: isDragging ? 1.3 : 1 }}
+            animate={{ scale: isDragging ? 1.1 : 1 }}
             className="drop-shadow-lg"
           />
         )}
