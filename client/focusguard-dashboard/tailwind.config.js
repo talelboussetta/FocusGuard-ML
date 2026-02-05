@@ -4,6 +4,19 @@ export default {
   theme: {
     extend: {
       colors: {
+        // Brand Colors
+        brand: {
+          primary: '#374151',    // gray-700 - main dark
+          secondary: '#6b7280',  // gray-500 - secondary
+          accent: '#f59e0b',     // amber-500 - accent/highlight
+        },
+        // Focus/Success States
+        focus: {
+          high: '#16a34a',       // green-600
+          medium: '#ca8a04',     // yellow-600  
+          low: '#ea580c',        // orange-600
+          poor: '#dc2626',       // red-600
+        },
         primary: {
           50: "#f0f9ff",
           100: "#e0f2fe",
