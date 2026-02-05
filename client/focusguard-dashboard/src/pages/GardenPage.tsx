@@ -6,6 +6,10 @@ import Sidebar from '../components/Sidebar'
 import { gardenAPI, userAPI } from '../services/api'
 import type { Garden, UserStats } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
+import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.png'
+import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.png'
+import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.png'
+import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.png'
 
 const GardenPage = () => {
   const navigate = useNavigate()
@@ -69,16 +73,6 @@ const GardenPage = () => {
       return `${hours}h ${mins}m`
     }
     return `${mins}m`
-  }
-
-  const getPlantEmoji = (type: string): string => {
-    const plants: { [key: string]: string } = {
-      common: '🌱',
-      rare: '🌿',
-      epic: '🌳',
-      legendary: '✨',
-    }
-    return plants[type] || '🌱'
   }
 
   if (loading) {
@@ -181,35 +175,35 @@ const GardenPage = () => {
                 <Sparkles className="w-6 h-6 text-primary-400" />
               </div>
               <div className="flex-1">
-                <h3 className="text-lg font-semibold text-white mb-2">🌱 Plant Collection System</h3>
+                <h3 className="text-lg font-semibold text-white mb-2">Plant Collection System</h3>
                 <p className="text-slate-300 text-sm mb-3">
                   Earn <span className="text-primary-400 font-semibold">1 plant every 5 minutes</span> of focused study time! 
                   The more you study, the higher your chances of discovering rare plants.
                 </p>
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🌱</span>
+                    <img src={gardenImage1} alt="Regular" className="w-8 h-8 object-contain" />
                     <div>
                       <p className="text-white font-medium">Regular</p>
                       <p className="text-slate-400 text-xs">Always available</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🌿</span>
+                    <img src={gardenImage2} alt="Uncommon" className="w-8 h-8 object-contain" />
                     <div>
                       <p className="text-white font-medium">Uncommon</p>
                       <p className="text-slate-400 text-xs">10% + study bonus</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">🌳</span>
+                    <img src={gardenImage3} alt="Rare" className="w-8 h-8 object-contain" />
                     <div>
                       <p className="text-white font-medium">Rare</p>
                       <p className="text-slate-400 text-xs">5% + study bonus</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">✨</span>
+                    <img src={gardenImage4} alt="Legendary" className="w-8 h-8 object-contain" />
                     <div>
                       <p className="text-white font-medium">Legendary</p>
                       <p className="text-slate-400 text-xs">2% + study bonus</p>
@@ -244,8 +238,8 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center">
-                  <Leaf className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center p-2">
+                  <img src={gardenImage1} alt="Total Plants" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <div className="text-2xl font-bold gradient-text">{garden?.total_plants || 0}</div>
@@ -261,8 +255,8 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
-                  <Sparkles className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center p-2">
+                  <img src={gardenImage2} alt="Rare Plants" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <div className="text-2xl font-bold gradient-text">{garden?.rare_plants || 0}</div>
@@ -278,8 +272,8 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                  <Sprout className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center p-2">
+                  <img src={gardenImage3} alt="Epic Plants" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <div className="text-2xl font-bold gradient-text">{garden?.epic_plants || 0}</div>
@@ -295,8 +289,8 @@ const GardenPage = () => {
               className="card-soft"
             >
               <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center">
-                  <Clock className="w-6 h-6" />
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-yellow-500 to-orange-600 flex items-center justify-center p-2">
+                  <img src={gardenImage4} alt="Legendary Plants" className="w-full h-full object-contain" />
                 </div>
                 <div>
                   <div className="text-2xl font-bold gradient-text">{garden?.legendary_plants || 0}</div>
@@ -351,17 +345,17 @@ const GardenPage = () => {
                 <div className="relative w-full h-[550px]">
                   {plants.map((plant, index) => {
                     const plantType = parseInt(plant.plant_type)
-                    let emoji = '🌱'
+                    let plantImage = gardenImage1
                     let rarityColor = 'from-green-500 to-emerald-600'
                     
                     if (plantType >= 13 && plantType <= 15) {
-                      emoji = '🌿'
+                      plantImage = gardenImage2
                       rarityColor = 'from-blue-500 to-cyan-600'
                     } else if (plantType >= 16 && plantType <= 17) {
-                      emoji = '🌳'
+                      plantImage = gardenImage3
                       rarityColor = 'from-purple-500 to-pink-600'
                     } else if (plantType === 18) {
-                      emoji = '✨'
+                      plantImage = gardenImage4
                       rarityColor = 'from-yellow-500 to-orange-600'
                     }
 
@@ -406,9 +400,11 @@ const GardenPage = () => {
                           
                           {/* Plant */}
                           <div className="relative">
-                            <div className="text-4xl md:text-5xl filter drop-shadow-lg transform group-hover:scale-110 transition-transform duration-200">
-                              {emoji}
-                            </div>
+                            <img 
+                              src={plantImage} 
+                              alt={`Plant ${plant.plant_num}`}
+                              className="w-16 h-16 md:w-20 md:h-20 object-contain filter drop-shadow-lg transform group-hover:scale-110 transition-transform duration-200"
+                            />
                             
                             {/* Tooltip */}
                             <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -426,14 +422,14 @@ const GardenPage = () => {
                   {/* Summary Cards */}
                   <div className="absolute bottom-0 left-0 right-0 grid grid-cols-4 gap-2">
                     <div className="glass rounded-lg p-2 text-center backdrop-blur-md">
-                      <div className="text-2xl">🌱</div>
+                      <img src={gardenImage1} alt="Regular" className="w-8 h-8 object-contain mx-auto mb-1" />
                       <div className="text-xs text-slate-400">Regular</div>
                       <div className="font-bold text-sm">
                         {plants.filter(p => parseInt(p.plant_type) < 13).length}
                       </div>
                     </div>
                     <div className="glass rounded-lg p-2 text-center backdrop-blur-md">
-                      <div className="text-2xl">🌿</div>
+                      <img src={gardenImage2} alt="Uncommon" className="w-8 h-8 object-contain mx-auto mb-1" />
                       <div className="text-xs text-slate-400">Uncommon</div>
                       <div className="font-bold text-sm text-blue-400">
                         {plants.filter(p => {
@@ -443,7 +439,7 @@ const GardenPage = () => {
                       </div>
                     </div>
                     <div className="glass rounded-lg p-2 text-center backdrop-blur-md">
-                      <div className="text-2xl">🌳</div>
+                      <img src={gardenImage3} alt="Rare" className="w-8 h-8 object-contain mx-auto mb-1" />
                       <div className="text-xs text-slate-400">Rare</div>
                       <div className="font-bold text-sm text-purple-400">
                         {plants.filter(p => {
@@ -453,7 +449,7 @@ const GardenPage = () => {
                       </div>
                     </div>
                     <div className="glass rounded-lg p-2 text-center backdrop-blur-md">
-                      <div className="text-2xl">✨</div>
+                      <img src={gardenImage4} alt="Legendary" className="w-8 h-8 object-contain mx-auto mb-1" />
                       <div className="text-xs text-slate-400">Legendary</div>
                       <div className="font-bold text-sm text-yellow-400">
                         {plants.filter(p => parseInt(p.plant_type) === 18).length}

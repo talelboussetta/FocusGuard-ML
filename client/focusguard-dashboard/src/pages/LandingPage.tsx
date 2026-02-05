@@ -1,10 +1,10 @@
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
-import forestImage from '../assets/images/forest.png'
-import focusedImage from '../assets/images/foucsed.png'
-import relaxedImage from '../assets/images/relaxed.png'
-import sessionImage from '../assets/images/session.png'
+import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.jpg'
+import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.jpg'
+import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.jpg'
+import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.jpg'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -296,7 +296,7 @@ const LandingPage = () => {
                 transition={{ duration: 0.3 }}
               >
                 <img
-                  src={forestImage}
+                  src={gardenImage1}
                   alt="Beautiful forest representing your productivity garden"
                   className="w-full h-full object-cover"
                 />
@@ -418,7 +418,7 @@ const LandingPage = () => {
 
           <div className="space-y-12">
             {howItWorksSteps.map((step, index) => {
-              const stepImages = [sessionImage, focusedImage, forestImage, relaxedImage]
+              const stepImages = [gardenImage2, gardenImage3, gardenImage4, gardenImage1]
               return (
                 <motion.div
                   key={index}

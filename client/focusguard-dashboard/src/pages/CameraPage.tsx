@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
 import { PoseLandmarker, FaceLandmarker, FilesetResolver } from '@mediapipe/tasks-vision'
+import notificationIcon from '../assets/images/garden_images/GST DACAR 121-02.png'
 
 type FocusState = 'focused' | 'distracted' | 'neutral'
 type DistractionReason = 'out_of_frame' | 'looking_away' | 'head_down_too_long' | 'no_face' | null
@@ -235,8 +236,8 @@ const CameraPage = () => {
     
     new Notification('FocusGuard - Stay Focused! 🎯', {
       body: reason,
-      icon: '/images/logo.png',
-      badge: '/images/logo.png',
+      icon: notificationIcon,
+      badge: notificationIcon,
       tag: 'focus-distraction',
       requireInteraction: false,
     })
