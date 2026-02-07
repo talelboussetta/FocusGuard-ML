@@ -19,6 +19,7 @@ const CameraPage = () => {
   const [blinkRate, setBlinkRate] = useState(0)
   const [isLoading, setIsLoading] = useState(false)
   const [showRefreshNotification, setShowRefreshNotification] = useState(false)
+  const [cameraError, setCameraError] = useState<'permission' | 'not-found' | null>(null)
   
   // New focus tracking states
   const [focusState, setFocusState] = useState<FocusState>('neutral')
@@ -138,6 +139,7 @@ const CameraPage = () => {
 
   const startCamera = async () => {
     try {
+      setCameraError(null)
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { 
           width: { ideal: 1280 },
@@ -155,9 +157,17 @@ const CameraPage = () => {
           setIsCameraOn(true)
         }
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error accessing camera:', error)
-      alert('Could not access camera. Please check permissions.')
+      
+      // Determine error type
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        setCameraError('permission')
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        setCameraError('not-found')
+      } else {
+        setCameraError('permission') // Default to permission error
+      }
     }
   }
 
@@ -737,9 +747,52 @@ const CameraPage = () => {
                       exit={{ opacity: 0 }}
                       className="absolute inset-0 flex items-center justify-center bg-slate-950/80"
                     >
-                      <div className="text-center">
-                        <CameraOff className="w-20 h-20 text-slate-600 mx-auto mb-4" />
-                        <p className="text-slate-400 text-lg">Camera is off</p>
+                      <div className="text-center max-w-md px-6">
+                        {cameraError ? (
+                          <>
+                            <div className="mb-6">
+                              {cameraError === 'permission' ? (
+                                <AlertCircle className="w-24 h-24 text-amber-500 mx-auto mb-4" />
+                              ) : (
+                                <CameraOff className="w-24 h-24 text-slate-500 mx-auto mb-4" />
+                              )}
+                            </div>
+                            
+                            <h3 className="text-2xl font-bold text-white mb-3">
+                              {cameraError === 'permission' ? 'Camera Access Denied' : 'No Webcam Found'}
+                            </h3>
+                            
+                            <p className="text-slate-300 mb-6">
+                              {cameraError === 'permission' 
+                                ? 'Please allow camera access in your browser settings to use presence detection.'
+                                : 'No webcam detected. Please connect a webcam to use this feature.'}
+                            </p>
+                            
+                            <div className="space-y-3">
+                              <Button
+                                onClick={startCamera}
+                                className="w-full bg-purple-600 hover:bg-purple-700"
+                              >
+                                <Camera className="w-4 h-4 mr-2" />
+                                Try Again
+                              </Button>
+                              
+                              {cameraError === 'permission' && (
+                                <div className="text-xs text-slate-400 bg-slate-800/50 rounded-lg p-3">
+                                  <p className="font-semibold mb-1">How to enable camera:</p>
+                                  <p>1. Click the camera icon in your browser's address bar</p>
+                                  <p>2. Select "Allow" for camera access</p>
+                                  <p>3. Click "Try Again" above</p>
+                                </div>
+                              )}
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <CameraOff className="w-20 h-20 text-slate-600 mx-auto mb-4" />
+                            <p className="text-slate-400 text-lg">Camera is off</p>
+                          </>
+                        )}
                       </div>
                     </motion.div>
                   )}
