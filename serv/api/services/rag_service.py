@@ -33,20 +33,25 @@ class RAGService:
         if self._initialized:
             return
         
-        logger.info("Initializing RAG service...")
+        logger.info("[RAG] Initializing RAG service...")
         
-        # Lazy import to avoid loading heavy dependencies at module import time
-        from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
-        from rag.vector_store.qdrant_store import QdrantVectorStore
-        from rag.retrieval.retriever import Retriever
-        from rag.generation.config import get_generator
-        
-        # Initialize embedder
-        logger.info("Loading embedder...")
-        self.embedder = SentenceTransformerEmbedder()
-        
-        # Initialize vector store
-        logger.info("Connecting to Qdrant...")
+        try:
+            # Lazy import to avoid loading heavy dependencies at module import time
+            from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
+            from rag.vector_store.qdrant_store import QdrantVectorStore
+            from rag.retrieval.retriever import Retriever
+            from rag.generation.config import get_generator
+            
+            # Initialize embedder
+            logger.info("[RAG] Loading sentence transformer embedder...")
+            self.embedder = SentenceTransformerEmbedder()
+            logger.info(f"[RAG] Embedder loaded: dimension={self.embedder.dimension}")
+            
+            # Initialize vector store
+            logger.info("[RAG] Connecting to Qdrant vector store...")
+        except Exception as e:
+            logger.error(f"[RAG] Fatal error during initialization: {e}", exc_info=True)
+            raise
         self.vector_store = QdrantVectorStore(
             url="http://localhost:6333",
             collection_name="focusguard_knowledge",
@@ -96,14 +101,14 @@ class RAGService:
         if not self._initialized:
             await self.initialize()
         
-        logger.info(f"Processing RAG query: '{query}' (top_k={top_k}, user_id={user_id})")
+        logger.info(f"[RAG Query] Starting: '{query[:100]}...' (top_k={top_k}, user_id={user_id or 'anonymous'})")
         
         # Check if this is a stats/analytics query
         is_stats_query = self._is_stats_query(query)
         user_stats_context = None
         
         if is_stats_query and user_id and db:
-            logger.info("Detected stats query - fetching user data")
+            logger.info(f"[RAG Query] Detected stats query - fetching user data for user_id={user_id}")
             user_stats_context = await self._fetch_user_stats(user_id, db)
         
         # Build metadata filter if category specified
@@ -112,95 +117,144 @@ class RAGService:
             filter_metadata = {"category": category_filter}
             logger.info(f"Filtering by category: {category_filter}")
         
-        # Retrieve relevant documents
-        search_results = await self.retriever.retrieve(
-            query=query,
-            top_k=top_k,
-            filter_metadata=filter_metadata
-        )
-        
-        # Check if this is a conversational/greeting query (low relevance scores)
-        is_conversational = not search_results or (search_results and search_results[0].score < 0.5)
-        
-        if not search_results or is_conversational:
-            # For conversational queries or no matches, use LLM without context
-            logger.info(f"Handling conversational/general query (best score: {search_results[0].score if search_results else 'N/A'})")
+        # Check if knowledge base is empty
+        try:
+            collection_info = await self.vector_store.get_collection_info()
+            doc_count = collection_info.get('points_count', 0)
             
-            # Import here to avoid circular dependency
-            from rag.generation.prompts import PRODUCTIVITY_COACH_PROMPT
+            if doc_count == 0:
+                logger.warning("Knowledge base is empty - returning helpful message")
+                
+                # Return a helpful message explaining how to populate the knowledge base
+                empty_kb_message = """I'm your AI productivity coach, but it looks like the knowledge base is empty right now.
+
+To enable AI-powered coaching, please run the knowledge base ingestion:
+
+**Steps:**
+1. Open a terminal
+2. Navigate to the `serv` directory
+3. Run: `python -m rag.ingest_knowledge_base`
+4. Wait for all documents to be ingested
+
+Once complete, I'll be able to provide personalized productivity tips, focus strategies, and study guidance based on 40+ research-backed documents!
+
+In the meantime, here's some general advice: The Pomodoro Technique (25 minutes of focused work followed by 5-minute breaks) is a great starting point for improving focus and productivity."""
+                
+                return RAGQueryResponse(
+                    answer=empty_kb_message,
+                    sources=[] if include_sources else None,
+                    query=query,
+                    model_used="system_message"
+                )
+        except Exception as e:
+            logger.error(f"Failed to check document count: {e}")
+            # Continue with normal flow if health check fails
+        
+        try:
+            # Retrieve relevant documents
+            search_results = await self.retriever.retrieve(
+                query=query,
+                top_k=top_k,
+                filter_metadata=filter_metadata
+            )
             
-            # Create a simple prompt for conversational queries
-            conversational_prompt = f"""{PRODUCTIVITY_COACH_PROMPT}
+            # Check if this is a conversational/greeting query (low relevance scores)
+            is_conversational = not search_results or (search_results and search_results[0].score < 0.5)
+            
+            if not search_results or is_conversational:
+                # For conversational queries or no matches, use LLM without context
+                logger.info(f"Handling conversational/general query (best score: {search_results[0].score if search_results else 'N/A'})")
+                
+                # Import here to avoid circular dependency
+                from rag.generation.prompts import PRODUCTIVITY_COACH_PROMPT
+                
+                # Create a simple prompt for conversational queries
+                conversational_prompt = f"""{PRODUCTIVITY_COACH_PROMPT}
 
 User Message: {query}
 
 Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. If it's a question you can help with, provide guidance."""
+                
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=[conversational_prompt],
+                    system_prompt=""
+                )
+                
+                return RAGQueryResponse(
+                    answer=answer,
+                    sources=[] if include_sources else None,
+                    query=query,
+                    model_used=self.generator.model if self.generator else "conversational"
+                )
             
-            answer = await self.generator.generate(
-                query=query,
-                context_documents=[conversational_prompt],
-                system_prompt=""
-            )
+            logger.info(f"Retrieved {len(search_results)} documents (scores: {[f'{r.score:.3f}' for r in search_results]})")
+            
+            # Extract context documents for LLM
+            context_docs = [result.document.content for result in search_results]
+            
+            # If stats query with user data, build specialized stats prompt
+            if is_stats_query and user_stats_context:
+                logger.info("Building stats analysis prompt with user data")
+                from rag.generation.prompts import build_stats_analysis_prompt
+                
+                stats_prompt = build_stats_analysis_prompt(
+                    query=query,
+                    user_stats=user_stats_context,
+                    context_documents=context_docs[:2]  # Include top 2 relevant tips
+                )
+                
+                # Generate personalized stats analysis
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=[stats_prompt],
+                    system_prompt=""
+                )
+            else:
+                # Generate answer using LLM with knowledge base context
+                logger.info("Generating answer with LLM...")
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=context_docs
+                )
+            
+            logger.info(f"Generated answer ({len(answer)} chars)")
+            
+            # Build source documents if requested
+            sources = None
+            if include_sources:
+                sources = [
+                    SourceDocument(
+                        content=result.document.content[:300] + "..." if len(result.document.content) > 300 else result.document.content,
+                        source=result.document.metadata.get('source', 'unknown'),
+                        section_title=result.document.metadata.get('section_title', 'N/A'),
+                        score=result.score,
+                        category=result.document.metadata.get('category')
+                    )
+                    for result in search_results
+                ]
             
             return RAGQueryResponse(
                 answer=answer,
-                sources=[] if include_sources else None,
+                sources=sources,
                 query=query,
-                model_used=self.generator.model if self.generator else "conversational"
-            )
-        
-        logger.info(f"Retrieved {len(search_results)} documents (scores: {[f'{r.score:.3f}' for r in search_results]})")
-        
-        # Extract context documents for LLM
-        context_docs = [result.document.content for result in search_results]
-        
-        # If stats query with user data, build specialized stats prompt
-        if is_stats_query and user_stats_context:
-            logger.info("Building stats analysis prompt with user data")
-            from rag.generation.prompts import build_stats_analysis_prompt
-            
-            stats_prompt = build_stats_analysis_prompt(
-                query=query,
-                user_stats=user_stats_context,
-                context_documents=context_docs[:2]  # Include top 2 relevant tips
+                model_used=self.generator.model if self.generator else "unknown"
             )
             
-            # Generate personalized stats analysis
-            answer = await self.generator.generate(
-                query=query,
-                context_documents=[stats_prompt],
-                system_prompt=""
+        except Exception as e:
+            logger.error(
+                f"[RAG Query] FAILED - Error processing query: {str(e)}",
+                exc_info=True,
+                extra={
+                    "query": query[:200],
+                    "user_id": user_id,
+                    "top_k": top_k,
+                    "category_filter": category_filter,
+                    "error_type": type(e).__name__,
+                }
             )
-        else:
-            # Generate answer using LLM with knowledge base context
-            logger.info("Generating answer with LLM...")
-            answer = await self.generator.generate(
-                query=query,
-                context_documents=context_docs
-            )
-        
-        logger.info(f"Generated answer ({len(answer)} chars)")
-        
-        # Build source documents if requested
-        sources = None
-        if include_sources:
-            sources = [
-                SourceDocument(
-                    content=result.document.content[:300] + "..." if len(result.document.content) > 300 else result.document.content,
-                    source=result.document.metadata.get('source', 'unknown'),
-                    section_title=result.document.metadata.get('section_title', 'N/A'),
-                    score=result.score,
-                    category=result.document.metadata.get('category')
-                )
-                for result in search_results
-            ]
-        
-        return RAGQueryResponse(
-            answer=answer,
-            sources=sources,
-            query=query,
-            model_used=self.generator.model if self.generator else "unknown"
-        )
+            # Re-raise to be handled by route
+            raise
     
     async def health_check(self) -> Dict[str, Any]:
         """Check health status of all RAG components."""
