@@ -1,13 +1,28 @@
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
-import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.jpg'
-import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.jpg'
-import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.jpg'
-import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.jpg'
+import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, ArrowUp, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
+import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.png'
+import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.png'
+import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.png'
+import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.png'
 
 const LandingPage = () => {
   const navigate = useNavigate()
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400)
+    }
+
+    window.addEventListener('scroll', handleScroll)
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const scrollToHowItWorks = () => {
     const element = document.getElementById('how-it-works')
@@ -17,6 +32,10 @@ const LandingPage = () => {
   const scrollToPrivacy = () => {
     const element = document.getElementById('privacy')
     element?.scrollIntoView({ behavior: 'smooth' })
+  }
+  const scrollToSignin=()=>{
+    const element=document.getElementById("bottom_arrow")
+    element?.scrollIntoView({behavior:"smooth"}) 
   }
 
   const features = [
@@ -743,7 +762,28 @@ const LandingPage = () => {
         {/* Footer */}
         <footer className="container mx-auto px-6 py-12 text-center text-slate-500">
           <p>© 2026 FocusGuard. Made with 💚 for focused minds everywhere.</p>
+            <motion.button
+              onClick={scrollToSignin}
+              className="text-slate-300 hover:text-nature-400 transition-colors flex items-center space-x-2"
+              whileHover={{ scale: 1.05 }}
+            ></motion.button>
         </footer>
+
+        {/* Scroll to Top Button */}
+        {showScrollTop && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            onClick={scrollToTop}
+            className="fixed bottom-8 right-8 p-4 rounded-full bg-gradient-to-r from-primary-500 to-primary-700 text-white shadow-lg hover:shadow-xl transition-all z-50"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            aria-label="Scroll to top"
+          >
+            <ArrowUp className="w-6 h-6" />
+          </motion.button>
+        )}
       </div>
     </div>
   )

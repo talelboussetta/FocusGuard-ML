@@ -44,18 +44,9 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const { playNotification } = useSound()
 
   // Load active session on mount
-  // Load active session on mount and refresh periodically (but not if session is active)
   useEffect(() => {
     loadActiveSession()
-    
-    // Only set up background refresh if no active session
-    if (activeSession) {
-      return // Don't refresh when timer is running
-    }
-    
-    const interval = setInterval(loadActiveSession, 30000) // Refresh every 30 seconds
-    return () => clearInterval(interval)
-  }, [activeSession])
+  }, []) // Run only once on mount to avoid infinite loops
 
   // Timer effect - tick every second when running
   useEffect(() => {
