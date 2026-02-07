@@ -148,48 +148,93 @@ const TeamPage = () => {
 					</motion.div>
 
 					<motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.3 }} className="glass rounded-2xl p-8">
-						<div className="flex flex-col md:flex-row items-center justify-between gap-6">
-							<div className="flex-1">
-								<h2 className="text-2xl font-display font-semibold mb-2">Study together, level up together</h2>
-								<p className="text-slate-400 mb-4">Form guilds to create friendly competition and collaborate during study sessions. Teams can earn collective XP and climb the leaderboard.</p>
-								<div className="flex gap-3">
-									{currentTeamId ? (
-										<motion.button 
-											onClick={() => navigate(`/teams/${currentTeamId}`)} 
-											className="btn-primary flex items-center space-x-2" 
-											whileHover={{ scale: 1.03 }} 
-											whileTap={{ scale: 0.97 }}
-										>
-											<Users className="w-5 h-5" />
-											<span>View My Team</span>
-										</motion.button>
-									) : (
-										<>
-											<motion.button onClick={() => setShowJoinModal(true)} className="btn-primary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-												<UserPlus className="w-5 h-5" />
-												<span>Join a Team</span>
-											</motion.button>
-
-											<motion.button onClick={() => setShowCreateModal(true)} className="btn-secondary flex items-center space-x-2" whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}>
-												<PlusCircle className="w-5 h-5" />
-												<span>Create a Team</span>
-											</motion.button>
-										</>
-									)}
+						{currentTeamId ? (
+							<div className="flex flex-col md:flex-row items-center justify-between gap-6">
+								<div className="flex-1">
+									<h2 className="text-2xl font-display font-semibold mb-2">You're in a team!</h2>
+									<p className="text-slate-400 mb-4">View your team stats, chat with members, and track collective progress.</p>
+									<motion.button 
+										onClick={() => navigate(`/teams/${currentTeamId}`)} 
+										className="btn-primary flex items-center space-x-2" 
+										whileHover={{ scale: 1.03 }} 
+										whileTap={{ scale: 0.97 }}
+									>
+										<Users className="w-5 h-5" />
+										<span>View My Team</span>
+									</motion.button>
+								</div>
+								<div className="w-full md:w-1/3">
+									<div className="p-4 bg-slate-900 rounded-xl border border-slate-800/50">
+										<h3 className="text-sm text-slate-300 font-medium mb-2">Team Benefits</h3>
+										<ul className="text-slate-400 text-sm space-y-2">
+											<li>- Shared team XP and stats</li>
+											<li>- Team chat and messages</li>
+											<li>- Collaborative leaderboards</li>
+										</ul>
+									</div>
 								</div>
 							</div>
+						) : (
+							<div className="text-center py-8">
+								<div className="mb-6 flex justify-center">
+									<div className="relative">
+										<Users className="w-24 h-24 text-slate-700" />
+										<div className="absolute -bottom-1 -right-1 bg-purple-600 rounded-full p-1.5">
+											<PlusCircle className="w-5 h-5 text-white" />
+										</div>
+									</div>
+								</div>
+								
+								<h2 className="text-3xl font-display font-bold mb-3">You're not in a team yet</h2>
+								<p className="text-slate-400 max-w-2xl mx-auto mb-8">
+									Teams let you study together, compete on leaderboards, and share progress with friends. 
+									Join an existing team or create your own to get started.
+								</p>
+								
+								<div className="flex gap-4 justify-center mb-8">
+									<motion.button 
+										onClick={() => setShowJoinModal(true)} 
+										className="btn-primary flex items-center space-x-2 px-6 py-3" 
+										whileHover={{ scale: 1.03 }} 
+										whileTap={{ scale: 0.97 }}
+									>
+										<UserPlus className="w-5 h-5" />
+										<span>Join a Team</span>
+									</motion.button>
 
-							<div className="w-full md:w-1/3">
-								<div className="p-4 bg-slate-900 rounded-xl border border-slate-800/50">
-									<h3 className="text-sm text-slate-300 font-medium mb-2">Quick Tips</h3>
-									<ul className="text-slate-400 text-sm space-y-2">
-										<li>- Share your Team ID with friends to invite them</li>
-										<li>- Coordinate session times for group focus</li>
-										<li>- Earn team XP when members complete sessions</li>
-									</ul>
+									<motion.button 
+										onClick={() => setShowCreateModal(true)} 
+										className="btn-secondary flex items-center space-x-2 px-6 py-3" 
+										whileHover={{ scale: 1.03 }} 
+										whileTap={{ scale: 0.97 }}
+									>
+										<PlusCircle className="w-5 h-5" />
+										<span>Create a Team</span>
+									</motion.button>
+								</div>
+								
+								<div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-3xl mx-auto">
+									<div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800/30">
+										<h3 className="text-sm text-purple-400 font-medium mb-2">Create a Team</h3>
+										<p className="text-slate-400 text-xs">
+											Start your own guild, get a unique Team ID, and invite friends to join
+										</p>
+									</div>
+									<div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800/30">
+										<h3 className="text-sm text-purple-400 font-medium mb-2">Join a Team</h3>
+										<p className="text-slate-400 text-xs">
+											Have a Team ID? Enter it to join an existing team and collaborate
+										</p>
+									</div>
+									<div className="p-4 bg-slate-900/50 rounded-xl border border-slate-800/30">
+										<h3 className="text-sm text-purple-400 font-medium mb-2">Earn Together</h3>
+										<p className="text-slate-400 text-xs">
+											Collective XP, shared stats, and friendly competition to stay motivated
+										</p>
+									</div>
 								</div>
 							</div>
-						</div>
+						)}
 					</motion.div>
 
 					{/* Modals */}
