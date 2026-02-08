@@ -14,7 +14,7 @@ import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Progress } from '../components/ui/Progress'
 import { Badge } from '../components/ui/Badge'
-import { statsAPI, userAPI } from '../services/api'
+import { statsAPI, userAPI, getErrorMessage } from '../services/api'
 import type { DailyStats, UserStats } from '../services/api'
 
 const AnalyticsPage = () => {
@@ -94,7 +94,7 @@ const AnalyticsPage = () => {
   const maxHours = Math.max(...dailyStats.map((d) => d.focus_min / 60), 1)
   
   const thisWeekFocus = trends?.this_week?.total_focus_min || 0
-  const lastWeekFocus = trends?.last_week?.total_focus_min || 0
+  // const lastWeekFocus = trends?.last_week?.total_focus_min || 0  // Unused for now
   const thisWeekSessions = trends?.this_week?.sessions_completed || 0
   const lastWeekSessions = trends?.last_week?.sessions_completed || 0
   const thisWeekScore = trends?.this_week?.avg_focus_score || 0

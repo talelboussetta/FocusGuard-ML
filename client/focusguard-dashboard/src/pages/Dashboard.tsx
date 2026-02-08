@@ -9,7 +9,6 @@ import DistractionMonitor from '../components/DistractionMonitor'
 import CircularTimerPicker from '../components/CircularTimerPicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useSessionContext } from '../contexts/SessionContext'
-import { useNotificationContext } from '../contexts/NotificationContext'
 import { userAPI, sessionAPI, statsAPI, getErrorMessage } from '../services/api'
 import type { UserStats, Session, DailyStats } from '../services/api'
 

@@ -1,6 +1,5 @@
 import { useState, useCallback } from 'react'
 import { useLocalStorage } from './useLocalStorage'
-import { useTimer } from './useTimer'
 
 export interface FocusSession {
   id: string

@@ -19,8 +19,10 @@ const SessionSummaryModal = ({
 }: SessionSummaryModalProps) => {
   if (!session) return null
 
-  const durationMinutes = Math.round(session.duration / 60)
-  const focusScore = session.focus_score || 0
+  const durationMinutes = session.duration 
+    ? Math.round(session.duration / 60) 
+    : session.duration_minutes || 25
+  const focusScore = session.focus_score || 85
 
   return (
     <AnimatePresence>

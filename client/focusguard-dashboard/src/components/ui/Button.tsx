@@ -1,10 +1,10 @@
 import { ButtonHTMLAttributes, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success'
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'success' | 'outline'
 export type ButtonSize = 'sm' | 'md' | 'lg'
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: ButtonVariant
   size?: ButtonSize
   isLoading?: boolean
@@ -15,6 +15,7 @@ const variantStyles: Record<ButtonVariant, string> = {
   primary: 'bg-gray-900 hover:bg-gray-800 text-white shadow-md hover:shadow-lg',
   secondary: 'bg-gray-200 hover:bg-gray-300 text-gray-900 shadow-sm hover:shadow-md',
   ghost: 'bg-transparent hover:bg-gray-100 text-gray-700 border border-gray-300 hover:border-gray-400',
+  outline: 'bg-transparent hover:bg-gray-100 text-gray-900 border-2 border-gray-900 hover:border-gray-700',
   danger: 'bg-red-600 hover:bg-red-700 text-white shadow-md hover:shadow-lg',
   success: 'bg-green-600 hover:bg-green-700 text-white shadow-md hover:shadow-lg',
 }

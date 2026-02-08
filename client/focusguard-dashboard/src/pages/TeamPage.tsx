@@ -2,7 +2,6 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { Users, PlusCircle, UserPlus, X, Copy } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
-import { useAuth } from '../contexts/AuthContext'
 import { useState, useRef, useEffect } from 'react'
 import { teamAPI, getErrorMessage } from '../services/api'
 

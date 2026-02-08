@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion'
-import { Users, Crown, MessageSquare, Send, ArrowLeft, Trophy, Target, Flame } from 'lucide-react'
+import { Users, Crown, MessageSquare, Send, ArrowLeft, Trophy, Target } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'

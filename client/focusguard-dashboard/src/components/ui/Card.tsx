@@ -1,7 +1,7 @@
 import { HTMLAttributes, forwardRef } from 'react'
 import { motion } from 'framer-motion'
 
-interface CardProps extends HTMLAttributes<HTMLDivElement> {
+interface CardProps extends Omit<HTMLAttributes<HTMLDivElement>, 'onDrag' | 'onDragStart' | 'onDragEnd'> {
   variant?: 'default' | 'gradient' | 'glass'
   hover?: boolean
 }

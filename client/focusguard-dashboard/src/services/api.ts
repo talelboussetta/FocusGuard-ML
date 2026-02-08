@@ -16,7 +16,8 @@ export interface User {
   email: string;
   full_name?: string;
   bio?: string;
-  xp_points: number;  // Backend uses xp_points, not xp
+  xp: number;  // Alias for compatibility
+  xp_points: number;  // Backend uses xp_points
   lvl: number;
   is_active: boolean;
   created_at: string;
@@ -28,7 +29,10 @@ export interface Session {
   user_id: string;  // UUID from backend
   completed: boolean;
   duration_minutes?: number;  // Planned duration (15, 25, 45, 60 for Pomodoro)
+  duration?: number;  // Duration in seconds (computed: duration_minutes * 60)
+  focus_score?: number;  // Focus quality percentage (0-100)
   blink_rate?: number;  // AI analysis
+  start_time?: string;  // Alias for created_at
   created_at: string;
 }
 
@@ -250,7 +254,7 @@ async function handleResponse<T>(response: Response, originalRequest?: () => Pro
     } else {
       // Wait for the ongoing refresh to complete
       return new Promise((resolve, reject) => {
-        subscribeTokenRefresh(async (token: string) => {
+        subscribeTokenRefresh(async (_token: string) => {
           try {
             const retryResponse = await originalRequest();
             resolve(await handleResponse<T>(retryResponse));
@@ -379,7 +383,9 @@ export const userAPI = {
       headers: getAuthHeader(),
     });
     const response = await makeRequest();
-    return handleResponse<User>(response, makeRequest);
+    const user = await handleResponse<User>(response, makeRequest);
+    // Add xp alias for compatibility
+    return { ...user, xp: user.xp_points };
   },
 
   async updateProfile(data: { full_name?: string; bio?: string }) {
