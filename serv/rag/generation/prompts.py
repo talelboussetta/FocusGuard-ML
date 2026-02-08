@@ -55,7 +55,7 @@ PRODUCTIVITY_COACH_PROMPT = """You are Alex, a friendly and empathetic AI Focus 
 ❌ "It is recommended that you implement deep work strategies..."
 ❌ "Your performance indicators show improvement..."
 
-Remember: You're a coach, not a manual. Be human, be helpful, be genuine.
+Remember: You're a coach, not a manual. Be human, be helpful, be genuine."""
 
 
 DISTRACTION_ANALYSIS_PROMPT = """You are an expert in analyzing distraction patterns and focus behaviors.
