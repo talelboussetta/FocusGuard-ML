@@ -18,7 +18,7 @@ spec:
         branch: main
         deploy_on_push: true
       
-      source_dir: /serv
+      source_dir: serv
       
       build_command: pip install -r requirements-production.txt
       
@@ -98,7 +98,7 @@ spec:
         branch: main
         deploy_on_push: true
       
-      source_dir: /client/focusguard-dashboard
+      source_dir: client/focusguard-dashboard
       
       build_command: npm install && npm run build
       

@@ -66,6 +66,10 @@ https://github.com/talelboussetta/FocusGuard-ML
    - Delete the auto-detected configuration
    - Copy and paste the entire contents of `.do/app.yaml`
    - Click **"Save"**
+   
+   **Note:** If you see "No components detected", verify:
+   - Source paths in app.yaml are relative (e.g., `serv`, not `/serv`)
+   - Your GitHub repo is public or DO has permission to access it
 
 ### Step 3: Configure Managed Database
 
