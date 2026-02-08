@@ -142,8 +142,8 @@ const AITutorPage = () => {
       ))
       setEditingConversationId(null)
       
-      // TODO: Add API endpoint to update conversation title
-      // await conversationAPI.update(conversationId, { title: editingTitle })
+      // Note: Conversation title updates are local-only for now
+      // Future: Add API endpoint conversationAPI.update(conversationId, { title })
     } catch (error) {
       console.error('Failed to update conversation title:', error)
     }

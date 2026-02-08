@@ -52,8 +52,7 @@ const GardenPage = () => {
     try {
       setResetting(true)
       setError(null)
-      const result = await gardenAPI.reset()
-      console.log('Garden reset result:', result)
+      await gardenAPI.reset()
       
       // Reload garden after reset
       await loadGarden()

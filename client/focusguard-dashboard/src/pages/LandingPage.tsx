@@ -3,6 +3,7 @@ import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check } from 'lucide-react'
 import moonImage from '../assets/images/moonjpg.jpg'
+import arrowImage from '../assets/images/arrow.png'
 
 const LandingPage = () => {
   const navigate = useNavigate()
@@ -198,7 +199,9 @@ const LandingPage = () => {
         className="relative z-50 container mx-auto px-6 py-6 flex justify-between items-center"
       >
         <div className="flex items-center gap-2">
-          <Sprout className="w-6 h-6 text-emerald-400" strokeWidth={2.5} />
+          <div className="w-7 h-7 rounded-lg overflow-hidden border border-white/10 shadow-[0_6px_14px_rgba(2,6,23,0.5)]">
+            <img src={moonImage} alt="FocusGuard" className="w-full h-full object-cover" />
+          </div>
           <span className="text-xl font-semibold text-slate-100">FocusGuard</span>
         </div>
         <div className="flex items-center gap-4">
@@ -377,6 +380,11 @@ const LandingPage = () => {
           whileHover={{ scale: 1.04 }}
           className="relative w-[360px] h-[360px] lg:w-[460px] lg:h-[460px] mx-auto my-8 lg:my-0 z-0"
         >
+          <img
+            src={arrowImage}
+            alt=""
+            className="absolute -top-32 left-1/2 -translate-x-1/2 w-90 h-25 opacity-95 drop-shadow-[0_14px_22px_rgba(2,6,23,0.65)] pointer-events-none"
+          />
           {/* Clickable Moon */}
           <motion.button
             type="button"

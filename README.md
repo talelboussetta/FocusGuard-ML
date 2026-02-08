@@ -5,7 +5,9 @@
 FocusGuard is a modern productivity platform that combines the Pomodoro technique with AI-powered focus insights and gamification. Build better study habits while growing your personal digital garden.
 
 ![FocusGuard Banner](https://github.com/talelboussetta/FocusGuard-ML/blob/main/client/focusguard-dashboard/src/assets/images/banner.png)
-## Database Architecture 
+
+## Database Architecture
+
 ![FocusGuard Architecture](https://github.com/talelboussetta/FocusGuard-ML/blob/main/Excalidraw_architecture_progress/services_update.png)
 
 ## ✨ Features
@@ -126,28 +128,37 @@ VITE_ENABLE_CAMERA=true
 
 ```
 FocusGuard-ML/
-├── client/                      # Frontend application
-│   └── focusguard-dashboard/
-│       ├── src/
-│       │   ├── components/      # React components
-│       │   │   └── ui/          # Reusable UI components
-│       │   ├── pages/           # Page components
-│       │   ├── hooks/           # Custom React hooks
-│       │   ├── assets/          # Static assets
-│       │   └── styles/          # Global styles
-│       ├── public/              # Public assets
-│       └── package.json
-│
-├── serv/                        # Backend application
-│   ├── app/
-│   │   ├── __init__.py
-│   │   ├── routes.py           # API routes
-│   │   ├── hf_client.py        # AI/ML integrations
-│   │   └── utils.py            # Utility functions
-│   ├── config.py               # Configuration
-│   ├── run.py                  # Entry point
-│   └── requirements.txt
-│
+├── client/focusguard-dashboard/    # React frontend
+│   ├── src/
+│   │   ├── components/             # Reusable UI components
+│   │   ├── contexts/               # React Context (Auth, Session, etc.)
+│   │   ├── pages/                  # Route pages
+│   │   ├── services/               # API client
+│   │   └── assets/                 # Images, fonts, etc.
+│   └── public/
+├── serv/                           # FastAPI backend
+│   ├── api/
+│   │   ├── routes/                 # HTTP endpoints
+│   │   ├── services/               # Business logic
+│   │   ├── models/                 # SQLAlchemy ORM
+│   │   ├── schemas/                # Pydantic validation
+│   │   └── middleware/             # Auth, CORS, rate limiting
+│   ├── rag/                        # RAG AI Tutor system
+│   │   ├── embeddings/             # Text embeddings
+│   │   ├── retrieval/              # Vector search
+│   │   ├── generation/             # LLM integration
+│   │   ├── vector_store/           # Qdrant vector DB
+│   │   └── knowledge_base/         # Markdown docs
+│   └── database/init/              # SQL migrations
+├── scripts/                        # Development utilities
+│   ├── run_migration.py            # Manual DB migration
+│   └── remove_background.py        # Image processing
+├── .github/workflows/              # CI/CD pipelines
+├── docker-compose.yml              # Local development
+├── docker-compose.prod.yml         # Production deployment
+├── DEPLOYMENT.md                   # Production deployment guide
+└── README.md
+```
 └── README.md
 ```
 

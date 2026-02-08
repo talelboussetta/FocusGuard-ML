@@ -1,5 +1,6 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Leaf, Home, Camera, Brain, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight, Users, User } from 'lucide-react'
+import { Leaf, Home, Camera, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight, Users, User } from 'lucide-react'
+import moonImage from '../assets/images/moonjpg.jpg'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -7,7 +8,7 @@ import { useState } from 'react'
 const Sidebar = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { user, logout } = useAuth()
+  const { logout } = useAuth()
   const [isExpanded, setIsExpanded] = useState(false)
 
   const menuItems = [
@@ -60,8 +61,8 @@ const Sidebar = () => {
       {/* Logo */}
       <div className="p-6 border-b border-slate-800/50 overflow-hidden">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
-            <Leaf className="w-6 h-6 text-white" />
+          <div className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center flex-shrink-0 border border-white/10 shadow-[0_6px_14px_rgba(2,6,23,0.5)]">
+            <img src={moonImage} alt="FocusGuard" className="w-full h-full object-cover" />
           </div>
           {isExpanded && (
             <motion.div
