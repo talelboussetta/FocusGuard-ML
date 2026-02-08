@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, Trash2, MessageCircle, BookOpen, AlertCircle } from 'lucide-react'
+import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, Trash2, MessageCircle, BookOpen, AlertCircle, Copy, Check, RotateCcw } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
@@ -37,6 +37,7 @@ const AITutorPage = () => {
   const [isTyping, setIsTyping] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set())
+  const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -121,6 +122,29 @@ const AITutorPage = () => {
     })
   }
 
+  const copyToClipboard = async (messageId: string, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content)
+      setCopiedMessageId(messageId)
+      setTimeout(() => setCopiedMessageId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
+  const startNewChat = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "Fresh start! 🎯 I'm ready to help you tackle new challenges. What would you like to focus on?",
+        timestamp: new Date(),
+      },
+    ])
+    setError(null)
+    setInput('')
+  }
+
   const handleQuickPrompt = (text: string) => {
     setInput(text)
   }
@@ -142,12 +166,24 @@ const AITutorPage = () => {
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
-            <h1 className="text-4xl font-display font-bold mb-2">
-              AI <span className="gradient-text">Tutor</span>
-            </h1>
-            <p className="text-slate-400">
-              Your personal focus coach and productivity mentor
-            </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-4xl font-display font-bold mb-2">
+                  AI <span className="gradient-text">Tutor</span>
+                </h1>
+                <p className="text-slate-400">
+                  Your personal focus coach and productivity mentor
+                </p>
+              </div>
+              <Button
+                onClick={startNewChat}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <RotateCcw size={16} />
+                New Chat
+              </Button>
+            </div>
           </motion.div>
 
           {/* Quick Prompts */}
@@ -209,6 +245,17 @@ const AITutorPage = () => {
                                 {message.modelUsed.split('/').pop()?.slice(0, 20)}
                               </span>
                             )}
+                            <button
+                              onClick={() => copyToClipboard(message.id, message.content)}
+                              className="ml-auto p-1 hover:bg-slate-700/50 rounded transition-colors"
+                              title="Copy response"
+                            >
+                              {copiedMessageId === message.id ? (
+                                <Check size={14} className="text-emerald-400" />
+                              ) : (
+                                <Copy size={14} className="text-slate-500 hover:text-slate-300" />
+                              )}
+                            </button>
                           </div>
                         )}
                         <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
