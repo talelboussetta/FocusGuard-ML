@@ -1,11 +1,10 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { Leaf, Play, Sparkles, Clock, Sprout, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
+import { Leaf, Play, Sparkles, Sprout, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
-import { gardenAPI, userAPI } from '../services/api'
+import { gardenAPI, userAPI, getErrorMessage } from '../services/api'
 import type { Garden, UserStats } from '../services/api'
-import { useAuth } from '../contexts/AuthContext'
 import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.png'
 import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.png'
 import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.png'
@@ -13,7 +12,6 @@ import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.png'
 
 const GardenPage = () => {
   const navigate = useNavigate()
-  const { user } = useAuth()
   const [garden, setGarden] = useState<Garden | null>(null)
   const [plants, setPlants] = useState<Array<{id: string, plant_num: number, plant_type: string, growth_stage: number}>>([])
   const [stats, setStats] = useState<UserStats | null>(null)
@@ -307,6 +305,20 @@ const GardenPage = () => {
             transition={{ delay: 0.2 }}
             className="card-soft min-h-[600px] relative overflow-hidden"
           >
+            {plants.length >= 20 && (
+              <div className="absolute top-4 left-4 right-4 z-20">
+                <div className="glass rounded-xl px-4 py-3 border border-amber-500/30 bg-amber-500/10 text-amber-200 text-sm flex items-center justify-between gap-3">
+                  <span>🌱 You studied too much — consider a fresh garden to keep things smooth.</span>
+                  <button
+                    onClick={handleResetGarden}
+                    disabled={resetting}
+                    className="px-3 py-1.5 rounded-md bg-amber-500/20 hover:bg-amber-500/30 text-amber-100 text-xs font-semibold transition"
+                  >
+                    Reset Garden
+                  </button>
+                </div>
+              </div>
+            )}
             {/* Animated Sky Background */}
             <div className="absolute inset-0 bg-gradient-to-b from-blue-900/30 via-purple-900/20 to-green-900/30" />
             
@@ -340,6 +352,7 @@ const GardenPage = () => {
             </div>
 
             {/* Floating Plants Container */}
+            {/* If the garden gets super full, consider offering a reset: "You studied too much — time for a fresh garden?" to avoid lag. */}
             <div className="relative z-10 p-8 min-h-[600px]">
               {plants.length > 0 ? (
                 <div className="relative w-full h-[550px]">

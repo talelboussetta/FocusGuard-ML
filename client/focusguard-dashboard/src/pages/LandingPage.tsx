@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { motion, useTransform, useMotionValue, useSpring } from 'framer-motion'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check } from 'lucide-react'
 import moonImage from '../assets/images/moonjpg.jpg'
@@ -15,7 +15,6 @@ const LandingPage = () => {
   
   const [isOrbHovered, setIsOrbHovered] = useState(false)
   const [activeFeature, setActiveFeature] = useState(0) // 0=Timer, 1=AI, 2=Garden
-  const [starSpin, setStarSpin] = useState(0)
   const [moonSpin, setMoonSpin] = useState(0)
   const [showFeatureDetails, setShowFeatureDetails] = useState(false)
   const [floatingPos, setFloatingPos] = useState({ x: 0, y: 0 })
@@ -73,14 +72,6 @@ const LandingPage = () => {
     }
     setFloatingPos({ x, y: baseY })
     setHasFloatingInit(true)
-  }
-
-  const scrollToFeature = (index: number) => {
-    const ids = ['feature-focus', 'feature-coach', 'feature-garden']
-    const target = document.getElementById(ids[index])
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
-    }
   }
 
   useEffect(() => {
@@ -389,7 +380,7 @@ const LandingPage = () => {
           {/* Clickable Moon */}
           <motion.button
             type="button"
-            onClick={() => { cycleFeature(); setStarSpin((prev) => prev + 1); setMoonSpin((prev) => prev + 360); setShowFeatureDetails(true) }}
+            onClick={() => { cycleFeature(); setMoonSpin((prev) => prev + 360); setShowFeatureDetails(true) }}
             onMouseEnter={() => setIsOrbHovered(true)}
             onMouseLeave={() => setIsOrbHovered(false)}
             className="absolute inset-[12%] rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"

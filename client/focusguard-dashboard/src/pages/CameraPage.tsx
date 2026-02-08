@@ -136,9 +136,9 @@ const CameraPage = () => {
         
         poseLandmarkerRef.current = poseLandmarker
         faceLandmarkerRef.current = faceLandmarker
-        console.log('✅ MediaPipe Detectors initialized (Pose + Face)')
+        // Detectors initialized
       } catch (error) {
-        console.error('Failed to initialize MediaPipe:', error)
+        // Failed to initialize MediaPipe
         setShowRefreshNotification(true)
       } finally {
         setIsLoading(false)
@@ -178,7 +178,7 @@ const CameraPage = () => {
         }
       }
     } catch (error: any) {
-      console.error('Error accessing camera:', error)
+      // Error accessing camera
       
       // Determine error type
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
@@ -192,13 +192,13 @@ const CameraPage = () => {
   }
 
   const stopCamera = () => {
-    console.log('🛑 Stopping camera...')
+    // Stopping camera
     
     // Stop detection first
     if (animationFrameRef.current) {
       cancelAnimationFrame(animationFrameRef.current)
       animationFrameRef.current = null
-      console.log('✅ Cancelled animation frame')
+      // Cancelled animation frame
     }
     
     // Clear canvas
@@ -213,15 +213,15 @@ const CameraPage = () => {
     if (videoRef.current) {
       videoRef.current.pause()
       videoRef.current.srcObject = null
-      console.log('✅ Video paused and cleared')
+      // Video paused and cleared
     }
     
     // Stop all media tracks
     if (streamRef.current) {
       const tracks = streamRef.current.getTracks()
-      console.log(`🎥 Stopping ${tracks.length} media tracks`)
+      // Stopping media tracks
       tracks.forEach((track) => {
-        console.log(`  Stopping track: ${track.kind} (${track.label})`)
+        // Stopping track
         track.stop()
       })
       streamRef.current = null
@@ -257,7 +257,7 @@ const CameraPage = () => {
     distractionStartTimeRef.current = null
     headDownStartTimeRef.current = null
     
-    console.log('✅ Camera stopped successfully')
+    // Camera stopped successfully
   }
 
   // Show browser notification for distraction
@@ -361,16 +361,12 @@ const CameraPage = () => {
 
   const detectPose = async () => {
     if (!videoRef.current || !canvasRef.current || !poseLandmarkerRef.current) {
-      console.warn('⚠️ Missing refs:', {
-        video: !!videoRef.current,
-        canvas: !!canvasRef.current,
-        landmarker: !!poseLandmarkerRef.current
-      })
+      // Missing refs
       return
     }
     
     if (!isDetectingRef.current) {
-      console.log('⏸️ Detection stopped, exiting loop')
+      // Detection stopped, exiting loop
       return
     }
 
@@ -655,7 +651,7 @@ const CameraPage = () => {
   }
 
   const toggleDetection = () => {
-    console.log('🎯 toggleDetection called, current state:', { isCameraOn, isDetecting })
+    // toggleDetection called
     
     if (!isCameraOn) {
       alert('Please start the camera first')
@@ -664,19 +660,19 @@ const CameraPage = () => {
     
     if (!poseLandmarkerRef.current || !faceLandmarkerRef.current) {
       alert('Detection models not ready. Please wait...')
-      console.error('❌ Landmarkers not initialized')
+      // Landmarkers not initialized
       return
     }
     
     const newState = !isDetecting
-    console.log('📊 Setting detection state to:', newState)
+    // Setting detection state
     
     // Update both state and ref
     setIsDetecting(newState)
     isDetectingRef.current = newState
     
     if (newState) {
-      console.log('✅ Starting detection loop...')
+      // Starting detection loop
       blinkCountRef.current = 0
       blinkTimestampsRef.current = []
       setBlinkRate(0)
@@ -697,10 +693,10 @@ const CameraPage = () => {
       distractionStartTimeRef.current = null
       headDownStartTimeRef.current = null
       
-      console.log('🚀 Calling detectPose() immediately')
+      // Calling detectPose() immediately
       detectPose()
     } else {
-      console.log('⏸️ Stopping detection...')
+      // Stopping detection
       if (animationFrameRef.current) {
         cancelAnimationFrame(animationFrameRef.current)
         animationFrameRef.current = null
