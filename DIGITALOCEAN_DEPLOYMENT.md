@@ -61,15 +61,22 @@ https://github.com/talelboussetta/FocusGuard-ML
    - Branch: `main`
    - ✅ Enable **Auto Deploy** (deploys on git push)
 
-3. **Import App Spec**
-   - Click **"Edit App Spec"**
-   - Delete the auto-detected configuration
-   - Copy and paste the entire contents of `.do/app.yaml`
+3. **Option A: Import App Spec (Recommended)**
+   - Click **"Edit App Spec"** (top right, YAML icon)
+   - Delete ALL auto-detected configuration
+   - Copy the entire contents of `.do/app.yaml` from your repo
+   - Paste into the editor
    - Click **"Save"**
    
-   **Note:** If you see "No components detected", verify:
-   - Source paths in app.yaml are relative (e.g., `serv`, not `/serv`)
-   - Your GitHub repo is public or DO has permission to access it
+   **Option B: Let DigitalOcean Auto-Detect (Alternative)**
+   - Click **"Next"** to let DO detect components automatically
+   - After detection, click **"Edit App Spec"**
+   - Update the backend/frontend settings with values from `.do/app.yaml`
+   - Specifically add the environment variables section
+   
+   **Troubleshooting:**
+   - If "No components detected" → Use Option B instead
+   - Make sure repository is public or DigitalOcean has access permissions
 
 ### Step 3: Configure Managed Database
 

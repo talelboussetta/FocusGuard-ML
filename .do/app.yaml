@@ -13,6 +13,7 @@ spec:
   # Backend Service (FastAPI)
   services:
     - name: backend
+      environment_slug: python
       github:
         repo: talelboussetta/FocusGuard-ML
         branch: main
@@ -93,6 +94,7 @@ spec:
     
     # Frontend Service (React + Vite)
     - name: frontend
+      environment_slug: node-js
       github:
         repo: talelboussetta/FocusGuard-ML
         branch: main
@@ -101,6 +103,8 @@ spec:
       source_dir: client/focusguard-dashboard
       
       build_command: npm install && npm run build
+      
+      output_dir: dist
       
       # Serve static files
       routes:
