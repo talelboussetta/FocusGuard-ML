@@ -90,7 +90,7 @@ const LandingPage = () => {
         {/* Floating Orb Visual */}
         <motion.div 
           style={{ y: orbY, scale: orbScale }}
-          className="absolute top-32 left-1/2 -translate-x-1/2 w-[500px] h-[500px] pointer-events-none"
+          className="absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] pointer-events-none z-0"
         >
           {/* Glass Orb */}
           <motion.div
@@ -104,8 +104,9 @@ const LandingPage = () => {
             }}
             className="absolute inset-0"
           >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-200/40 via-violet-200/30 to-amber-200/40 blur-3xl" />
-            <div className="absolute inset-[20%] rounded-full bg-gradient-to-tr from-white/60 to-white/20 backdrop-blur-md border border-white/40" />
+            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-300/50 via-violet-300/40 to-amber-300/50 blur-[120px]" />
+            <div className="absolute inset-[15%] rounded-full bg-gradient-to-tr from-white/70 to-white/30 backdrop-blur-xl border-2 border-white/50 shadow-2xl" />
+            <div className="absolute inset-[25%] rounded-full bg-gradient-to-br from-emerald-400/20 via-violet-400/20 to-amber-400/20 blur-2xl" />
             
             {/* Orbiting Icons */}
             {[Timer, MessageSquare, Sprout].map((Icon, i) => (
@@ -118,14 +119,16 @@ const LandingPage = () => {
               >
                 <motion.div 
                   className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                  whileHover={{ scale: 1.2 }}
+                  whileHover={{ scale: 1.3 }}
+                  animate={{ y: [0, -8, 0] }}
+                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-white/90 backdrop-blur border border-slate-200/50 shadow-lg flex items-center justify-center">
-                    <Icon className={`w-6 h-6 ${
+                  <div className="w-16 h-16 rounded-xl bg-white/95 backdrop-blur-md border-2 border-slate-200/60 shadow-2xl flex items-center justify-center">
+                    <Icon className={`w-8 h-8 ${
                       i === 0 ? 'text-emerald-600' : 
                       i === 1 ? 'text-violet-600' : 
                       'text-amber-600'
-                    }`} strokeWidth={2} />
+                    }`} strokeWidth={2.5} />
                   </div>
                 </motion.div>
               </motion.div>
@@ -163,17 +166,26 @@ const LandingPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-lg md:text-xl text-slate-600 mb-10 max-w-2xl mx-auto leading-relaxed"
+            className="text-lg md:text-xl text-slate-600 mb-4 max-w-2xl mx-auto leading-relaxed"
           >
             FocusGuard combines a Pomodoro timer, AI coaching, and a personal growth garden 
             to build consistent study habits — all processed locally.
+          </motion.p>
+
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.5 }}
+            className="text-base text-emerald-700 font-semibold mb-10"
+          >
+            Average users complete 3× more sessions in their first 2 weeks.
           </motion.p>
 
           {/* CTAs */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
+            transition={{ duration: 0.6, delay: 0.6 }}
             className="flex flex-col sm:flex-row gap-4 justify-center items-center"
           >
             <button
@@ -196,18 +208,69 @@ const LandingPage = () => {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-            className="mt-16 flex flex-wrap justify-center gap-8 text-sm"
+            transition={{ duration: 0.6, delay: 0.8 }}
+            className="mt-16"
           >
-            <span className="text-slate-500">Used by</span>
-            {socialProof.map((item, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <span className="text-2xl font-bold text-slate-900">{item.count}</span>
-                <span className="text-slate-600">{item.label}</span>
-              </div>
-            ))}
+            <p className="text-slate-600 text-center mb-4 text-sm font-medium">
+              Designed for students, creators, and teams
+            </p>
+            <div className="flex flex-wrap justify-center gap-6">
+              {socialProof.map((item, i) => (
+                <div key={i} className="flex flex-col items-center px-6 py-3 bg-white/40 backdrop-blur-sm rounded-lg border border-slate-200/40">
+                  <span className="text-xs text-slate-500 mb-1">Beta users</span>
+                  <span className="text-xl font-bold text-slate-900">{item.count}</span>
+                  <span className="text-sm text-slate-600">{item.label}</span>
+                </div>
+              ))}
+            </div>
           </motion.div>
         </div>
+      </section>
+
+      {/* How It Works Micro-Timeline */}
+      <section className="container mx-auto px-6 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-4">
+            {[
+              { step: '1', title: 'Start a session', icon: Timer },
+              { step: '2', title: 'AI observes locally', icon: Eye },
+              { step: '3', title: 'Garden grows + insights', icon: Sprout },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="flex items-center gap-4"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${
+                  i === 0 ? 'bg-gradient-to-br from-emerald-200 to-emerald-300 border-2 border-emerald-400/30' :
+                  i === 1 ? 'bg-gradient-to-br from-violet-200 to-violet-300 border-2 border-violet-400/30' :
+                  'bg-gradient-to-br from-amber-200 to-amber-300 border-2 border-amber-400/30'
+                }`}>
+                  <item.icon className={`w-6 h-6 ${
+                    i === 0 ? 'text-emerald-700' :
+                    i === 1 ? 'text-violet-700' :
+                    'text-amber-700'
+                  }`} strokeWidth={2.5} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Step {item.step}</div>
+                  <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                </div>
+                {i < 2 && (
+                  <ChevronRight className="hidden md:block w-5 h-5 text-slate-300" />
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
       </section>
 
       {/* Three Pillars */}
@@ -289,6 +352,36 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* See It In Action */}
+      <section className="container mx-auto px-6 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-5xl mx-auto"
+        >
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-slate-900 mb-4">
+              See it in action
+            </h3>
+            <p className="text-slate-600">
+              A clean, distraction-free interface designed for deep work
+            </p>
+          </div>
+          <div className="relative rounded-2xl overflow-hidden border border-slate-200/50 shadow-2xl">
+            <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
+              <div className="text-center p-8">
+                <Timer className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                <p className="text-slate-400 text-sm font-medium">Dashboard Preview</p>
+                <p className="text-xs text-slate-400 mt-2">Focus timer • Garden • Analytics</p>
+              </div>
+            </div>
+            {/* Subtle overlay to match aesthetic */}
+            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent pointer-events-none" />
+          </div>
+        </motion.div>
+      </section>
+
       {/* Privacy Block */}
       <section id="privacy" className="container mx-auto px-6 py-24">
         <motion.div
@@ -355,11 +448,11 @@ const LandingPage = () => {
         <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500">
           <p>© 2026 FocusGuard. Made for focused minds.</p>
           <div className="flex items-center gap-6">
+            <a href="#privacy" className="hover:text-slate-700 transition-colors">
+              Privacy
+            </a>
             <button onClick={() => navigate('/auth')} className="hover:text-slate-700 transition-colors">
-              Privacy Policy
-            </button>
-            <button onClick={() => navigate('/auth')} className="hover:text-slate-700 transition-colors">
-              Terms
+              Sign In
             </button>
           </div>
         </div>
