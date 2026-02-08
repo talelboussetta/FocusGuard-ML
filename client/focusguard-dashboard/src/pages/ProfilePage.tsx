@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar'
 import { useAuth } from '../contexts/AuthContext'
 import { userAPI, teamAPI } from '../services/api'
 import { motion } from 'framer-motion'
+import moonImage from '../assets/images/moonjpg.jpg'
 
 const quotes = [
   "Focus is the bridge between goals and accomplishment.",
@@ -223,19 +224,32 @@ const ProfilePage = () => {
                   <h4 className="font-medium mb-2">Spin the Challenge Wheel</h4>
                   <div className="relative flex items-center justify-center">
                     <div className="w-72 h-72 md:w-80 md:h-80 rounded-full flex items-center justify-center shadow-xl relative">
-                      {/* Wheel using conic-gradient for colored slices */}
+                      {/* Moon Wheel with segmented arcs */}
                       <div
                         ref={wheelRef}
                         style={{
                           transform: `rotate(${rotation}deg)`,
                           transition: spinning ? 'transform 3.2s cubic-bezier(0.22, 0.8, 0.32, 1)' : 'transform 0.6s ease-out',
-                          background: `conic-gradient(${challenges.map((_, i) => `${colors[i % colors.length]} ${(i * (100 / challenges.length)).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')}`
+                          backgroundImage: `url(${moonImage}), conic-gradient(${challenges.map((_, i) => `${colors[i % colors.length]} ${(i * (100 / challenges.length)).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')})`,
+                          backgroundBlendMode: 'soft-light',
+                          backgroundPosition: 'center',
+                          backgroundSize: 'cover',
                         }}
-                        className="w-64 h-64 md:w-72 md:h-72 rounded-full relative overflow-hidden flex items-center justify-center"
+                        className="w-64 h-64 md:w-72 md:h-72 rounded-full relative overflow-hidden flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(15,23,42,0.6)]"
                       >
+                        {/* segment lines */}
+                        <div
+                          className="absolute inset-3 rounded-full"
+                          style={{
+                            backgroundImage: `conic-gradient(${challenges.map((_, i) => `rgba(255,255,255,0.12) ${(i * (100 / challenges.length)).toFixed(2)}% ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}%, transparent ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')})`,
+                          }}
+                        />
+                        {/* inner glow ring */}
+                        <div className="absolute inset-6 rounded-full border border-white/10 shadow-[inset_0_0_30px_rgba(255,255,255,0.08)]" />
                         {/* center circle */}
-                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-slate-900/80 border border-slate-800 flex items-center justify-center text-sm text-slate-200">Spin Wheel</div>
-                        {/* pointer (top) */}
+                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-slate-900/80 border border-slate-800 flex items-center justify-center text-sm text-slate-200">
+                          Spin Wheel
+                        </div>
                       </div>
 
                       {/* top pointer - bigger SVG arrow for clarity */}

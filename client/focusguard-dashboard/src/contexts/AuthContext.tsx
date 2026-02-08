@@ -28,16 +28,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (savedUser && token) {
         try {
           setUser(JSON.parse(savedUser));
-          // Refresh user data from API
+          // Refresh user data from API (will auto-refresh token if needed)
           const freshUser = await userAPI.getProfile();
           setUser(freshUser);
           localStorage.setItem('user', JSON.stringify(freshUser));
         } catch (error) {
           console.error('Failed to load user:', error);
-          // Token might be expired, clear everything
-          localStorage.removeItem('user');
-          localStorage.removeItem('access_token');
-          localStorage.removeItem('refresh_token');
+          // Only clear if there's no refresh token (user needs to login again)
+          const refreshToken = localStorage.getItem('refresh_token');
+          if (!refreshToken) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('access_token');
+            setUser(null);
+          }
         }
       }
       setLoading(false);
@@ -45,6 +48,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     loadUser();
   }, []);
+
+  // Auto-refresh user data periodically to keep stats fresh
+  useEffect(() => {
+    if (!user) return;
+
+    // Refresh user every 5 minutes to keep XP/level in sync
+    const interval = setInterval(async () => {
+      try {
+        await refreshUser();
+      } catch (error) {
+        console.error('Periodic user refresh failed:', error);
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    return () => clearInterval(interval);
+  }, [user]);
 
   const login = async (username: string, password: string) => {
     try {

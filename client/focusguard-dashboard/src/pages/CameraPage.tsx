@@ -42,6 +42,12 @@ const CameraPage = () => {
   const blinkCountRef = useRef<number>(0)
   const blinkTimestampsRef = useRef<number[]>([])
   const lastEyeStateRef = useRef<'open' | 'closed'>('open')
+  const smoothedPitchRef = useRef<number>(0)
+  const smoothedYawRef = useRef<number>(0)
+  const smoothedConfidenceRef = useRef<number>(0)
+  const pendingFocusStateRef = useRef<FocusState>('neutral')
+  const pendingReasonRef = useRef<DistractionReason>(null)
+  const focusStateFramesRef = useRef<number>(0)
   
   // New refs for focus tracking
   const lastFocusStateRef = useRef<FocusState>('neutral')
@@ -62,6 +68,20 @@ const CameraPage = () => {
     }
     requestNotificationPermission()
   }, [])
+
+  const toggleNotifications = async () => {
+    if (!('Notification' in window)) return
+    if (Notification.permission === 'granted') {
+      setNotificationsEnabled((prev) => !prev)
+      return
+    }
+    if (Notification.permission === 'denied') {
+      setNotificationsEnabled(false)
+      return
+    }
+    const permission = await Notification.requestPermission()
+    setNotificationsEnabled(permission === 'granted')
+  }
 
   // Timer to track focus/distraction duration
   useEffect(() => {
@@ -217,6 +237,12 @@ const CameraPage = () => {
     blinkCountRef.current = 0
     blinkTimestampsRef.current = []
     lastEyeStateRef.current = 'open'
+    smoothedPitchRef.current = 0
+    smoothedYawRef.current = 0
+    smoothedConfidenceRef.current = 0
+    pendingFocusStateRef.current = 'neutral'
+    pendingReasonRef.current = null
+    focusStateFramesRef.current = 0
     
     // Reset focus tracking
     setFocusState('neutral')
@@ -392,7 +418,11 @@ const CameraPage = () => {
       const avgConfidence = keyLandmarks.reduce((sum, idx) => {
         return sum + (landmark[idx]?.visibility || 0)
       }, 0) / keyLandmarks.length
-      setConfidence(Math.round(avgConfidence * 100))
+      const confPct = avgConfidence * 100
+      const confAlpha = 0.2
+      const smoothConf = smoothedConfidenceRef.current + confAlpha * (confPct - smoothedConfidenceRef.current)
+      smoothedConfidenceRef.current = smoothConf
+      setConfidence(Math.round(smoothConf))
 
       // Draw beautiful pose visualization
       drawPoseVisualization(ctx, landmark, canvas.width, canvas.height)
@@ -417,10 +447,13 @@ const CameraPage = () => {
       
       // Calculate head pose
       const pose = calculateHeadPose(faceLandmarks)
-      currentPitch = pose.pitch
-      currentYaw = pose.yaw
-      setHeadPitch(pose.pitch)
-      setHeadYaw(pose.yaw)
+      const poseAlpha = 0.2
+      smoothedPitchRef.current = smoothedPitchRef.current + poseAlpha * (pose.pitch - smoothedPitchRef.current)
+      smoothedYawRef.current = smoothedYawRef.current + poseAlpha * (pose.yaw - smoothedYawRef.current)
+      currentPitch = smoothedPitchRef.current
+      currentYaw = smoothedYawRef.current
+      setHeadPitch(currentPitch)
+      setHeadYaw(currentYaw)
       
       // Draw face landmarks
       drawFaceLandmarks(ctx, faceLandmarks, canvas.width, canvas.height)
@@ -435,27 +468,36 @@ const CameraPage = () => {
       faceInFrame
     )
     
-    setFocusState(newFocusState)
-    setDistractionReason(reason)
-    
-    // Track state changes
-    if (newFocusState !== lastFocusStateRef.current) {
-      if (newFocusState === 'distracted' && lastFocusStateRef.current === 'focused') {
+    if (newFocusState !== pendingFocusStateRef.current) {
+      pendingFocusStateRef.current = newFocusState
+      pendingReasonRef.current = reason
+      focusStateFramesRef.current = 1
+    } else {
+      focusStateFramesRef.current += 1
+    }
+
+    if (focusStateFramesRef.current >= 5 && pendingFocusStateRef.current !== lastFocusStateRef.current) {
+      const stableState = pendingFocusStateRef.current
+      const stableReason = pendingReasonRef.current
+      setFocusState(stableState)
+      setDistractionReason(stableReason)
+
+      if (stableState === 'distracted' && lastFocusStateRef.current === 'focused') {
         setTotalDistractions(prev => prev + 1)
         distractionStartTimeRef.current = Date.now()
         
-        // Show notification
-        const reasonText = reason === 'out_of_frame' ? 'You moved out of frame!' :
-                          reason === 'looking_away' ? 'You\'re looking away from the screen' :
-                          reason === 'head_down_too_long' ? 'Head down for too long - take a break?' :
-                          reason === 'no_face' ? 'Face not detected' :
+        const reasonText = stableReason === 'out_of_frame' ? 'You moved out of frame!' :
+                          stableReason === 'looking_away' ? 'You\'re looking away from the screen' :
+                          stableReason === 'head_down_too_long' ? 'Head down for too long - take a break?' :
+                          stableReason === 'no_face' ? 'Face not detected' :
                           'Stay focused!'
         showDistractionNotification(reasonText)
-      } else if (newFocusState === 'focused' && lastFocusStateRef.current === 'distracted') {
+      } else if (stableState === 'focused' && lastFocusStateRef.current === 'distracted') {
         distractionStartTimeRef.current = null
       }
       
-      lastFocusStateRef.current = newFocusState
+      lastFocusStateRef.current = stableState
+      focusStateFramesRef.current = 0
     }
 
     // Detect blinks
@@ -645,6 +687,12 @@ const CameraPage = () => {
       setDistractionTime(0)
       setTotalDistractions(0)
       lastFocusStateRef.current = 'neutral'
+      pendingFocusStateRef.current = 'neutral'
+      pendingReasonRef.current = null
+      focusStateFramesRef.current = 0
+      smoothedPitchRef.current = 0
+      smoothedYawRef.current = 0
+      smoothedConfidenceRef.current = 0
       focusStartTimeRef.current = Date.now()
       distractionStartTimeRef.current = null
       headDownStartTimeRef.current = null
@@ -715,7 +763,49 @@ const CameraPage = () => {
           <p className="text-slate-400">
             AI-powered presence monitoring using MediaPipe (runs locally in your browser)
           </p>
+          <div className="mt-4 inline-flex items-center gap-2 text-xs text-slate-300 bg-slate-900/60 border border-slate-800/60 px-3 py-2 rounded-lg">
+            <AlertCircle className="w-4 h-4 text-amber-400" />
+            Estimates can be imperfect. Use results as guidance, not ground truth.
+          </div>
         </motion.div>
+
+        {/* Focus & Privacy Highlights */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
+          <Card className="bg-slate-900/30 backdrop-blur-xl border-slate-700/30 p-6">
+            <h3 className="text-lg font-semibold text-white mb-3">Focus Estimation</h3>
+            <ul className="space-y-2 text-sm text-slate-400">
+              <li>• Head down = Studying (focused)</li>
+              <li>• Looking at screen = Focused</li>
+              <li>• Looking away = Distracted</li>
+              <li>• Out of frame = Distracted</li>
+              <li>• Good lighting improves accuracy</li>
+            </ul>
+            <div className="mt-4 text-xs text-slate-500">
+              Signals are approximate and can vary with posture, lighting, and camera angle.
+            </div>
+          </Card>
+          <Card className="bg-gradient-to-br from-purple-900/30 to-slate-900/30 backdrop-blur-xl border-purple-500/30 p-6">
+            <h3 className="text-lg font-semibold text-white mb-3">Privacy First</h3>
+            <ul className="space-y-2 text-sm text-slate-300">
+              <li className="flex items-start gap-2">
+                <span className="text-green-400 mt-1">✓</span>
+                <span>Runs entirely in your browser</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-400 mt-1">✓</span>
+                <span>No video data sent to servers</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-400 mt-1">✓</span>
+                <span>AI model runs locally</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <span className="text-green-400 mt-1">✓</span>
+                <span>Powered by Google MediaPipe</span>
+              </li>
+            </ul>
+          </Card>
+        </div>
 
         {/* Main Layout - Camera and Right Side Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
@@ -1289,64 +1379,28 @@ const CameraPage = () => {
                 </div>
               </div>
             </Card>
-
-            {/* Info Card */}
-            <Card className="bg-gradient-to-br from-purple-900/30 to-slate-900/30 backdrop-blur-xl border-purple-500/30 p-6">
-              <h3 className="text-lg font-semibold text-white mb-3">
-                🔒 Privacy First
-              </h3>
-              <ul className="space-y-2 text-sm text-slate-300">
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400 mt-1">✓</span>
-                  <span>Runs entirely in your browser</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400 mt-1">✓</span>
-                  <span>No video data sent to servers</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400 mt-1">✓</span>
-                  <span>AI model runs locally</span>
-                </li>
-                <li className="flex items-start gap-2">
-                  <span className="text-green-400 mt-1">✓</span>
-                  <span>Powered by Google MediaPipe</span>
-                </li>
-              </ul>
-              
-              {/* Notification Toggle */}
-              <div className="mt-4 pt-4 border-t border-slate-700">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-semibold text-white">Browser Notifications</div>
-                    <div className="text-xs text-slate-400">Alert when distracted</div>
-                  </div>
-                  <div className={`relative inline-flex items-center cursor-pointer ${
-                    notificationsEnabled ? 'opacity-100' : 'opacity-50'
-                  }`}>
-                    <span className="text-xs text-slate-400 mr-2">
-                      {notificationsEnabled ? 'ON' : 'OFF'}
-                    </span>
-                    <div className={`w-2 h-2 rounded-full ${
-                      notificationsEnabled ? 'bg-green-400 animate-pulse' : 'bg-slate-600'
-                    }`} />
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Tips Card */}
+            {/* Notification Toggle */}
             <Card className="bg-slate-900/30 backdrop-blur-xl border-slate-700/30 p-6">
-              <h3 className="text-lg font-semibold text-white mb-3">
-                💡 Focus Tips
-              </h3>
-              <ul className="space-y-2 text-sm text-slate-400">
-                <li>• Head down = Studying (focused)</li>
-                <li>• Looking at screen = Focused</li>
-                <li>• Looking away = Distracted</li>
-                <li>• Out of frame = Distracted</li>
-                <li>• Good lighting improves accuracy</li>
-              </ul>
+              <button
+                type="button"
+                onClick={toggleNotifications}
+                className="w-full flex items-center justify-between text-left"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-white">Browser Notifications</div>
+                  <div className="text-xs text-slate-400">Alert when distracted</div>
+                </div>
+                <div className={`relative inline-flex items-center ${
+                  notificationsEnabled ? 'opacity-100' : 'opacity-50'
+                }`}>
+                  <span className="text-xs text-slate-400 mr-2">
+                    {notificationsEnabled ? 'ON' : 'OFF'}
+                  </span>
+                  <div className={`w-2 h-2 rounded-full ${
+                    notificationsEnabled ? 'bg-green-400 animate-pulse' : 'bg-slate-600'
+                  }`} />
+                </div>
+              </button>
             </Card>
           </div>
         </div>
@@ -1356,3 +1410,4 @@ const CameraPage = () => {
 }
 
 export default CameraPage
+

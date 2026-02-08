@@ -113,10 +113,13 @@ const AITutorPage = () => {
             className="mb-8"
           >
             <h1 className="text-4xl font-display font-bold mb-2">
-              <span className="gradient-text">AI Moon</span>
+              <span className="gradient-text">MoonAI</span>
             </h1>
             <p className="text-slate-400">
               Your lunar focus coach for clarity, consistency, and momentum
+            </p>
+            <p className="text-xs text-slate-500 mt-2">
+              Note: AI responses are helpful guides, but they can be imperfect. Use your judgment.
             </p>
           </motion.div>
 
@@ -171,7 +174,7 @@ const AITutorPage = () => {
                       {message.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
                           <img src={moonImage} alt="" className="w-4 h-4 rounded-full opacity-90" />
-                          <span className="text-xs font-semibold text-primary-300">AI Moon</span>
+                          <span className="text-xs font-semibold text-primary-300">MoonAI</span>
                         </div>
                       )}
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
