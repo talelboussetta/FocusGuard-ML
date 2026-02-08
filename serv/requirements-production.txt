@@ -1,0 +1,77 @@
+# FocusGuard Production Requirements (DigitalOcean App Platform)
+# Optimized for FastAPI backend with RAG AI Tutor
+
+# ============================================================================
+# REST API Dependencies
+# ============================================================================
+
+# FastAPI - Modern, high-performance web framework
+fastapi>=0.109.0
+
+# ASGI Server - Production-grade async server
+uvicorn[standard]>=0.27.0
+
+# Database ORM & Drivers
+sqlalchemy>=2.0.25              # SQL toolkit and ORM
+asyncpg>=0.29.0                 # Async PostgreSQL driver
+psycopg2-binary>=2.9.9          # PostgreSQL adapter (for migrations/sync ops)
+
+# Data Validation
+pydantic>=2.5.0                 # Data validation using Python type hints
+pydantic-settings>=2.1.0        # Settings management
+email-validator>=2.1.0          # Email validation for Pydantic EmailStr
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0  # JWT token handling
+passlib[bcrypt]>=1.7.4            # Password hashing with bcrypt
+python-multipart>=0.0.6           # Form data parsing
+
+# Rate Limiting
+slowapi>=0.1.9                  # Rate limiting for FastAPI
+
+# Error Tracking & Monitoring
+sentry-sdk[fastapi]>=1.40.0     # Error tracking and performance monitoring
+
+# Utilities
+python-dotenv>=1.0.0            # Environment variable management
+
+# ============================================================================
+# RAG & AI Dependencies
+# ============================================================================
+
+# Vector Store
+qdrant-client>=1.7.0            # Qdrant vector database client
+
+# Embeddings
+sentence-transformers>=2.3.0    # Local embeddings (HuggingFace)
+
+# LLM Integration
+openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
+tiktoken>=0.5.0                 # Token counting for OpenAI models
+anthropic>=0.18.0               # Anthropic Claude API (optional alternative)
+huggingface-hub>=0.20.0         # Hugging Face Hub client (for inference API)
+
+# HTTP Client
+aiohttp>=3.9.0                  # Async HTTP client for API calls
+
+# Parsing
+PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
+
+# ============================================================================
+# Image Processing (Garden Features)
+# ============================================================================
+pillow>=10.0.0                  # Image processing for garden visuals
+
+# Numerical Computing (for ML/AI utilities)
+numpy>=1.24.0
+
+# ============================================================================
+# Development & Testing (install separately, not in production)
+# ============================================================================
+# pytest>=7.4.0
+# pytest-asyncio>=0.23.0
+# pytest-cov>=4.1.0
+# httpx>=0.26.0                 # Async HTTP client for testing
+# black>=23.0.0
+# flake8>=6.0.0
+# mypy>=1.8.0

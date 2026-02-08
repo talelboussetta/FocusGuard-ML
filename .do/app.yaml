@@ -1,0 +1,119 @@
+spec:
+  name: focusguard
+  region: nyc
+  
+  # Managed PostgreSQL Database
+  databases:
+    - name: focusguard-db
+      engine: PG
+      version: "15"
+      production: true
+      cluster_name: focusguard-db-cluster
+  
+  # Backend Service (FastAPI)
+  services:
+    - name: backend
+      github:
+        repo: talelboussetta/FocusGuard-ML
+        branch: main
+        deploy_on_push: true
+      
+      source_dir: /serv
+      
+      build_command: pip install -r requirements-production.txt
+      
+      run_command: uvicorn main:app --host 0.0.0.0 --port 8080
+      
+      http_port: 8080
+      
+      instance_count: 1
+      instance_size_slug: basic-xxs
+      
+      health_check:
+        http_path: /health
+        initial_delay_seconds: 30
+        period_seconds: 10
+        timeout_seconds: 5
+        success_threshold: 1
+        failure_threshold: 3
+      
+      envs:
+        # Database (auto-injected by DO)
+        - key: DATABASE_URL
+          scope: RUN_TIME
+          type: SECRET
+          value: ${focusguard-db.DATABASE_URL}
+        
+        # JWT Configuration (set in DO control panel during deployment)
+        - key: JWT_SECRET_KEY
+          scope: RUN_TIME
+          type: SECRET
+        
+        - key: ACCESS_TOKEN_EXPIRE_MINUTES
+          scope: RUN_TIME
+          value: "120"
+        
+        - key: REFRESH_TOKEN_EXPIRE_DAYS
+          scope: RUN_TIME
+          value: "30"
+        
+        # Qdrant Vector Database (set in DO control panel during deployment)
+        - key: QDRANT_URL
+          scope: RUN_TIME
+          type: SECRET
+        
+        - key: QDRANT_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+        
+        # HuggingFace API for RAG (set in DO control panel during deployment)
+        - key: HUGGINGFACE_API_KEY
+          scope: RUN_TIME
+          type: SECRET
+        
+        # Use local embeddings (free, runs on CPU)
+        - key: USE_LOCAL_EMBEDDINGS
+          scope: RUN_TIME
+          value: "True"
+        
+        # CORS Settings
+        - key: ALLOWED_ORIGINS
+          scope: RUN_TIME
+          value: "https://focusguard-*.ondigitalocean.app"
+        
+        # Rate Limiting
+        - key: RATE_LIMIT_ENABLED
+          scope: RUN_TIME
+          value: "True"
+        
+        # Environment
+        - key: DEBUG
+          scope: RUN_TIME
+          value: "False"
+    
+    # Frontend Service (React + Vite)
+    - name: frontend
+      github:
+        repo: talelboussetta/FocusGuard-ML
+        branch: main
+        deploy_on_push: true
+      
+      source_dir: /client/focusguard-dashboard
+      
+      build_command: npm install && npm run build
+      
+      # Serve static files
+      routes:
+        - path: /
+      
+      envs:
+        - key: VITE_API_URL
+          scope: BUILD_TIME
+          value: ${backend.PUBLIC_URL}
+        
+        - key: VITE_ENABLE_CAMERA
+          scope: BUILD_TIME
+          value: "true"
+      
+      instance_count: 1
+      instance_size_slug: basic-xxs

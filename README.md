@@ -124,7 +124,37 @@ VITE_API_URL=http://localhost:5000
 VITE_ENABLE_CAMERA=true
 ```
 
-## 📁 Project Structure
+## � Deployment
+
+### DigitalOcean App Platform (Recommended)
+
+Deploy FocusGuard to production in under 30 minutes with DigitalOcean App Platform:
+
+**Features:**
+- ✅ Automatic deployments from GitHub
+- ✅ Managed PostgreSQL database
+- ✅ SSL certificates (HTTPS)
+- ✅ Auto-scaling infrastructure
+- ✅ Zero-downtime deployments
+- ✅ Built-in monitoring
+
+**Quick Start:**
+```bash
+# 1. Push your code to GitHub (already done ✅)
+# 2. Follow the step-by-step guide:
+```
+
+📖 **Complete Guide**: See [DIGITALOCEAN_DEPLOYMENT.md](DIGITALOCEAN_DEPLOYMENT.md) for detailed instructions.
+
+**Estimated Monthly Cost**: ~$25-35 USD (includes database, backend, frontend)
+
+### Other Deployment Options
+
+- **Docker Compose**: See [docker-compose.yml](docker-compose.yml) for local/VPS deployment
+- **AWS/GCP/Azure**: See [DEPLOYMENT.md](DEPLOYMENT.md) for cloud platform guides
+- **Self-Hosted**: See [docs/self-hosting.md](docs/self-hosting.md) for custom server setup
+
+## �📁 Project Structure
 
 ```
 FocusGuard-ML/
@@ -153,12 +183,11 @@ FocusGuard-ML/
 ├── scripts/                        # Development utilities
 │   ├── run_migration.py            # Manual DB migration
 │   └── remove_background.py        # Image processing
+├── .do/                            # DigitalOcean App Platform config
+│   └── app.yaml                    # Deployment specification
 ├── .github/workflows/              # CI/CD pipelines
-├── docker-compose.yml              # Local development
-├── docker-compose.prod.yml         # Production deployment
-├── DEPLOYMENT.md                   # Production deployment guide
-└── README.md
-```
+├── docker-compose.yml              # Local development PostgreSQL
+├── DIGITALOCEAN_DEPLOYMENT.md      # Production deployment guide
 └── README.md
 ```
 
