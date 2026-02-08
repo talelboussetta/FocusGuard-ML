@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion'
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Leaf, Mail, Lock, Eye, EyeOff, User, AlertCircle, Loader2 } from 'lucide-react'
+import { Mail, Lock, Eye, EyeOff, User, AlertCircle, Loader2 } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { getErrorMessage } from '../services/api'
+import ServerWakeUpBanner from '../components/ServerWakeUpBanner'
+import moonImage from '../assets/images/moonjpg.jpg'
 
 const AuthPage = () => {
   const navigate = useNavigate()
@@ -70,6 +72,9 @@ const AuthPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-6">
+      {/* Server Wake Up Banner */}
+      <ServerWakeUpBanner />
+      
       {/* Animated Background */}
       <div className="fixed inset-0 z-0">
         <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
@@ -102,7 +107,9 @@ const AuthPage = () => {
             transition={{ delay: 0.2 }}
             className="flex items-center justify-center mb-8"
           >
-            <Leaf className="w-10 h-10 text-nature-500 mr-2" />
+            <div className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center mr-3 border border-white/10 shadow-lg">
+              <img src={moonImage} alt="FocusGuard" className="w-full h-full object-cover" />
+            </div>
             <span className="text-3xl font-display font-bold gradient-text">
               FocusGuard
             </span>
