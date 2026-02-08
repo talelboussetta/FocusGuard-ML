@@ -74,6 +74,7 @@ aiohttp>=3.9.0                  # Async HTTP client for API calls
 
 # Development
 pytest>=7.4.0
+pytest-cov>=4.1.0               # Code coverage for pytest
 black>=23.0.0
 flake8>=6.0.0
 mypy>=1.8.0                     # Type checking

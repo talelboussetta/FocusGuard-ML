@@ -236,6 +236,31 @@ Example:
 
 ## 🧪 Testing
 
+### Automated Tests
+
+The project includes comprehensive unit tests using pytest. Current test coverage:
+
+- **5 passing tests** covering session creation, streak logic, and leaderboards
+- Tests run automatically on every push via GitHub Actions CI
+- Test results available in `test_results.txt`
+
+Run tests locally:
+```bash
+cd serv
+python -m pytest -v --tb=short
+```
+
+With coverage reporting:
+```bash
+python -m pytest -v --cov=api --cov-report=term-missing
+```
+
+### Continuous Integration
+
+Tests run automatically on GitHub Actions for every push and pull request. See `.github/workflows/test.yml` for configuration.
+
+[![Tests](https://github.com/talelboussetta/FocusGuard-ML/actions/workflows/test.yml/badge.svg)](https://github.com/talelboussetta/FocusGuard-ML/actions/workflows/test.yml)
+
 ### Interactive Testing (Swagger UI)
 
 1. Navigate to http://localhost:8000/docs
