@@ -181,17 +181,16 @@ async def query_with_conversation(
     )
     
     # Add assistant message
-    sources_json = None
-    if rag_response.get("sources"):
-        import json
-        sources_json = json.dumps(rag_response["sources"])
+    sources_list = None
+    if rag_response.sources:
+        sources_list = [s.model_dump() for s in rag_response.sources]
     
     assistant_message = await ConversationService.add_assistant_message(
         db=db,
         conversation_id=conversation_id,
-        content=rag_response["answer"],
-        model_used=rag_response["model_used"],
-        sources_used=sources_json
+        content=rag_response.answer,
+        model_used=rag_response.model_used,
+        sources=sources_list
     )
     
     # Auto-generate title from first user message if needed
@@ -205,9 +204,9 @@ async def query_with_conversation(
     return ConversationQueryResponse(
         conversation_id=conversation_id,
         message_id=assistant_message.id,
-        answer=rag_response["answer"],
-        sources=rag_response.get("sources"),
-        model_used=rag_response["model_used"]
+        answer=rag_response.answer,
+        sources=[s.model_dump() for s in rag_response.sources] if rag_response.sources else None,
+        model_used=rag_response.model_used
     )
 
 

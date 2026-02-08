@@ -27,12 +27,29 @@ class RAGService:
         self.retriever = None
         self.generator = None
         self._initialized = False
+        self._initialization_in_progress = False
+        self._initialization_error = None
     
     async def initialize(self):
         """Initialize RAG components (embedder, vector store, retriever, generator)."""
         if self._initialized:
             return
         
+        # Prevent concurrent initialization
+        if self._initialization_in_progress:
+            raise RuntimeError(
+                "RAG service is currently starting up. Please wait a moment and try again. "
+                "This usually takes 30-60 seconds on first startup."
+            )
+        
+        # If previous initialization failed, raise that error
+        if self._initialization_error:
+            raise RuntimeError(
+                f"RAG service failed to initialize: {self._initialization_error}. "
+                "Please restart the server or check the logs."
+            )
+        
+        self._initialization_in_progress = True
         logger.info("[RAG] Initializing RAG service...")
         
         try:
@@ -49,31 +66,37 @@ class RAGService:
             
             # Initialize vector store
             logger.info("[RAG] Connecting to Qdrant vector store...")
+            self.vector_store = QdrantVectorStore(
+                url="http://localhost:6333",
+                collection_name="focusguard_knowledge",
+                vector_size=self.embedder.dimension
+            )
+            await self.vector_store.initialize()
+            
+            # Initialize retriever
+            logger.info("[RAG] Initializing retriever...")
+            self.retriever = Retriever(
+                embedder=self.embedder,
+                vector_store=self.vector_store,
+                enable_preprocessing=True,
+                min_score_threshold=0.3  # Filter low-relevance results
+            )
+            
+            # Initialize generator
+            logger.info("[RAG] Loading LLM generator...")
+            self.generator = get_generator()
+            
+            self._initialized = True
+            logger.info("✅ RAG service initialized successfully")
         except Exception as e:
+            self._initialization_error = str(e)
             logger.error(f"[RAG] Fatal error during initialization: {e}", exc_info=True)
-            raise
-        self.vector_store = QdrantVectorStore(
-            url="http://localhost:6333",
-            collection_name="focusguard_knowledge",
-            vector_size=self.embedder.dimension
-        )
-        await self.vector_store.initialize()
-        
-        # Initialize retriever
-        logger.info("Initializing retriever...")
-        self.retriever = Retriever(
-            embedder=self.embedder,
-            vector_store=self.vector_store,
-            enable_preprocessing=True,
-            min_score_threshold=0.3  # Filter low-relevance results
-        )
-        
-        # Initialize generator
-        logger.info("Loading LLM generator...")
-        self.generator = get_generator()
-        
-        self._initialized = True
-        logger.info("✅ RAG service initialized successfully")
+            raise RuntimeError(
+                f"RAG service failed to initialize: {str(e)}. "
+                "Please check that all services are running and try again."
+            )
+        finally:
+            self._initialization_in_progress = False
     
     async def query(
         self,

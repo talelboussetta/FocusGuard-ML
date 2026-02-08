@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, BookOpen, AlertCircle, Copy, Check, RotateCcw, MessageSquare, Trash2, Menu, X, Plus } from 'lucide-react'
+import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, BookOpen, AlertCircle, Copy, Check, RotateCcw, MessageSquare, Trash2, Menu, X, Plus, Edit2, ChevronDown, ChevronUp } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
-import { Input } from '../components/ui/Input'
 import { conversationAPI, getErrorMessage, type SourceDocument, type Conversation, type ConversationMessage } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
@@ -36,6 +35,8 @@ const AITutorPage = () => {
   const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [loadingConversations, setLoadingConversations] = useState(true)
+  const [editingConversationId, setEditingConversationId] = useState<string | null>(null)
+  const [editingTitle, setEditingTitle] = useState('')
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -116,6 +117,41 @@ const AITutorPage = () => {
     ])
     setCurrentConversationId(null)
     setError(null)
+    // Close sidebar on mobile after starting new chat
+    if (window.innerWidth < 1024) {
+      setSidebarOpen(false)
+    }
+  }
+
+  const startEditingConversation = (conversation: Conversation, e: React.MouseEvent) => {
+    e.stopPropagation()
+    setEditingConversationId(conversation.id)
+    setEditingTitle(conversation.title || '')
+  }
+
+  const saveConversationTitle = async (conversationId: string) => {
+    if (!editingTitle.trim()) {
+      setEditingConversationId(null)
+      return
+    }
+
+    try {
+      // Update locally immediately for responsive feel
+      setConversations(prev => prev.map(c => 
+        c.id === conversationId ? { ...c, title: editingTitle } : c
+      ))
+      setEditingConversationId(null)
+      
+      // TODO: Add API endpoint to update conversation title
+      // await conversationAPI.update(conversationId, { title: editingTitle })
+    } catch (error) {
+      console.error('Failed to update conversation title:', error)
+    }
+  }
+
+  const cancelEditingTitle = () => {
+    setEditingConversationId(null)
+    setEditingTitle('')
   }
 
   const quickPrompts = [
@@ -154,11 +190,27 @@ const AITutorPage = () => {
         include_sources: true,
       })
 
-      // If this was a new conversation, update the ID
+      // If this was a new conversation, update the ID and add to sidebar immediately
       if (!currentConversationId) {
         setCurrentConversationId(response.conversation_id)
-        // Reload conversations to get the new one in the list
-        loadConversations()
+        
+        // Add optimistic conversation to sidebar
+        const newConversation: Conversation = {
+          id: response.conversation_id,
+          user_id: user?.username || '',
+          title: undefined,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          message_count: 2, // User + Assistant
+        }
+        setConversations(prev => [newConversation, ...prev])
+      } else {
+        // Update message count for existing conversation
+        setConversations(prev => prev.map(c => 
+          c.id === currentConversationId 
+            ? { ...c, message_count: c.message_count + 2, updated_at: new Date().toISOString() }
+            : c
+        ))
       }
 
       const aiMessage: Message = {
@@ -178,12 +230,19 @@ const AITutorPage = () => {
       const isKBEmpty = errorMessage.includes('knowledge base is empty') || 
                         errorMessage.includes('ingestion')
       
+      // Check if it's a warmup issue
+      const isWarmingUp = errorMessage.includes('starting up') || 
+                          errorMessage.includes('initialization') ||
+                          errorMessage.includes('currently starting')
+      
       const errorMsg: Message = {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
-        content: isKBEmpty 
-          ? "Hmm, looks like my knowledge base isn't set up yet. 📚 I need some documents to learn from first. Have your admin run the knowledge ingestion script, and I'll be ready to help!"
-          : `Oops! I hit a snag: ${errorMessage}. Mind trying that again? 🔄`,
+        content: isWarmingUp
+          ? "Hey! I'm still warming up (loading AI models). ⏳ This takes about 30-60 seconds on first startup. Give me a moment and try again!"
+          : isKBEmpty 
+            ? "Hmm, looks like my knowledge base isn't set up yet. 📚 I need some documents to learn from first. Have your admin run the knowledge ingestion script, and I'll be ready to help!"
+            : `Oops! I hit a snag: ${errorMessage}. Mind trying that again? 🔄`,
         timestamp: new Date(),
       }
 
@@ -212,7 +271,7 @@ const AITutorPage = () => {
     setTimeout(() => setCopiedMessageId(null), 2000)
   }
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -236,11 +295,21 @@ const AITutorPage = () => {
   }
 
   return (
-    <div className="min-h-screen flex">
+    <div className="min-h-screen flex relative">
       <Sidebar />
       
+      {/* Mobile Overlay */}
+      {sidebarOpen && window.innerWidth < 1024 && (
+        <div 
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
       {/* Conversation History Sidebar */}
-      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 border-r border-slate-800 bg-slate-900/50 backdrop-blur-sm flex flex-col overflow-hidden`}>
+      <div className={`${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      } fixed lg:relative inset-y-0 left-16 lg:left-0 w-80 lg:w-80 transition-transform duration-300 border-r border-slate-800 bg-slate-900/50 backdrop-blur-sm flex flex-col overflow-hidden z-50 lg:z-auto lg:translate-x-0`}>
         {/* Header */}
         <div className="p-4 border-b border-slate-800 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -260,7 +329,6 @@ const AITutorPage = () => {
           <Button
             onClick={startNewChat}
             className="w-full flex items-center justify-center gap-2"
-            variant="outline"
           >
             <Plus size={16} />
             New Conversation
@@ -270,12 +338,33 @@ const AITutorPage = () => {
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto p-3 space-y-2">
           {loadingConversations ? (
-            <div className="flex items-center justify-center py-8 text-slate-500">
-              <Sparkles size={20} className="animate-pulse" />
+            // Loading skeleton
+            <div className="space-y-2">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="p-3 rounded-lg bg-slate-800/30 animate-pulse">
+                  <div className="h-4 bg-slate-700/50 rounded w-3/4 mb-2" />
+                  <div className="h-3 bg-slate-700/30 rounded w-1/2" />
+                </div>
+              ))}
             </div>
           ) : conversations.length === 0 ? (
-            <div className="text-center py-8 text-slate-500 text-sm">
-              No conversations yet.<br />Start chatting with Alex!
+            // Enhanced empty state
+            <div className="flex flex-col items-center justify-center py-12 px-4">
+              <div className="p-4 bg-primary-500/10 rounded-2xl mb-4">
+                <MessageSquare size={32} className="text-primary-400" />
+              </div>
+              <h3 className="text-white font-semibold mb-1">No conversations yet</h3>
+              <p className="text-slate-500 text-sm text-center mb-4">
+                Start chatting with Alex to build your conversation history
+              </p>
+              <Button
+                onClick={startNewChat}
+                className="flex items-center gap-2"
+                size="sm"
+              >
+                <Plus size={16} />
+                Start Conversation
+              </Button>
             </div>
           ) : (
             conversations.map((conversation) => (
@@ -288,13 +377,50 @@ const AITutorPage = () => {
                     ? 'bg-primary-500/20 border border-primary-500/30'
                     : 'hover:bg-slate-800/50 border border-transparent'
                 }`}
-                onClick={() => loadConversation(conversation.id)}
+                onClick={() => {
+                  if (editingConversationId !== conversation.id) {
+                    loadConversation(conversation.id)
+                    // Close sidebar on mobile after selecting conversation
+                    if (window.innerWidth < 1024) {
+                      setSidebarOpen(false)
+                    }
+                  }
+                }}
               >
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm text-white font-medium truncate">
-                      {conversation.title || 'New conversation'}
-                    </p>
+                    {editingConversationId === conversation.id ? (
+                      <div onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="text"
+                          value={editingTitle}
+                          onChange={(e) => setEditingTitle(e.target.value)}
+                          onKeyPress={(e) => {
+                            if (e.key === 'Enter') {
+                              saveConversationTitle(conversation.id)
+                            } else if (e.key === 'Escape') {
+                              cancelEditingTitle()
+                            }
+                          }}
+                          onBlur={() => saveConversationTitle(conversation.id)}
+                          className="w-full bg-slate-900 border border-primary-500 rounded px-2 py-1 text-sm text-white focus:outline-none focus:ring-2 focus:ring-primary-500/50"
+                          autoFocus
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <p className="text-sm text-white font-medium truncate flex-1">
+                          {conversation.title || 'New conversation'}
+                        </p>
+                        <button
+                          onClick={(e) => startEditingConversation(conversation, e)}
+                          className="opacity-0 group-hover:opacity-100 p-1 hover:bg-slate-700/50 rounded transition-all"
+                          title="Rename conversation"
+                        >
+                          <Edit2 size={12} className="text-slate-400" />
+                        </button>
+                      </div>
+                    )}
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-slate-500">
                         {conversation.message_count} messages
@@ -348,7 +474,6 @@ const AITutorPage = () => {
               </div>
               <Button
                 onClick={startNewChat}
-                variant="outline"
                 className="flex items-center gap-2"
               >
                 <RotateCcw size={16} />
@@ -431,47 +556,82 @@ const AITutorPage = () => {
                         )}
                         <p className="text-sm whitespace-pre-wrap leading-relaxed">{message.content}</p>
                         
-                        {/* Enhanced Source Display */}
+                        {/* Enhanced Source Display with Inline Top Source */}
                         {message.sources && message.sources.length > 0 && (
                           <div className="mt-3 pt-3 border-t border-slate-700/50">
-                            <button
-                              onClick={() => toggleSourceExpansion(message.id)}
-                              className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 transition-colors"
-                            >
-                              <BookOpen size={14} />
-                              <span>
-                                {expandedSources.has(message.id) ? 'Hide' : 'Show'} {message.sources.length} source{message.sources.length > 1 ? 's' : ''}
-                              </span>
-                            </button>
+                            {/* Top source shown inline */}
+                            <div className="mb-2 p-2 bg-slate-900/50 rounded-lg border border-slate-700/30">
+                              <div className="flex items-start justify-between gap-2 mb-1">
+                                <div className="flex items-center gap-1.5">
+                                  <BookOpen size={12} className="text-primary-400 flex-shrink-0" />
+                                  <span className="text-xs font-medium text-slate-300">
+                                    {message.sources[0].section_title}
+                                  </span>
+                                </div>
+                                <span className="text-xs text-emerald-400 font-mono">
+                                  {Math.round(message.sources[0].score * 100)}%
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 line-clamp-2">
+                                {message.sources[0].content}
+                              </p>
+                              {message.sources[0].category && (
+                                <span className="inline-block mt-1 text-xs text-purple-400">
+                                  #{message.sources[0].category}
+                                </span>
+                              )}
+                            </div>
                             
-                            {expandedSources.has(message.id) && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="mt-2 space-y-2"
-                              >
-                                {message.sources.map((source, idx) => (
-                                  <div key={idx} className="p-2 bg-slate-900/50 rounded-lg border border-slate-700/30">
-                                    <div className="flex items-start justify-between gap-2 mb-1">
-                                      <span className="text-xs font-medium text-slate-300">
-                                        {source.section_title}
-                                      </span>
-                                      <span className="text-xs text-emerald-400 font-mono">
-                                        {Math.round(source.score * 100)}%
-                                      </span>
-                                    </div>
-                                    <p className="text-xs text-slate-500 line-clamp-2">
-                                      {source.content}
-                                    </p>
-                                    {source.category && (
-                                      <span className="inline-block mt-1 text-xs text-purple-400">
-                                        #{source.category}
-                                      </span>
-                                    )}
-                                  </div>
-                                ))}
-                              </motion.div>
+                            {/* Show more sources button if there are additional sources */}
+                            {message.sources.length > 1 && (
+                              <>
+                                <button
+                                  onClick={() => toggleSourceExpansion(message.id)}
+                                  className="flex items-center gap-2 text-xs text-slate-400 hover:text-slate-300 transition-colors w-full justify-center"
+                                >
+                                  {expandedSources.has(message.id) ? (
+                                    <>
+                                      <ChevronUp size={14} />
+                                      <span>Hide {message.sources.length - 1} more source{message.sources.length > 2 ? 's' : ''}</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <ChevronDown size={14} />
+                                      <span>Show {message.sources.length - 1} more source{message.sources.length > 2 ? 's' : ''}</span>
+                                    </>
+                                  )}
+                                </button>
+                                
+                                {expandedSources.has(message.id) && (
+                                  <motion.div
+                                    initial={{ opacity: 0, height: 0 }}
+                                    animate={{ opacity: 1, height: 'auto' }}
+                                    exit={{ opacity: 0, height: 0 }}
+                                    className="mt-2 space-y-2"
+                                  >
+                                    {message.sources.slice(1).map((source, idx) => (
+                                      <div key={idx} className="p-2 bg-slate-900/50 rounded-lg border border-slate-700/30">
+                                        <div className="flex items-start justify-between gap-2 mb-1">
+                                          <span className="text-xs font-medium text-slate-300">
+                                            {source.section_title}
+                                          </span>
+                                          <span className="text-xs text-emerald-400 font-mono">
+                                            {Math.round(source.score * 100)}%
+                                          </span>
+                                        </div>
+                                        <p className="text-xs text-slate-500 line-clamp-2">
+                                          {source.content}
+                                        </p>
+                                        {source.category && (
+                                          <span className="inline-block mt-1 text-xs text-purple-400">
+                                            #{source.category}
+                                          </span>
+                                        )}
+                                      </div>
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </>
                             )}
                           </div>
                         )}
@@ -507,20 +667,28 @@ const AITutorPage = () => {
                 <div ref={messagesEndRef} />
               </div>
 
-              {/* Input */}
+              {/* Input with Multi-line Support */}
               <div className="border-t border-slate-800 p-4">
-                <div className="flex gap-3">
-                  <Input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    onKeyPress={handleKeyPress}
-                    placeholder="Ask me anything about productivity..."
-                    className="flex-1"
-                  />
-                  <Button onClick={handleSend} disabled={!input.trim() || isTyping}>
+                <div className="flex gap-3 items-end">
+                  <div className="flex-1">
+                    <textarea
+                      value={input}
+                      onChange={(e) => setInput(e.target.value)}
+                      onKeyDown={handleKeyPress}
+                      placeholder="Ask me anything about productivity... (Shift+Enter for new line)"
+                      className="w-full bg-slate-900/50 border border-slate-700 rounded-lg px-4 py-3 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-primary-500/50 focus:border-primary-500 resize-none transition-all"
+                      rows={input.includes('\n') ? Math.min(input.split('\n').length + 1, 5) : 1}
+                      style={{ minHeight: '48px', maxHeight: '160px' }}
+                    />
+                  </div>
+                  <Button onClick={handleSend} disabled={!input.trim() || isTyping} className="h-12 px-4">
                     <Send size={18} />
                   </Button>
                 </div>
+                <p className="text-xs text-slate-500 mt-2">
+                  Press <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-xs">Enter</kbd> to send, 
+                  <kbd className="px-1.5 py-0.5 bg-slate-800 border border-slate-700 rounded text-xs ml-1">Shift+Enter</kbd> for new line
+                </p>
               </div>
             </Card>
           </motion.div>
