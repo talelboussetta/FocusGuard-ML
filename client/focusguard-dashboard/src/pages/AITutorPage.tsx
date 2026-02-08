@@ -1,11 +1,12 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb } from 'lucide-react'
+import { Send, Brain, Target, TrendingUp, Lightbulb } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
 import { ragAPI, getErrorMessage, type SourceDocument } from '../services/api'
+import moonImage from '../assets/images/moonjpg.jpg'
 
 interface Message {
   id: string
@@ -112,10 +113,10 @@ const AITutorPage = () => {
             className="mb-8"
           >
             <h1 className="text-4xl font-display font-bold mb-2">
-              AI <span className="gradient-text">Tutor</span>
+              <span className="gradient-text">AI Moon</span>
             </h1>
             <p className="text-slate-400">
-              Your personal focus coach and productivity mentor
+              Your lunar focus coach for clarity, consistency, and momentum
             </p>
           </motion.div>
 
@@ -149,9 +150,9 @@ const AITutorPage = () => {
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
           >
-            <Card className="h-[500px] flex flex-col">
+            <Card className="h-[500px] flex flex-col relative overflow-hidden">
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              <div className="flex-1 overflow-y-auto p-4 space-y-4 relative z-10">
                 {messages.map((message, index) => (
                   <motion.div
                     key={message.id}
@@ -169,8 +170,8 @@ const AITutorPage = () => {
                     >
                       {message.role === 'assistant' && (
                         <div className="flex items-center gap-2 mb-2">
-                          <Sparkles size={16} className="text-primary-400" />
-                          <span className="text-xs font-semibold text-primary-400">AI Coach</span>
+                          <img src={moonImage} alt="" className="w-4 h-4 rounded-full opacity-90" />
+                          <span className="text-xs font-semibold text-primary-300">AI Moon</span>
                         </div>
                       )}
                       <p className="text-sm whitespace-pre-wrap">{message.content}</p>
@@ -199,7 +200,7 @@ const AITutorPage = () => {
                   >
                     <div className="bg-slate-800/50 rounded-2xl px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <Sparkles size={16} className="text-primary-400" />
+                        <img src={moonImage} alt="" className="w-4 h-4 rounded-full opacity-90" />
                         <div className="flex gap-1">
                           <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                           <div className="w-2 h-2 bg-slate-500 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />

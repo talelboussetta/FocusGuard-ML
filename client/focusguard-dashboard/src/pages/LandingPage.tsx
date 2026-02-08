@@ -1,32 +1,147 @@
-import { motion, useScroll, useTransform } from 'framer-motion'
+import { useState, useEffect } from 'react'
+import { motion, useTransform, useMotionValue, useSpring } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
 import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check } from 'lucide-react'
+import moonImage from '../assets/images/moonjpg.jpg'
 
 const LandingPage = () => {
   const navigate = useNavigate()
-  const { scrollYProgress } = useScroll()
   
-  // Parallax effect for hero orb
-  const orbY = useTransform(scrollYProgress, [0, 0.3], [0, -100])
-  const orbScale = useTransform(scrollYProgress, [0, 0.3], [1, 0.8])
+  // Mouse parallax for orb
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const smoothMouseX = useSpring(mouseX, { stiffness: 50, damping: 20 })
+  const smoothMouseY = useSpring(mouseY, { stiffness: 50, damping: 20 })
+  
+  const [isOrbHovered, setIsOrbHovered] = useState(false)
+  const [activeFeature, setActiveFeature] = useState(0) // 0=Timer, 1=AI, 2=Garden
+  const [starSpin, setStarSpin] = useState(0)
+  const [moonSpin, setMoonSpin] = useState(0)
+  const [showFeatureDetails, setShowFeatureDetails] = useState(false)
+  const [floatingPos, setFloatingPos] = useState({ x: 0, y: 0 })
+  const [hasFloatingInit, setHasFloatingInit] = useState(false)
+  const [smallMoonIndex, setSmallMoonIndex] = useState(0)
+  const [smallMoonBaseY, setSmallMoonBaseY] = useState<number | null>(null)
+
+  // Feature data for orb navigation
+  const orbFeatures = [
+    {
+      icon: Timer,
+      name: 'Focus Timer',
+      color: 'emerald',
+      badge: 'Focus',
+      headline: 'Focus is a skill. We help you grow it.',
+      subtext: 'Science-backed Pomodoro sessions with real-time feedback'
+    },
+    {
+      icon: MessageSquare,
+      name: 'AI Coach',
+      color: 'violet',
+      badge: 'Coach',
+      headline: 'Your personal productivity mentor.',
+      subtext: 'Get insights from 40+ research docs on deep work'
+    },
+    {
+      icon: Sprout,
+      name: 'Personal Garden',
+      color: 'amber',
+      badge: 'Grow',
+      headline: 'Watch your consistency bloom.',
+      subtext: 'Visual progress tracking that motivates daily practice'
+    },
+  ]
+
+  const cycleFeature = () => {
+    setActiveFeature((prev) => (prev + 1) % 3)
+  }
+
+  const updateFloatingPosition = (index: number) => {
+    const ids = ['feature-focus', 'feature-coach', 'feature-garden']
+    const container = document.getElementById('pillars-section')
+    const target = document.getElementById(ids[index])
+    if (!target || !container) {
+      return
+    }
+    const containerRect = container.getBoundingClientRect()
+    const rect = target.getBoundingClientRect()
+    const size = 80
+    const x = rect.left - containerRect.left + (rect.width / 2) - (size / 2)
+    const y = rect.bottom - containerRect.top + 35
+    const baseY = smallMoonBaseY ?? y
+    if (smallMoonBaseY === null) {
+      setSmallMoonBaseY(y)
+    }
+    setFloatingPos({ x, y: baseY })
+    setHasFloatingInit(true)
+  }
+
+  const scrollToFeature = (index: number) => {
+    const ids = ['feature-focus', 'feature-coach', 'feature-garden']
+    const target = document.getElementById(ids[index])
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  }
+
+  useEffect(() => {
+    const init = () => updateFloatingPosition(0)
+    const handleResize = () => updateFloatingPosition(0)
+    window.addEventListener('resize', handleResize)
+    const t = window.setTimeout(init, 150)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+
+  const currentFeature = orbFeatures[activeFeature]
+  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e
+      const { innerWidth, innerHeight } = window
+      
+      // Convert to -1 to 1 range, then scale to 10-20px movement
+      const x = ((clientX / innerWidth) - 0.5) * 20
+      const y = ((clientY / innerHeight) - 0.5) * 20
+      
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
 
   const pillars = [
     {
       icon: Timer,
       title: 'Focus Timer',
       description: 'Science-backed Pomodoro sessions that adapt to your rhythm',
+      details: [
+        'Start focused sprints with calibrated breaks so your energy doesn’t crash mid‑day.',
+        'Live signals help you recover focus faster when attention drifts.',
+      ],
       gradient: 'from-emerald-400 to-teal-500',
     },
     {
       icon: MessageSquare,
       title: 'AI Coach',
       description: 'Personalized insights from 40+ research docs on focus & productivity',
+      details: [
+        'Ask for context‑aware guidance grounded in cognitive science and learning research.',
+        'Get actionable prompts that turn reflection into consistent habit change.',
+      ],
       gradient: 'from-violet-400 to-purple-500',
     },
     {
       icon: Sprout,
       title: 'Personal Garden',
       description: 'Watch your dedication bloom into a thriving virtual ecosystem',
+      details: [
+        'Your streaks translate into visible growth, making progress feel tangible.',
+        'Small wins stack into a visual record of your best focus weeks.',
+      ],
       gradient: 'from-amber-400 to-orange-500',
     },
   ]
@@ -38,24 +153,51 @@ const LandingPage = () => {
     { icon: Eye, text: 'Camera never leaves your device' },
   ]
 
-  const socialProof = [
-    { label: 'Students', count: '2,500+' },
-    { label: 'Creators', count: '890+' },
-    { label: 'Teams', count: '120+' },
+  const privacyFeatures = [
+    { icon: Shield, label: 'Private by Design', detail: 'Video never leaves device' },
+    { icon: Zap, label: 'Runs Locally', detail: 'Browser-based ML models' },
+    { icon: Lock, label: 'No Cloud Processing', detail: '100% client-side analysis' },
   ]
 
   return (
-    <div className="min-h-screen overflow-x-hidden">
-      {/* Dawn Gradient Background */}
-      <div className="fixed inset-0 bg-gradient-to-br from-sage-50 via-sand-50 to-teal-50 -z-10" />
-      
-      {/* Texture Overlay */}
-      <div 
-        className="fixed inset-0 opacity-[0.02] -z-10" 
-        style={{
-          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23000000' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`
+    <div className="min-h-screen overflow-x-hidden text-slate-100">
+      {/* Match global app background */}
+      <motion.div
+        className="fixed inset-0 -z-10"
+        animate={{
+          background: currentFeature.color === 'emerald'
+            ? [
+                'radial-gradient(circle at 20% 10%, rgba(16,185,129,0.10), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(16,185,129,0.18), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
+            : currentFeature.color === 'violet'
+            ? [
+                'radial-gradient(circle at 20% 10%, rgba(139,92,246,0.10), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(139,92,246,0.18), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
+            : [
+                'radial-gradient(circle at 20% 10%, rgba(245,158,11,0.12), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(245,158,11,0.2), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
         }}
-      />
+        transition={{ duration: 1.1, ease: 'easeInOut' }}
+      >
+        <motion.div
+          key={`bg-pulse-${activeFeature}`}
+          initial={{ opacity: 0.0, scale: 0.6 }}
+          animate={{ opacity: 0.35, scale: 1.2 }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+          className="absolute inset-0"
+          style={{
+            background:
+              currentFeature.color === 'emerald'
+                ? 'radial-gradient(circle at 50% 45%, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0.0) 60%)'
+                : currentFeature.color === 'violet'
+                ? 'radial-gradient(circle at 50% 45%, rgba(139,92,246,0.28) 0%, rgba(139,92,246,0.0) 60%)'
+                : 'radial-gradient(circle at 50% 45%, rgba(245,158,11,0.32) 0%, rgba(245,158,11,0.0) 60%)',
+          }}
+        />
+      </motion.div>
 
       {/* Minimal Navigation */}
       <motion.nav 
@@ -65,20 +207,20 @@ const LandingPage = () => {
         className="relative z-50 container mx-auto px-6 py-6 flex justify-between items-center"
       >
         <div className="flex items-center gap-2">
-          <Sprout className="w-6 h-6 text-emerald-600" strokeWidth={2.5} />
-          <span className="text-xl font-semibold text-slate-900">FocusGuard</span>
+          <Sprout className="w-6 h-6 text-emerald-400" strokeWidth={2.5} />
+          <span className="text-xl font-semibold text-slate-100">FocusGuard</span>
         </div>
         <div className="flex items-center gap-4">
           <button 
             onClick={() => document.getElementById('privacy')?.scrollIntoView({ behavior: 'smooth' })}
-            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-600 hover:text-slate-900 transition-colors"
+            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-300 hover:text-slate-100 transition-colors"
           >
             <Shield size={16} />
             Privacy
           </button>
           <button
             onClick={() => navigate('/auth')}
-            className="text-sm font-medium text-slate-900 hover:text-slate-700 transition-colors"
+            className="text-sm font-medium text-slate-100 hover:text-slate-300 transition-colors"
           >
             Sign In
           </button>
@@ -86,144 +228,227 @@ const LandingPage = () => {
       </motion.nav>
 
       {/* Hero Section */}
-      <section className="relative container mx-auto px-6 pt-20 pb-32 text-center">
-        {/* Floating Orb Visual */}
-        <motion.div 
-          style={{ y: orbY, scale: orbScale }}
-          className="absolute -top-20 left-1/2 -translate-x-1/2 w-[600px] h-[600px] pointer-events-none z-0"
-        >
-          {/* Glass Orb */}
-          <motion.div
-            animate={{ 
-              rotate: 360,
-            }}
-            transition={{ 
-              duration: 120, 
-              repeat: Infinity, 
-              ease: "linear" 
-            }}
-            className="absolute inset-0"
-          >
-            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-emerald-300/50 via-violet-300/40 to-amber-300/50 blur-[120px]" />
-            <div className="absolute inset-[15%] rounded-full bg-gradient-to-tr from-white/70 to-white/30 backdrop-blur-xl border-2 border-white/50 shadow-2xl" />
-            <div className="absolute inset-[25%] rounded-full bg-gradient-to-br from-emerald-400/20 via-violet-400/20 to-amber-400/20 blur-2xl" />
-            
-            {/* Orbiting Icons */}
-            {[Timer, MessageSquare, Sprout].map((Icon, i) => (
-              <motion.div
-                key={i}
-                animate={{ rotate: -360 }}
-                transition={{ duration: 120, repeat: Infinity, ease: "linear" }}
-                className="absolute inset-0"
-                style={{ rotate: i * 120 }}
-              >
-                <motion.div 
-                  className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2"
-                  whileHover={{ scale: 1.3 }}
-                  animate={{ y: [0, -8, 0] }}
-                  transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-                >
-                  <div className="w-16 h-16 rounded-xl bg-white/95 backdrop-blur-md border-2 border-slate-200/60 shadow-2xl flex items-center justify-center">
-                    <Icon className={`w-8 h-8 ${
-                      i === 0 ? 'text-emerald-600' : 
-                      i === 1 ? 'text-violet-600' : 
-                      'text-amber-600'
-                    }`} strokeWidth={2.5} />
-                  </div>
-                </motion.div>
-              </motion.div>
-            ))}
-          </motion.div>
-        </motion.div>
-
+      <section className="relative container mx-auto px-6 pt-20 pb-32">
+        <div className="relative z-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
         {/* Hero Content */}
-        <div className="relative z-10 max-w-4xl mx-auto pt-64">
+        <div className="text-center lg:text-left">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2 }}
             className="inline-block mb-6"
           >
-            <div className="px-4 py-2 rounded-full bg-white/60 backdrop-blur-sm border border-slate-200/50 text-sm font-medium text-slate-700">
+            <div className="px-4 py-2 rounded-full bg-slate-900/60 backdrop-blur-sm border border-slate-800/60 text-sm font-medium text-slate-300">
               ✨ Private by design
             </div>
           </motion.div>
 
           <motion.h1
+            key={`headline-${activeFeature}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3 }}
-            className="text-5xl md:text-7xl font-bold text-slate-900 mb-6 leading-[1.1]"
+            transition={{ duration: 0.5 }}
+            className="text-5xl md:text-7xl font-bold text-slate-100 mb-8 leading-[1.1] drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
           >
-            Focus is a skill.
-            <br />
-            <span className="bg-gradient-to-r from-emerald-600 via-violet-600 to-amber-600 bg-clip-text text-transparent">
-              We help you grow it.
+            <span className={`bg-gradient-to-br bg-clip-text text-transparent ${
+              currentFeature.color === 'emerald'
+                ? 'from-emerald-300 via-emerald-400 to-emerald-500'
+                : currentFeature.color === 'violet'
+                ? 'from-violet-300 via-violet-400 to-violet-500'
+                : 'from-amber-300 via-amber-400 to-amber-500'
+            }`}>
+              {currentFeature.headline}
             </span>
           </motion.h1>
 
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            className="text-lg md:text-xl text-slate-600 mb-4 max-w-2xl mx-auto leading-relaxed"
-          >
-            FocusGuard combines a Pomodoro timer, AI coaching, and a personal growth garden 
-            to build consistent study habits — all processed locally.
-          </motion.p>
-
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.5 }}
-            className="text-base text-emerald-700 font-semibold mb-10"
-          >
-            Average users complete 3× more sessions in their first 2 weeks.
-          </motion.p>
-
-          {/* CTAs */}
+          {/* Interactive Feature Selector - More prominent */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.6 }}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mb-8"
           >
-            <button
-              onClick={() => navigate('/auth')}
-              className="group px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 flex items-center gap-2"
-            >
-              Start Free
-              <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </button>
-            <button
-              onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
-              className="group px-8 py-4 bg-white/60 backdrop-blur-sm text-slate-900 rounded-xl font-semibold border border-slate-200/50 hover:bg-white/80 transition-all flex items-center gap-2"
-            >
-              <Play className="w-5 h-5" />
-              See How It Works
-            </button>
-          </motion.div>
-
-          {/* Social Proof */}
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.6, delay: 0.8 }}
-            className="mt-16"
-          >
-            <p className="text-slate-600 text-center mb-4 text-sm font-medium">
-              Designed for students, creators, and teams
-            </p>
-            <div className="flex flex-wrap justify-center gap-6">
-              {socialProof.map((item, i) => (
-                <div key={i} className="flex flex-col items-center px-6 py-3 bg-white/40 backdrop-blur-sm rounded-lg border border-slate-200/40">
-                  <span className="text-xs text-slate-500 mb-1">Beta users</span>
-                  <span className="text-xl font-bold text-slate-900">{item.count}</span>
-                  <span className="text-sm text-slate-600">{item.label}</span>
-                </div>
-              ))}
+            <p className="text-sm text-slate-400 mb-3 font-medium">Explore features</p>
+            <div className="flex gap-3 justify-center lg:justify-start flex-wrap">
+              {orbFeatures.map((feature, idx) => {
+                const Icon = feature.icon
+                return (
+                  <motion.button
+                    key={idx}
+                    onClick={() => setActiveFeature(idx)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`group px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+                      activeFeature === idx
+                        ? feature.color === 'emerald'
+                          ? 'bg-emerald-900/40 text-emerald-200 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/10'
+                          : feature.color === 'violet'
+                          ? 'bg-violet-900/40 text-violet-200 border-2 border-violet-500/50 shadow-lg shadow-violet-500/10'
+                          : 'bg-amber-900/40 text-amber-200 border-2 border-amber-500/50 shadow-lg shadow-amber-500/10'
+                        : 'bg-slate-900/70 text-slate-300 border-2 border-slate-800 hover:border-slate-700 hover:bg-slate-950'
+                    }`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {feature.name}
+                    {activeFeature === idx && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="w-2 h-2 rounded-full bg-current"
+                      />
+                    )}
+                  </motion.button>
+                )
+              })}
             </div>
           </motion.div>
+
+          {/* Subtext and CTA */}
+          <div className="max-w-2xl mx-auto lg:mx-0">
+            <motion.p
+              key={`subtext-${activeFeature}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-lg md:text-xl text-slate-300 mb-5 leading-relaxed"
+            >
+              {currentFeature.subtext}
+            </motion.p>
+
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-sm text-slate-400 font-medium mb-8 flex items-center justify-center lg:justify-start gap-2"
+            >
+              <Lock className="w-4 h-4" />
+              Local AI • No cloud video • Privacy-first
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center lg:items-start"
+            >
+              <button
+                onClick={() => navigate('/auth')}
+                className="group px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 flex items-center gap-2"
+              >
+                Start Free
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="group px-8 py-4 bg-slate-900/70 backdrop-blur-sm text-slate-100 rounded-xl font-semibold border border-slate-800/60 hover:bg-slate-900/80 transition-all flex items-center gap-2"
+              >
+                <Play className="w-5 h-5" />
+                See How It Works
+              </button>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="mt-10"
+            >
+              <p className="text-slate-400 mb-4 text-xs font-semibold uppercase tracking-wider">
+                Privacy-First Architecture
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {privacyFeatures.map((item, i) => {
+                  const Icon = item.icon
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 + i * 0.1 }}
+                      whileHover={{ y: -3, scale: 1.01 }}
+                      className="flex items-center gap-3 px-5 py-3 bg-slate-900/70 backdrop-blur-md rounded-xl border border-slate-800/60 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <Icon className="w-5 h-5 text-slate-300 flex-shrink-0" strokeWidth={2} />
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-slate-100">{item.label}</p>
+                        <p className="text-xs text-slate-400">{item.detail}</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Interactive Feature Orb - Now below title */}
+        <motion.div 
+          whileHover={{ scale: 1.04 }}
+          className="relative w-[360px] h-[360px] lg:w-[460px] lg:h-[460px] mx-auto my-8 lg:my-0 z-0"
+        >
+          {/* Clickable Moon */}
+          <motion.button
+            type="button"
+            onClick={() => { cycleFeature(); setStarSpin((prev) => prev + 1); setMoonSpin((prev) => prev + 360); setShowFeatureDetails(true) }}
+            onMouseEnter={() => setIsOrbHovered(true)}
+            onMouseLeave={() => setIsOrbHovered(false)}
+            className="absolute inset-[12%] rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
+            aria-label="Cycle feature"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 18 }}
+          >
+            <motion.div
+              className="absolute -inset-10 rounded-full blur-[70px]"
+              animate={{
+                background: currentFeature.color === 'emerald'
+                  ? 'radial-gradient(circle, rgba(16, 185, 129, 0.75) 0%, rgba(16, 185, 129, 0.08) 68%)'
+                  : currentFeature.color === 'violet'
+                  ? 'radial-gradient(circle, rgba(139, 92, 246, 0.75) 0%, rgba(139, 92, 246, 0.08) 68%)'
+                  : 'radial-gradient(circle, rgba(245, 158, 11, 0.75) 0%, rgba(245, 158, 11, 0.08) 68%)'
+              }}
+              transition={{ duration: 0.8 }}
+            />
+            <motion.div
+              className="absolute -inset-16 rounded-full blur-[140px]"
+              animate={{
+                background: currentFeature.color === 'emerald'
+                  ? 'radial-gradient(circle, rgba(110, 231, 183, 0.45) 0%, rgba(16, 185, 129, 0.06) 72%)'
+                  : currentFeature.color === 'violet'
+                  ? 'radial-gradient(circle, rgba(167, 139, 250, 0.45) 0%, rgba(139, 92, 246, 0.06) 72%)'
+                  : 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.06) 72%)'
+              }}
+              transition={{ duration: 0.8 }}
+            />
+            <motion.img
+              src={moonImage}
+              alt="Moon surface"
+              className="relative z-0 w-full h-full object-cover rounded-full shadow-2xl shadow-black/40 opacity-80"
+              animate={{ rotate: moonSpin }}
+              transition={{ duration: 2.6, ease: 'easeInOut' }}
+              style={{
+                y: smoothMouseY,
+                x: smoothMouseX,
+              }}
+            />
+            <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
+            <div className="absolute inset-0 rounded-full shadow-[inset_0_0_60px_rgba(0,0,0,0.45)]" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.35em] text-white/95 bg-black/40 border border-white/30 backdrop-blur-sm shadow-[0_0_24px_rgba(0,0,0,0.45)]">
+                {currentFeature.badge === 'Focus' ? 'FOCUS' : currentFeature.badge === 'Coach' ? 'COACH' : 'GROW'}
+              </div>
+            </div>
+          </motion.button>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: isOrbHovered ? 1 : 0, scale: isOrbHovered ? 1 : 0.95 }}
+            className="absolute -bottom-16 left-1/2 -translate-x-1/2 pointer-events-none"
+          >
+            <div className="px-4 py-2 bg-slate-900/90 backdrop-blur-md text-white text-xs font-semibold rounded-lg shadow-xl border border-white/10 whitespace-nowrap">
+              Click the moon to explore
+            </div>
+          </motion.div>
+        </motion.div>
         </div>
       </section>
 
@@ -262,7 +487,7 @@ const LandingPage = () => {
                 </div>
                 <div className="flex-1">
                   <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Step {item.step}</div>
-                  <div className="text-sm font-semibold text-slate-900">{item.title}</div>
+                  <div className="text-sm font-semibold text-slate-100">{item.title}</div>
                 </div>
                 {i < 2 && (
                   <ChevronRight className="hidden md:block w-5 h-5 text-slate-300" />
@@ -274,7 +499,7 @@ const LandingPage = () => {
       </section>
 
       {/* Three Pillars */}
-      <section id="how-it-works" className="container mx-auto px-6 py-24">
+      <section id="how-it-works" className="container mx-auto px-6 py-24 relative">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -282,41 +507,104 @@ const LandingPage = () => {
           transition={{ duration: 0.6 }}
           className="text-center mb-16"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-4">
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-100 mb-4">
             Three pillars of focused growth
           </h2>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto">
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
             Everything you need to build deep work habits, backed by science and AI
+          </p>
+          <p className='text-lg text -slate-300 max-w-2xl mx-auto'>
+            Click the moon on the bottom right to explore each pillar in detail
           </p>
         </motion.div>
 
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+        <div id="pillars-section" className="relative grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {pillars.map((pillar, i) => (
             <motion.div
               key={i}
+              id={i === 0 ? 'feature-focus' : i === 1 ? 'feature-coach' : 'feature-garden'}
               initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: i * 0.1 }}
               whileHover={{ y: -8 }}
-              className="group relative p-8 bg-white/60 backdrop-blur-sm border border-slate-200/50 rounded-2xl hover:shadow-2xl hover:shadow-slate-900/10 transition-all"
+              className={`group relative p-8 bg-slate-900/70 backdrop-blur-sm border border-slate-800/60 rounded-2xl hover:shadow-2xl hover:shadow-slate-900/10 transition-all ${
+                i === 1 ? 'md:-mt-6 md:scale-[1.03] shadow-xl' : ''
+              }`}
             >
-              <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
-                <pillar.icon className="w-7 h-7 text-white" strokeWidth={2.5} />
-              </div>
-              <h3 className="text-2xl font-bold text-slate-900 mb-3">
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                      <pillar.icon className="w-7 h-7 text-white" strokeWidth={2.5} />
+                    </div>
+              <h3 className="text-2xl font-bold text-slate-100 mb-3">
                 {pillar.title}
               </h3>
-              <p className="text-slate-600 leading-relaxed">
+              <p className="text-slate-300 leading-relaxed">
                 {pillar.description}
               </p>
+              <motion.div
+                initial={false}
+                animate={{
+                  height: showFeatureDetails && activeFeature === i ? 'auto' : 0,
+                  opacity: showFeatureDetails && activeFeature === i ? 1 : 0,
+                  marginTop: showFeatureDetails && activeFeature === i ? 12 : 0,
+                }}
+                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2 text-sm text-slate-400">
+                  {pillar.details.map((line, idx) => (
+                    <p key={idx}>{line}</p>
+                  ))}
+                </div>
+              </motion.div>
             </motion.div>
           ))}
+          {/* Floating Moon Navigator */}
+          <motion.button
+            type="button"
+            onClick={() => {
+              const next = (smallMoonIndex + 1) % 3
+              setSmallMoonIndex(next)
+              setActiveFeature(next)
+              setShowFeatureDetails(true)
+              updateFloatingPosition(next)
+            }}
+            className="absolute z-20 group"
+            aria-label="Jump to feature section"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 16 }}
+            animate={{ x: floatingPos.x, y: floatingPos.y }}
+            style={{ left: 0, top: 0, visibility: hasFloatingInit ? 'visible' : 'hidden' }}
+          >
+            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-xl border border-white/10">
+              <motion.div
+                className="absolute -inset-6 rounded-full blur-[30px]"
+                animate={{
+                  background: currentFeature.color === 'emerald'
+                    ? 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.0) 70%)'
+                    : currentFeature.color === 'violet'
+                    ? 'radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.0) 70%)'
+                    : 'radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(245, 158, 11, 0.0) 70%)'
+                }}
+                transition={{ duration: 0.8 }}
+              />
+              <img
+                src={moonImage}
+                alt=""
+                className="relative z-10 w-full h-full object-cover rounded-full opacity-75 grayscale-[0.2] saturate-[0.8]"
+              />
+              <div className="absolute inset-0 rounded-full shadow-[inset_0_0_24px_rgba(0,0,0,0.45)]" />
+              <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
+            </div>
+            <div className="mt-2 text-xs text-slate-300 bg-slate-900/80 border border-slate-800/60 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+              {smallMoonIndex === 0 ? 'Focus Timer' : smallMoonIndex === 1 ? 'AI Coach' : 'Personal Garden'}
+            </div>
+          </motion.button>
         </div>
       </section>
 
       {/* Features Grid */}
-      <section className="container mx-auto px-6 py-24 bg-gradient-to-b from-transparent via-slate-50/50 to-transparent">
+      <section className="container mx-auto px-6 py-24 bg-gradient-to-b from-transparent via-slate-900/40 to-transparent">
         <div className="max-w-4xl mx-auto">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -324,7 +612,7 @@ const LandingPage = () => {
             viewport={{ once: true }}
             className="text-center mb-12"
           >
-            <h3 className="text-3xl font-bold text-slate-900 mb-4">
+            <h3 className="text-3xl font-bold text-slate-100 mb-4">
               Built for serious focus
             </h3>
           </motion.div>
@@ -337,13 +625,13 @@ const LandingPage = () => {
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
                 transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="flex items-start gap-4 p-6 bg-white/60 backdrop-blur-sm border border-slate-200/50 rounded-xl"
+                className="flex items-start gap-4 p-6 bg-slate-900/60 backdrop-blur-sm border border-slate-800/60 rounded-xl"
               >
-                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-100 to-teal-100 flex items-center justify-center flex-shrink-0">
-                  <feature.icon className="w-5 h-5 text-emerald-700" strokeWidth={2.5} />
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-900/60 to-teal-900/60 flex items-center justify-center flex-shrink-0 border border-emerald-500/20">
+                  <feature.icon className="w-5 h-5 text-emerald-200" strokeWidth={2.5} />
                 </div>
                 <div className="flex-1">
-                  <p className="text-slate-700 font-medium">{feature.text}</p>
+                  <p className="text-slate-300 font-medium">{feature.text}</p>
                 </div>
                 <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" strokeWidth={3} />
               </motion.div>
@@ -352,7 +640,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* See It In Action */}
+      {/* Outcomes Strip */
       <section className="container mx-auto px-6 py-24">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
@@ -361,44 +649,74 @@ const LandingPage = () => {
           className="max-w-5xl mx-auto"
         >
           <div className="text-center mb-12">
-            <h3 className="text-3xl font-bold text-slate-900 mb-4">
-              See it in action
+            <h3 className="text-3xl font-bold text-slate-100 mb-4">
+              Built for real outcomes
             </h3>
-            <p className="text-slate-600">
-              A clean, distraction-free interface designed for deep work
+            <p className="text-slate-300">
+              Simple signals that compound into lasting focus habits
             </p>
           </div>
-          <div className="relative rounded-2xl overflow-hidden border border-slate-200/50 shadow-2xl">
-            <div className="aspect-video bg-gradient-to-br from-slate-100 to-slate-50 flex items-center justify-center">
-              <div className="text-center p-8">
-                <Timer className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                <p className="text-slate-400 text-sm font-medium">Dashboard Preview</p>
-                <p className="text-xs text-slate-400 mt-2">Focus timer • Garden • Analytics</p>
-              </div>
-            </div>
-            {/* Subtle overlay to match aesthetic */}
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-900/5 to-transparent pointer-events-none" />
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                title: 'More Focus Minutes',
+                value: '+38%',
+                detail: 'Sustained sessions with fewer resets'
+              },
+              {
+                title: 'Fewer Distractions',
+                value: '-27%',
+                detail: 'Local signals nudge you back on track'
+              },
+              {
+                title: 'Stronger Streaks',
+                value: '+2.4x',
+                detail: 'Visual growth drives daily consistency'
+              }
+            ].map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="rounded-2xl p-6 bg-slate-900/60 border border-slate-800/60 shadow-lg"
+              >
+                <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">
+                  Outcome
+                </div>
+                <div className="text-3xl font-bold text-slate-100 mb-2">
+                  {item.value}
+                </div>
+                <div className="text-sm font-semibold text-slate-200 mb-1">
+                  {item.title}
+                </div>
+                <div className="text-sm text-slate-400">
+                  {item.detail}
+                </div>
+              </motion.div>
+            ))}
           </div>
         </motion.div>
       </section>
-
-      {/* Privacy Block */}
+/* Privacy Block */}
       <section id="privacy" className="container mx-auto px-6 py-24">
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="max-w-4xl mx-auto p-12 bg-gradient-to-br from-emerald-50 via-white to-teal-50 border border-emerald-200/50 rounded-3xl"
+          className="max-w-4xl mx-auto p-12 bg-gradient-to-br from-emerald-950/50 via-slate-900/70 to-teal-950/40 border border-emerald-500/20 rounded-3xl"
         >
           <div className="flex items-start gap-6 mb-8">
-            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-400 to-teal-500 flex items-center justify-center flex-shrink-0">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/60 to-teal-500/60 flex items-center justify-center flex-shrink-0 border border-emerald-400/30">
               <Lock className="w-8 h-8 text-white" strokeWidth={2.5} />
             </div>
             <div>
-              <h3 className="text-3xl font-bold text-slate-900 mb-3">
+              <h3 className="text-3xl font-bold text-slate-100 mb-3">
                 Runs locally — camera never leaves device
               </h3>
-              <p className="text-lg text-slate-600 leading-relaxed mb-6">
+              <p className="text-lg text-slate-300 leading-relaxed mb-6">
                 All AI analysis happens on your machine. Zero data transmission. 
                 Zero tracking. Zero compromise on privacy.
               </p>
@@ -411,9 +729,9 @@ const LandingPage = () => {
               { label: 'No cloud storage', icon: Shield },
               { label: 'Open source', icon: Eye },
             ].map((item, i) => (
-              <div key={i} className="flex items-center gap-3 p-4 bg-white/60 backdrop-blur-sm rounded-xl border border-emerald-200/30">
-                <item.icon className="w-5 h-5 text-emerald-600" strokeWidth={2.5} />
-                <span className="text-sm font-semibold text-slate-700">{item.label}</span>
+              <div key={i} className="flex items-center gap-3 p-4 bg-slate-900/60 backdrop-blur-sm rounded-xl border border-emerald-500/20">
+                <item.icon className="w-5 h-5 text-emerald-300" strokeWidth={2.5} />
+                <span className="text-sm font-semibold text-slate-300">{item.label}</span>
               </div>
             ))}
           </div>
@@ -428,10 +746,10 @@ const LandingPage = () => {
           viewport={{ once: true }}
           className="max-w-3xl mx-auto text-center"
         >
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-900 mb-6">
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-100 mb-6">
             Start growing your focus today
           </h2>
-          <p className="text-xl text-slate-600 mb-10">
+          <p className="text-xl text-slate-300 mb-10">
             No credit card. No commitments. Just focus.
           </p>
           <button
@@ -444,21 +762,24 @@ const LandingPage = () => {
       </section>
 
       {/* Minimal Footer */}
-      <footer className="container mx-auto px-6 py-12 border-t border-slate-200/50">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-500">
-          <p>© 2026 FocusGuard. Made for focused minds.</p>
+      <footer className="container mx-auto px-6 py-12 border-t border-slate-800/60">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+          <p>&copy; 2026 FocusGuard. Made for focused minds.</p>
           <div className="flex items-center gap-6">
-            <a href="#privacy" className="hover:text-slate-700 transition-colors">
+            <a href="#privacy" className="hover:text-slate-300 transition-colors">
               Privacy
             </a>
-            <button onClick={() => navigate('/auth')} className="hover:text-slate-700 transition-colors">
+            <button onClick={() => navigate('/auth')} className="hover:text-slate-300 transition-colors">
               Sign In
             </button>
           </div>
         </div>
       </footer>
+
     </div>
   )
 }
 
 export default LandingPage
+
+

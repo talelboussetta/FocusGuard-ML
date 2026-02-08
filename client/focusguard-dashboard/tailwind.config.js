@@ -90,6 +90,31 @@ export default {
           800: "#115e59",
           900: "#134e4a",
         },
+        // Modern/Productivity palette (blue + mint)
+        ocean: {
+          50: "#f0f9ff",
+          100: "#e0f2fe",
+          200: "#b9e5fb",
+          300: "#7dd0f7",
+          400: "#3db3f0",
+          500: "#2A6F97",  // Primary blue
+          600: "#235a7a",
+          700: "#1d4a63",
+          800: "#183d52",
+          900: "#143244",
+        },
+        mint: {
+          50: "#f0fdf9",
+          100: "#ccfbef",
+          200: "#99f6e0",
+          300: "#5feacb",
+          400: "#52B69A",  // Accent mint
+          500: "#3d9b80",
+          600: "#2f7d67",
+          700: "#266554",
+          800: "#205145",
+          900: "#1a4239",
+        },
       },
       fontFamily: {
         sans: ["Inter", "system-ui", "sans-serif"],
