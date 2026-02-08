@@ -25,6 +25,7 @@ from api.routes import (
     team_message_router
 )
 from api.routes.rag import router as rag_router
+from api.routes.conversation import router as conversation_router
 from api.middleware.error_handler import register_exception_handlers
 from api.middleware.rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
@@ -162,6 +163,7 @@ app.include_router(distraction_router)
 app.include_router(team_router)
 app.include_router(team_message_router)
 app.include_router(rag_router)
+app.include_router(conversation_router)
 
 
 @app.get(

@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, Trash2, MessageCircle, BookOpen, AlertCircle, Copy, Check, RotateCcw } from 'lucide-react'
+import { Send, Sparkles, Brain, Target, TrendingUp, Lightbulb, BookOpen, AlertCircle, Copy, Check, RotateCcw, MessageSquare, Trash2, Menu, X, Plus } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { Card } from '../components/ui/Card'
 import { Button } from '../components/ui/Button'
 import { Input } from '../components/ui/Input'
-import { ragAPI, getErrorMessage, type SourceDocument } from '../services/api'
+import { conversationAPI, getErrorMessage, type SourceDocument, type Conversation, type ConversationMessage } from '../services/api'
 import { useAuth } from '../contexts/AuthContext'
 
 interface Message {
@@ -15,12 +15,6 @@ interface Message {
   timestamp: Date
   sources?: SourceDocument[]
   modelUsed?: string
-}
-
-interface Conversation {
-  id: string
-  messages: Message[]
-  title?: string
 }
 
 const AITutorPage = () => {
@@ -38,6 +32,10 @@ const AITutorPage = () => {
   const [error, setError] = useState<string | null>(null)
   const [expandedSources, setExpandedSources] = useState<Set<string>>(new Set())
   const [copiedMessageId, setCopiedMessageId] = useState<string | null>(null)
+  const [conversations, setConversations] = useState<Conversation[]>([])
+  const [currentConversationId, setCurrentConversationId] = useState<string | null>(null)
+  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [loadingConversations, setLoadingConversations] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -48,12 +46,89 @@ const AITutorPage = () => {
     scrollToBottom()
   }, [messages])
 
+  // Load conversations on mount
+  useEffect(() => {
+    loadConversations()
+  }, [])
+
+  const loadConversations = async () => {
+    try {
+      setLoadingConversations(true)
+      const response = await conversationAPI.list(0, 50)
+      setConversations(response.conversations)
+    } catch (error) {
+      console.error('Failed to load conversations:', error)
+    } finally {
+      setLoadingConversations(false)
+    }
+  }
+
+  const loadConversation = async (conversationId: string) => {
+    try {
+      const conversation = await conversationAPI.get(conversationId)
+      
+      // Convert backend messages to UI messages
+      const uiMessages: Message[] = conversation.messages.map((msg: ConversationMessage) => ({
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+        sources: msg.sources_used ? JSON.parse(msg.sources_used) : undefined,
+        modelUsed: msg.model_used || undefined,
+      }))
+      
+      setMessages(uiMessages)
+      setCurrentConversationId(conversationId)
+      setError(null)
+    } catch (error) {
+      setError(getErrorMessage(error))
+    }
+  }
+
+  const deleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent loading the conversation when clicking delete
+    
+    if (!confirm('Delete this conversation? This cannot be undone.')) return
+    
+    try {
+      await conversationAPI.delete(conversationId)
+      
+      // Remove from list
+      setConversations(prev => prev.filter(c => c.id !== conversationId))
+      
+      // If we deleted the current conversation, start a new one
+      if (currentConversationId === conversationId) {
+        startNewChat()
+      }
+    } catch (error) {
+      setError(getErrorMessage(error))
+    }
+  }
+
+  const startNewChat = () => {
+    setMessages([
+      {
+        id: Date.now().toString(),
+        role: 'assistant',
+        content: "Fresh start! 🎯 I'm ready to help you tackle new challenges. What would you like to focus on today?",
+        timestamp: new Date(),
+      },
+    ])
+    setCurrentConversationId(null)
+    setError(null)
+  }
+
   const quickPrompts = [
     { icon: Target, text: 'How can I stay more focused?', color: 'primary' },
     { icon: TrendingUp, text: 'Show me my productivity stats', color: 'purple' },
     { icon: Brain, text: 'Why am I getting distracted?', color: 'emerald' },
     { icon: Lightbulb, text: 'Give me a study tip', color: 'yellow' },
   ]
+
+  const handleQuickPrompt = (text: string) => {
+    setInput(text)
+    setTimeout(() => handleSend(), 100)
+  }
 
   const handleSend = async () => {
     if (!input.trim()) return
@@ -71,20 +146,28 @@ const AITutorPage = () => {
     setError(null)
 
     try {
-      // Call RAG API
-      const ragResponse = await ragAPI.query({
+      // Call Conversation API (with or without conversation ID)
+      const response = await conversationAPI.query({
         query: input,
+        conversation_id: currentConversationId || undefined,
         top_k: 3,
         include_sources: true,
       })
 
+      // If this was a new conversation, update the ID
+      if (!currentConversationId) {
+        setCurrentConversationId(response.conversation_id)
+        // Reload conversations to get the new one in the list
+        loadConversations()
+      }
+
       const aiMessage: Message = {
-        id: (Date.now() + 1).toString(),
+        id: response.message_id,
         role: 'assistant',
-        content: ragResponse.answer,
+        content: response.answer,
         timestamp: new Date(),
-        sources: ragResponse.sources || [],
-        modelUsed: ragResponse.model_used,
+        sources: response.sources || [],
+        modelUsed: response.model_used,
       }
 
       setMessages((prev) => [...prev, aiMessage])
@@ -99,10 +182,11 @@ const AITutorPage = () => {
         id: (Date.now() + 1).toString(),
         role: 'assistant',
         content: isKBEmpty 
-          ? "Oops! 😅 Looks like my knowledge base needs to be set up first. The backend team needs to run the knowledge ingestion script. In the meantime, I can still chat with you and offer general productivity advice - just keep in mind I won't have access to the full research library until that's done!"
-          : `Hmm, I hit a snag there... 🤔 ${errorMessage}\n\nMind trying that again? If the problem keeps happening, the dev team would love to know about it!`,
+          ? "Hmm, looks like my knowledge base isn't set up yet. 📚 I need some documents to learn from first. Have your admin run the knowledge ingestion script, and I'll be ready to help!"
+          : `Oops! I hit a snag: ${errorMessage}. Mind trying that again? 🔄`,
         timestamp: new Date(),
       }
+
       setMessages((prev) => [...prev, errorMsg])
       setError(errorMessage)
     } finally {
@@ -111,7 +195,7 @@ const AITutorPage = () => {
   }
 
   const toggleSourceExpansion = (messageId: string) => {
-    setExpandedSources(prev => {
+    setExpandedSources((prev) => {
       const newSet = new Set(prev)
       if (newSet.has(messageId)) {
         newSet.delete(messageId)
@@ -123,30 +207,9 @@ const AITutorPage = () => {
   }
 
   const copyToClipboard = async (messageId: string, content: string) => {
-    try {
-      await navigator.clipboard.writeText(content)
-      setCopiedMessageId(messageId)
-      setTimeout(() => setCopiedMessageId(null), 2000)
-    } catch (err) {
-      console.error('Failed to copy:', err)
-    }
-  }
-
-  const startNewChat = () => {
-    setMessages([
-      {
-        id: Date.now().toString(),
-        role: 'assistant',
-        content: "Fresh start! 🎯 I'm ready to help you tackle new challenges. What would you like to focus on?",
-        timestamp: new Date(),
-      },
-    ])
-    setError(null)
-    setInput('')
-  }
-
-  const handleQuickPrompt = (text: string) => {
-    setInput(text)
+    await navigator.clipboard.writeText(content)
+    setCopiedMessageId(messageId)
+    setTimeout(() => setCopiedMessageId(null), 2000)
   }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -156,9 +219,107 @@ const AITutorPage = () => {
     }
   }
 
+  const formatConversationDate = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60)
+    
+    if (diffInHours < 24) {
+      return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    } else if (diffInHours < 48) {
+      return 'Yesterday'
+    } else if (diffInHours < 168) {
+      return date.toLocaleDateString([], { weekday: 'short' })
+    } else {
+      return date.toLocaleDateString([], { month: 'short', day: 'numeric' })
+    }
+  }
+
   return (
     <div className="min-h-screen flex">
       <Sidebar />
+      
+      {/* Conversation History Sidebar */}
+      <div className={`${sidebarOpen ? 'w-80' : 'w-0'} transition-all duration-300 border-r border-slate-800 bg-slate-900/50 backdrop-blur-sm flex flex-col overflow-hidden`}>
+        {/* Header */}
+        <div className="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <MessageSquare size={20} className="text-primary-400" />
+            <h2 className="font-semibold text-white">Conversations</h2>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(false)}
+            className="p-1 hover:bg-slate-800 rounded transition-colors lg:hidden"
+          >
+            <X size={18} className="text-slate-400" />
+          </button>
+        </div>
+
+        {/* New Chat Button */}
+        <div className="p-3 border-b border-slate-800">
+          <Button
+            onClick={startNewChat}
+            className="w-full flex items-center justify-center gap-2"
+            variant="outline"
+          >
+            <Plus size={16} />
+            New Conversation
+          </Button>
+        </div>
+
+        {/* Conversations List */}
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {loadingConversations ? (
+            <div className="flex items-center justify-center py-8 text-slate-500">
+              <Sparkles size={20} className="animate-pulse" />
+            </div>
+          ) : conversations.length === 0 ? (
+            <div className="text-center py-8 text-slate-500 text-sm">
+              No conversations yet.<br />Start chatting with Alex!
+            </div>
+          ) : (
+            conversations.map((conversation) => (
+              <motion.div
+                key={conversation.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                className={`p-3 rounded-lg cursor-pointer group transition-all ${
+                  currentConversationId === conversation.id
+                    ? 'bg-primary-500/20 border border-primary-500/30'
+                    : 'hover:bg-slate-800/50 border border-transparent'
+                }`}
+                onClick={() => loadConversation(conversation.id)}
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-white font-medium truncate">
+                      {conversation.title || 'New conversation'}
+                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-slate-500">
+                        {conversation.message_count} messages
+                      </span>
+                      <span className="text-xs text-slate-600">•</span>
+                      <span className="text-xs text-slate-500">
+                        {formatConversationDate(conversation.updated_at)}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={(e) => deleteConversation(conversation.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-500/20 rounded transition-all"
+                    title="Delete conversation"
+                  >
+                    <Trash2 size={14} className="text-red-400" />
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          )}
+        </div>
+      </div>
+
+      {/* Main Content */}
       <div className="flex-1 overflow-y-auto">
         <div className="p-8 max-w-5xl mx-auto">
           <motion.div
@@ -167,13 +328,23 @@ const AITutorPage = () => {
             className="mb-8"
           >
             <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-display font-bold mb-2">
-                  AI <span className="gradient-text">Tutor</span>
-                </h1>
-                <p className="text-slate-400">
-                  Your personal focus coach and productivity mentor
-                </p>
+              <div className="flex items-center gap-3">
+                {!sidebarOpen && (
+                  <button
+                    onClick={() => setSidebarOpen(true)}
+                    className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    <Menu size={20} className="text-slate-400" />
+                  </button>
+                )}
+                <div>
+                  <h1 className="text-4xl font-display font-bold mb-2">
+                    AI <span className="gradient-text">Tutor</span>
+                  </h1>
+                  <p className="text-slate-400">
+                    Your personal focus coach and productivity mentor
+                  </p>
+                </div>
               </div>
               <Button
                 onClick={startNewChat}
@@ -354,7 +525,7 @@ const AITutorPage = () => {
             </Card>
           </motion.div>
 
-          {/* Info Card */}
+          {/* Error Card */}
           {error && (
             <motion.div
               initial={{ opacity: 0, y: 20 }}
@@ -375,6 +546,7 @@ const AITutorPage = () => {
             </motion.div>
           )}
 
+          {/* Info Card */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -388,10 +560,10 @@ const AITutorPage = () => {
                 </div>
                 <div>
                   <h4 className="text-white font-semibold mb-1">
-                    Context-Aware AI Coaching
+                    Context-Aware AI Coaching with Memory
                   </h4>
                   <p className="text-sm text-slate-400 mb-2">
-                    Alex analyzes your focus patterns, session history, and productivity trends to give you personalized, evidence-based advice - not generic tips.
+                    Alex remembers your conversations and analyzes your focus patterns, session history, and productivity trends to give you personalized, evidence-based advice - not generic tips.
                   </p>
                   <div className="flex flex-wrap gap-2 mt-3">
                     <span className="text-xs px-2 py-1 bg-emerald-500/10 text-emerald-400 rounded-full">
@@ -401,6 +573,9 @@ const AITutorPage = () => {
                       Your Stats Integrated
                     </span>
                     <span className="text-xs px-2 py-1 bg-primary-500/10 text-primary-400 rounded-full">
+                      Conversation Memory
+                    </span>
+                    <span className="text-xs px-2 py-1 bg-yellow-500/10 text-yellow-400 rounded-full">
                       Human-like Responses
                     </span>
                   </div>
