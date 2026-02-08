@@ -71,6 +71,17 @@ async def lifespan(app: FastAPI):
     else:
         print("[WARNING] Database connection check failed")
     
+    # Warm up RAG service (loads models on startup instead of first request)
+    try:
+        from api.services.rag_service import get_rag_service
+        print("[*] Warming up RAG service (loading AI models)...")
+        rag_service = get_rag_service()
+        await rag_service.initialize()
+        print("[OK] RAG service ready (Alex is warmed up! ✨)")
+    except Exception as e:
+        print(f"[WARNING] RAG service initialization failed: {e}")
+        print("[INFO] AI Tutor will initialize on first request instead")
+    
     print(f"[INFO] API running at: http://localhost:8000")
     print(f"[INFO] Swagger UI: http://localhost:8000/docs")
     print(f"[INFO] ReDoc: http://localhost:8000/redoc")
