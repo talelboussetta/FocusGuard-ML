@@ -2,10 +2,9 @@
 FocusGuard API - Distraction Detection Routes
 
 WebSocket and HTTP endpoints for real-time distraction monitoring.
+NOTE: Backend ML processing disabled for production (all ML runs in browser).
 """
 
-import cv2
-import base64
 import asyncio
 import json
 from typing import Dict, Optional
@@ -38,32 +37,8 @@ settings = Settings()
 
 router = APIRouter(prefix="/distraction", tags=["Distraction Detection"])
 
-# Global detector instance (one per server)
-detector_instance: Optional[object] = None
-active_sessions: Dict[str, Dict] = {}  # user_id -> {session_id, websocket, detector_state}
-
-
-def get_detector():
-    """Get or create the global detector instance with lazy import.
-
-    Avoid importing heavy ML libraries at app startup. If dependencies are
-    missing, raise a clear error only when this feature is used.
-    """
-    global detector_instance
-    if detector_instance is None:
-        try:
-            from AI_models_and_routes.distraction_detector import DistractionDetector  # type: ignore
-        except ImportError as e:
-            # Provide a helpful error message
-            raise HTTPException(
-                status_code=500,
-                detail=f"Distraction detector dependencies not installed: {e}. Install 'ultralytics', 'torch', 'torchvision'."
-            )
-        detector_instance = DistractionDetector(
-            model_name="yolov8n.pt",  # YOLOv8 Nano - faster than v11
-            phone_alert_duration=10.0
-        )
-    return detector_instance
+# Active WebSocket sessions tracker
+active_sessions: Dict[str, Dict] = {}  # user_id -> {session_id, websocket, started_at, events}
 
 
 @router.websocket("/ws/monitor")
@@ -102,14 +77,11 @@ async def websocket_monitor(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=f"Authentication failed: {str(e)}")
         return
     
-    detector = get_detector()
-    
     # Track active session
     active_sessions[user_id] = {
         "session_id": session_id,
         "websocket": websocket,
-        "started_at": datetime.utcnow(),
-        "distraction_events": []
+        "started_at": datetime.utcnow()
     }
     
     try:
@@ -124,67 +96,12 @@ async def websocket_monitor(
             data = await websocket.receive_json()
             
             if data.get("type") == "frame":
-                # Decode base64 frame
-                frame_data = data.get("frame")
-                if not frame_data:
-                    continue
-                
-                # Decode base64 to image
-                try:
-                    import numpy as np
-                    frame_bytes = base64.b64decode(frame_data.split(',')[1] if ',' in frame_data else frame_data)
-                    nparr = np.frombuffer(frame_bytes, np.uint8)
-                    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-                    
-                    if frame is None:
-                        continue
-                    
-                    # Detect distractions
-                    annotated_frame, detection_info = detector.detect(frame)
-                    
-                    # Encode annotated frame back to base64
-                    _, buffer = cv2.imencode('.jpg', annotated_frame)
-                    annotated_base64 = base64.b64encode(buffer).decode('utf-8')
-                    
-                    # Send detection results
-                    response = {
-                        "type": "detection",
-                        "data": {
-                            **detection_info,
-                            "timestamp": datetime.utcnow().isoformat()
-                        },
-                        "annotated_frame": f"data:image/jpeg;base64,{annotated_base64}"
-                    }
-                    
-                    await websocket.send_json(response)
-                    
-                    # Send alert if needed
-                    if detection_info["should_alert"]:
-                        alert = AlertNotification(
-                            alert_type="phone_usage",
-                            message="Phone usage detected! Please focus on your work.",
-                            severity=Severity.MEDIUM,
-                            duration=detection_info["phone_usage_duration"],
-                            play_sound=True
-                        )
-                        
-                        await websocket.send_json({
-                            "type": "alert",
-                            "data": alert.model_dump()
-                        })
-                        
-                        # Track event for later saving
-                        active_sessions[user_id]["distraction_events"].append({
-                            "event_type": "phone_usage",
-                            "started_at": datetime.utcnow(),
-                            "duration_seconds": int(detection_info["phone_usage_duration"])
-                        })
-                
-                except Exception as e:
-                    await websocket.send_json({
-                        "type": "error",
-                        "message": f"Frame processing error: {str(e)}"
-                    })
+                # Backend ML processing disabled (all ML runs in browser via MediaPipe)
+                # This route is kept for future backend analytics but doesn't process images
+                await websocket.send_json({
+                    "type": "info",
+                    "message": "Backend ML disabled. Use browser-based MediaPipe detection."
+                })
             
             elif data.get("type") == "stop":
                 # Client requested to stop monitoring
@@ -198,9 +115,6 @@ async def websocket_monitor(
         # Cleanup
         if user_id in active_sessions:
             del active_sessions[user_id]
-        
-        # Reset detector state
-        detector.reset()
 
 
 @router.post(
