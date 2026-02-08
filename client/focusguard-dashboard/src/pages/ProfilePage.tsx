@@ -80,7 +80,13 @@ const ProfilePage = () => {
     'Lucky break',
     'No phone for 45m focus'
   ]
-  const colors = ['#06B6D4', '#F97316', '#A78BFA', '#F43F5E', '#10B981']
+  const colors = [
+    'rgba(148,163,184,0.18)',
+    'rgba(100,116,139,0.18)',
+    'rgba(148,163,184,0.22)',
+    'rgba(71,85,105,0.18)',
+    'rgba(203,213,225,0.18)'
+  ]
 
   const startChallenge = () => {
     if (!challenge || attempting) return
@@ -162,6 +168,27 @@ const ProfilePage = () => {
             </div>
           </motion.div>
 
+          <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="grid md:grid-cols-3 gap-4 mb-6">
+            <div className="glass rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Total Focus</div>
+              <div className="text-2xl font-semibold text-slate-100">
+                {stats?.total_focus_min != null ? `${stats.total_focus_min} min` : '--'}
+              </div>
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Sessions</div>
+              <div className="text-2xl font-semibold text-slate-100">
+                {stats?.total_sessions != null ? stats.total_sessions : '--'}
+              </div>
+            </div>
+            <div className="glass rounded-xl p-4">
+              <div className="text-xs uppercase tracking-wide text-slate-500 mb-2">Best Streak</div>
+              <div className="text-2xl font-semibold text-slate-100">
+                {stats?.best_streak != null ? stats.best_streak : '--'}
+              </div>
+            </div>
+          </motion.div>
+
           <div className="grid md:grid-cols-3 gap-6">
             <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass rounded-2xl p-6">
               <h2 className="text-lg font-semibold mb-2">Quote of the Day</h2>
@@ -224,32 +251,31 @@ const ProfilePage = () => {
                   <h4 className="font-medium mb-2">Spin the Challenge Wheel</h4>
                   <div className="relative flex items-center justify-center">
                     <div className="w-72 h-72 md:w-80 md:h-80 rounded-full flex items-center justify-center shadow-xl relative">
-                      {/* Moon Wheel with segmented arcs */}
+                      {/* Moon Wheel */}
                       <div
                         ref={wheelRef}
                         style={{
                           transform: `rotate(${rotation}deg)`,
                           transition: spinning ? 'transform 3.2s cubic-bezier(0.22, 0.8, 0.32, 1)' : 'transform 0.6s ease-out',
-                          backgroundImage: `url(${moonImage}), conic-gradient(${challenges.map((_, i) => `${colors[i % colors.length]} ${(i * (100 / challenges.length)).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')})`,
-                          backgroundBlendMode: 'soft-light',
+                          backgroundImage: `url(${moonImage})`,
                           backgroundPosition: 'center',
                           backgroundSize: 'cover',
                         }}
                         className="w-64 h-64 md:w-72 md:h-72 rounded-full relative overflow-hidden flex items-center justify-center border border-white/10 shadow-[0_0_40px_rgba(15,23,42,0.6)]"
                       >
-                        {/* segment lines */}
+                        {/* subtle radial segment lines */}
                         <div
-                          className="absolute inset-3 rounded-full"
+                          className="absolute inset-2 rounded-full"
                           style={{
-                            backgroundImage: `conic-gradient(${challenges.map((_, i) => `rgba(255,255,255,0.12) ${(i * (100 / challenges.length)).toFixed(2)}% ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}%, transparent ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')})`,
+                            backgroundImage: `conic-gradient(${challenges.map((_, i) => `rgba(255,255,255,0.22) ${(i * (100 / challenges.length)).toFixed(2)}% ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}%, transparent ${((i * (100 / challenges.length)) + 0.6).toFixed(2)}% ${((i + 1) * (100 / challenges.length)).toFixed(2)}%`).join(', ')})`,
+                            mixBlendMode: 'screen',
                           }}
                         />
+                        <div className="absolute inset-10 rounded-full border border-white/5 shadow-[inset_0_0_18px_rgba(255,255,255,0.06)]" />
                         {/* inner glow ring */}
                         <div className="absolute inset-6 rounded-full border border-white/10 shadow-[inset_0_0_30px_rgba(255,255,255,0.08)]" />
                         {/* center circle */}
-                        <div className="w-24 h-24 md:w-28 md:h-28 rounded-full bg-slate-900/80 border border-slate-800 flex items-center justify-center text-sm text-slate-200">
-                          Spin Wheel
-                        </div>
+                     
                       </div>
 
                       {/* top pointer - bigger SVG arrow for clarity */}
@@ -345,3 +371,7 @@ const ProfilePage = () => {
 }
 
 export default ProfilePage
+
+
+
+

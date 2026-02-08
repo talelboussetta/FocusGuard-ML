@@ -13,7 +13,8 @@ from ..schemas.auth import (
     RegisterResponse,
     LoginRequest,
     LoginResponse,
-    TokenResponse
+    TokenResponse,
+    RefreshTokenRequest
 )
 from ..schemas.user import UserResponse
 from ..services import auth_service
@@ -101,7 +102,7 @@ async def login(
     description="Get new access token using refresh token"
 )
 async def refresh_token(
-    refresh_token: str,
+    request: RefreshTokenRequest,
     db: AsyncSession = Depends(get_db)
 ):
     """
@@ -116,7 +117,7 @@ async def refresh_token(
     
     # Verify refresh token
     payload = verify_token(
-        refresh_token,
+        request.refresh_token,
         secret_key=settings.jwt_secret_key,
         algorithm=settings.jwt_algorithm
     )
