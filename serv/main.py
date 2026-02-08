@@ -25,6 +25,7 @@ from api.routes import (
     team_message_router
 )
 from api.routes.rag import router as rag_router
+from api.routes.conversation import router as conversation_router
 from api.middleware.error_handler import register_exception_handlers
 from api.middleware.rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
@@ -70,6 +71,17 @@ async def lifespan(app: FastAPI):
         print("[OK] Database connection verified")
     else:
         print("[WARNING] Database connection check failed")
+    
+    # Warm up RAG service (loads models on startup instead of first request)
+    try:
+        from api.services.rag_service import get_rag_service
+        print("[*] Warming up RAG service (loading AI models)...")
+        rag_service = get_rag_service()
+        await rag_service.initialize()
+        print("[OK] RAG service ready (Alex is warmed up! ✨)")
+    except Exception as e:
+        print(f"[WARNING] RAG service initialization failed: {e}")
+        print("[INFO] AI Tutor will initialize on first request instead")
     
     print(f"[INFO] API running at: http://localhost:8000")
     print(f"[INFO] Swagger UI: http://localhost:8000/docs")
@@ -151,6 +163,7 @@ app.include_router(distraction_router)
 app.include_router(team_router)
 app.include_router(team_message_router)
 app.include_router(rag_router)
+app.include_router(conversation_router)
 
 
 @app.get(

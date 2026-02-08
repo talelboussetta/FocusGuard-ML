@@ -100,6 +100,48 @@ export interface RAGQueryResponse {
   model_used: string;
 }
 
+export interface ConversationMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  model_used?: string;
+  sources_used?: string;
+  created_at: string;
+}
+
+export interface Conversation {
+  id: string;
+  user_id: string;
+  title?: string;
+  created_at: string;
+  updated_at: string;
+  message_count: number;
+}
+
+export interface ConversationDetail extends Conversation {
+  messages: ConversationMessage[];
+}
+
+export interface ConversationListResponse {
+  conversations: Conversation[];
+  total: number;
+}
+
+export interface ConversationQueryRequest {
+  query: string;
+  conversation_id?: string;
+  top_k?: number;
+  include_sources?: boolean;
+}
+
+export interface ConversationQueryResponse {
+  conversation_id: string;
+  message_id: string;
+  answer: string;
+  sources?: SourceDocument[];
+  model_used: string;
+}
+
 export interface RAGQueryRequest {
   query: string;
   top_k?: number;
@@ -700,3 +742,51 @@ export const ragAPI = {
     return handleResponse<RAGQueryResponse>(response);
   },
 };
+
+export const conversationAPI = {
+  async list(skip: number = 0, limit: number = 20) {
+    const response = await fetch(`${API_BASE_URL}/conversations?skip=${skip}&limit=${limit}`, {
+      method: 'GET',
+      headers: {
+        ...getAuthHeader(),
+      },
+    });
+    return handleResponse<ConversationListResponse>(response);
+  },
+
+  async get(conversationId: string) {
+    const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}`, {
+      method: 'GET',
+      headers: {
+        ...getAuthHeader(),
+      },
+    });
+    return handleResponse<ConversationDetail>(response);
+  },
+
+  async query(data: ConversationQueryRequest) {
+    const response = await fetch(`${API_BASE_URL}/conversations/query`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...getAuthHeader(),
+      },
+      body: JSON.stringify(data),
+    });
+    return handleResponse<ConversationQueryResponse>(response);
+  },
+
+  async delete(conversationId: string) {
+    const response = await fetch(`${API_BASE_URL}/conversations/${conversationId}`, {
+      method: 'DELETE',
+      headers: {
+        ...getAuthHeader(),
+      },
+    });
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ detail: 'Failed to delete conversation' }));
+      throw new Error(error.detail || 'Failed to delete conversation');
+    }
+  },
+};
+
