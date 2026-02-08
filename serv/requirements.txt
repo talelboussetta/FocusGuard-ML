@@ -44,6 +44,9 @@ fastapi-cors>=0.0.6             # Cross-Origin Resource Sharing
 # Rate Limiting
 slowapi>=0.1.9                  # Rate limiting for FastAPI
 
+# Error Tracking & Monitoring
+sentry-sdk[fastapi]>=1.40.0     # Error tracking and performance monitoring
+
 # Database Migrations
 alembic>=1.13.0                 # Database migration tool
 

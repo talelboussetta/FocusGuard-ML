@@ -120,6 +120,25 @@ class Settings(BaseSettings):
     )
     
     # ========================================================================
+    # Error Tracking & Monitoring (Sentry)
+    # ========================================================================
+    
+    sentry_dsn: str = Field(
+        default="",
+        description="Sentry DSN for error tracking (leave empty to disable)"
+    )
+    
+    sentry_environment: str = Field(
+        default="development",
+        description="Environment name for Sentry (development, staging, production)"
+    )
+    
+    sentry_traces_sample_rate: float = Field(
+        default=1.0,
+        description="Sentry performance monitoring sample rate (0.0 to 1.0)"
+    )
+    
+    # ========================================================================
     # RAG & Vector Store Settings (Qdrant)
     # ========================================================================
     

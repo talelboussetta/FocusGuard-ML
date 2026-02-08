@@ -293,7 +293,7 @@ python main.py
 Create a `.env` file (see `.env.example`):
 
 ```env
-DATABASE_URL=postgresql+asyncpg://talel_admin:bou6199425@localhost:5432/focusguard_db
+DATABASE_URL=postgresql+asyncpg://your_username:your_password@localhost:5432/focusguard_db
 JWT_SECRET_KEY=your-super-secret-key-here
 CORS_ORIGINS=http://localhost:3000,http://localhost:5173
 ```

@@ -4,6 +4,9 @@ FocusGuard API - Main Application
 FastAPI application entry point.
 """
 
+import sentry_sdk
+from sentry_sdk.integrations.fastapi import FastApiIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +29,26 @@ from api.middleware.error_handler import register_exception_handlers
 from api.middleware.rate_limiter import limiter
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+
+
+# Initialize Sentry for error tracking and performance monitoring
+if settings.sentry_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_dsn,
+        environment=settings.sentry_environment,
+        traces_sample_rate=settings.sentry_traces_sample_rate,
+        integrations=[
+            FastApiIntegration(),
+            SqlalchemyIntegration(),
+        ],
+        # Capture errors, performance data, and breadcrumbs
+        send_default_pii=False,  # Don't send personally identifiable information
+        attach_stacktrace=True,
+        max_breadcrumbs=50,
+    )
+    print(f"[OK] Sentry initialized (environment: {settings.sentry_environment})")
+else:
+    print("[INFO] Sentry disabled (no DSN configured)")
 
 
 @asynccontextmanager
