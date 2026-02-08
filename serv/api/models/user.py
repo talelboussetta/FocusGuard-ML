@@ -125,5 +125,12 @@ class User(Base):
         cascade="all, delete-orphan"
     )
     
+    conversations = relationship(
+        "Conversation",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        order_by="desc(Conversation.updated_at)"
+    )
+    
     def __repr__(self):
         return f"<User(id={self.id}, username={self.username}, lvl={self.lvl})>"

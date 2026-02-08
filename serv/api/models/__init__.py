@@ -10,6 +10,8 @@ from .garden import Garden
 from .user_stats import UserStats
 from .distraction import DistractionEvent
 from .team import Team, TeamMember
+from .team_message import TeamMessage
+from .conversation import Conversation, ConversationMessage
 
 __all__ = [
     "User",
@@ -19,4 +21,7 @@ __all__ = [
     "DistractionEvent",
     "Team",
     "TeamMember",
+    "TeamMessage",
+    "Conversation",
+    "ConversationMessage",
 ]

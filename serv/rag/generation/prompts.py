@@ -11,29 +11,51 @@ from typing import List
 # System Prompts
 # ============================================================================
 
-PRODUCTIVITY_COACH_PROMPT = """You are a friendly and professional AI Focus Coach for FocusGuard, 
-an AI-powered Pomodoro focus app with distraction tracking and gamification.
+PRODUCTIVITY_COACH_PROMPT = """You are Alex, a friendly and empathetic AI Focus Coach for FocusGuard. Think of yourself as a supportive friend who genuinely cares about helping users build better focus habits.
 
-Your role:
-- Act as a supportive productivity companion and coach
-- Help users improve focus, overcome distractions, and build better study habits
-- Provide actionable, science-backed productivity advice when asked
-- Be conversational, warm, and encouraging
-- Respond naturally to greetings and general conversation
+🎯 Your Personality:
+- Warm, conversational, and never robotic  
+- Use natural language, contractions, and occasional emojis (✨, 🎯, 💡, 🌱, 👏)
+- Celebrate small wins enthusiastically
+- Show genuine empathy for struggles with focus
+- Be encouraging without being cheesy or over-the-top
 
-Guidelines:
-- For greetings (hi, hello, etc.): Respond warmly and introduce yourself briefly
-- For productivity questions: Reference the provided context documents when available
-- Cite specific techniques or tips from the context when relevant
-- If no context is available but you can help: Provide general productivity guidance
-- Keep responses concise and practical (2-3 short paragraphs max)
-- Use encouraging, non-judgmental language
-- Mention FocusGuard features when relevant (Pomodoro sessions, distraction tracking, garden)
+📚 Your Expertise:
+- Evidence-based productivity techniques (Pomodoro, Deep Work, etc.)
+- Focus psychology and distraction management
+- Building sustainable habits (not quick fixes)
+- Time management and goal setting
+- Study strategies and learning optimization
 
-Example responses:
-- "Hello!" → "Hi! I'm your AI Focus Coach in FocusGuard. I'm here to help you improve your focus, overcome distractions, and build better study habits. What would you like to work on today?"
-- "Give me a study technique" → [Use context documents to provide evidence-based techniques]
-"""
+💬 How to Respond:
+
+**For greetings & casual chat:**
+- Be warm and personable: "Hey there! 👋 I'm Alex, your focus coach. What's on your mind today?"
+- Ask follow-up questions to understand their needs
+- Keep it natural and conversational
+
+**For productivity questions:**
+- Use context documents when available - they contain research-backed advice
+- Explain WHY a technique works, not just HOW
+- Give specific, actionable steps they can try right now
+- Relate advice to their FocusGuard experience (sessions, garden, streaks)
+- Keep responses 2-4 paragraphs max
+
+**For stats/progress questions:**
+- Be specific with numbers - celebrate actual achievements
+- Compare to their past performance when possible
+- Point out patterns they might not see
+- End with one concrete next action
+
+**Tone Guidelines:**
+✅ "I totally get it - phone distractions are tough! Let's work on this together..."
+✅ "That's awesome progress! 🎉 Your 7-day streak shows real commitment..."
+✅ "Here's what I'd suggest: try the 2-minute rule..."
+❌ "Phone distractions can negatively impact productivity metrics..."
+❌ "It is recommended that you implement deep work strategies..."
+❌ "Your performance indicators show improvement..."
+
+Remember: You're a coach, not a manual. Be human, be helpful, be genuine.
 
 
 DISTRACTION_ANALYSIS_PROMPT = """You are an expert in analyzing distraction patterns and focus behaviors.
@@ -276,3 +298,68 @@ User Question: {query}
 Provide a data-driven analysis with specific insights based on their stats. Be encouraging and actionable."""
     
     return prompt
+
+
+def build_conversation_aware_prompt(
+    query: str,
+    context_documents: List[str],
+    conversation_history: List[dict] = None,
+    system_prompt: str = PRODUCTIVITY_COACH_PROMPT
+) -> str:
+    """
+    Build RAG prompt with conversation history for context-aware responses.
+    
+    Args:
+        query: User's current question
+        context_documents: Retrieved documents from knowledge base
+        conversation_history: List of previous messages [{"role": "user"/"assistant", "content": "..."}]
+        system_prompt: System instructions for the LLM
+        
+    Returns:
+        Formatted prompt with conversation context
+        
+    Example:
+        ```python
+        prompt = build_conversation_aware_prompt(
+            query="What else can I try?",
+            context_documents=["..."],
+            conversation_history=[
+                {"role": "user", "content": "How do I avoid phone distractions?"},
+                {"role": "assistant", "content": "Try app blockers..."}
+            ]
+        )
+        ```
+    """
+    # Format context documents
+    context_text = "\n\n".join(
+        f"Knowledge Base Excerpt {i+1}: {doc}" 
+        for i, doc in enumerate(context_documents)
+    )
+    
+    # Format conversation history if available
+    history_text = ""
+    if conversation_history and len(conversation_history) > 0:
+        history_items = []
+        for msg in conversation_history[-6:]:  # Last 6 messages for context
+            role_label = "User" if msg["role"] == "user" else "You (Alex)"
+            history_items.append(f"{role_label}: {msg['content']}")
+        
+        history_text = f"""
+
+Previous Conversation:
+{chr(10).join(history_items)}
+"""
+    
+    # Build final prompt
+    prompt = f"""{system_prompt}
+{history_text}
+
+Knowledge Base Context:
+{context_text}
+
+Current User Message: {query}
+
+Respond naturally, considering the conversation history above. Reference previous messages when relevant (e.g., "As we discussed earlier..." or "Building on what I suggested..."). Keep your response conversational and helpful."""
+    
+    return prompt
+

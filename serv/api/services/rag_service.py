@@ -256,6 +256,153 @@ Respond naturally and helpfully. If it's a greeting, introduce yourself warmly. 
             # Re-raise to be handled by route
             raise
     
+    async def query_with_conversation(
+        self,
+        query: str,
+        conversation_history: List[dict] = None,
+        top_k: int = 3,
+        category_filter: Optional[str] = None,
+        include_sources: bool = True,
+        user_id: Optional[str] = None,
+        db: Optional[AsyncSession] = None
+    ) -> RAGQueryResponse:
+        """
+        Process RAG query with conversation context for memory-aware responses.
+        
+        Args:
+            query: Current user question
+            conversation_history: Previous messages [{"role": "user"/"assistant", "content": "..."}]
+            top_k: Number of knowledge base documents to retrieve
+            category_filter: Optional category filter
+            include_sources: Whether to include source documents
+            user_id: Optional user ID for personalization
+            db: Optional database session
+        
+        Returns:
+            RAGQueryResponse with context-aware answer
+        """
+        if not self._initialized:
+            await self.initialize()
+        
+        logger.info(
+            f"[RAG Query w/ Conversation] query='{query[:80]}...', "
+            f"history_length={len(conversation_history) if conversation_history else 0}, "
+            f"user_id={user_id or 'anon'}"
+        )
+        
+        # Check for stats query
+        is_stats_query = self._is_stats_query(query)
+        user_stats_context = None
+        
+        if is_stats_query and user_id and db:
+            user_stats_context = await self._fetch_user_stats(user_id, db)
+        
+        # Build metadata filter
+        filter_metadata = {"category": category_filter} if category_filter else None
+        
+        try:
+            # Retrieve relevant documents
+            search_results = await self.retriever.retrieve(
+                query=query,
+                top_k=top_k,
+                filter_metadata=filter_metadata
+            )
+            
+            logger.info(f"Retrieved {len(search_results)} documents (scores: {[f'{r.score:.3f}' for r in search_results]})")
+            
+            # Check if conversational query (low relevance or no results)
+            is_conversational = not search_results or (search_results and search_results[0].score < 0.5)
+            
+            if is_conversational and not is_stats_query:
+                logger.info("Handling conversational query with history")
+                from rag.generation.prompts import build_conversation_aware_prompt, PRODUCTIVITY_COACH_PROMPT
+                
+                prompt = build_conversation_aware_prompt(
+                    query=query,
+                    context_documents=[],
+                    conversation_history=conversation_history,
+                    system_prompt=PRODUCTIVITY_COACH_PROMPT
+                )
+                
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=[prompt],
+                    system_prompt=""
+                )
+                
+                return RAGQueryResponse(
+                    answer=answer,
+                    sources=[],
+                    query=query,
+                    model_used=self.generator.model if self.generator else "conversational"
+                )
+            
+            # Extract context documents
+            context_docs = [result.document.content for result in search_results]
+            
+            # Build prompt with conversation context
+            from rag.generation.prompts import build_conversation_aware_prompt, build_stats_analysis_prompt
+            
+            if is_stats_query and user_stats_context:
+                # Stats query with conversation awareness
+                stats_prompt = build_stats_analysis_prompt(
+                    query=query,
+                    user_stats=user_stats_context,
+                    context_documents=context_docs[:2]
+                )
+                
+                # Add conversation context to stats prompt if available
+                if conversation_history:
+                    history_summary = "\n".join(
+                        f"- {msg['role']}: {msg['content'][:100]}..." 
+                        for msg in conversation_history[-3:]
+                    )
+                    stats_prompt += f"\n\nRecent Conversation:\n{history_summary}\n\nConsider the conversation context when providing insights."
+                
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=[stats_prompt],
+                    system_prompt=""
+                )
+            else:
+                # Regular RAG with conversation context
+                prompt = build_conversation_aware_prompt(
+                    query=query,
+                    context_documents=context_docs,
+                    conversation_history=conversation_history
+                )
+                
+                answer = await self.generator.generate(
+                    query=query,
+                    context_documents=[prompt],
+                    system_prompt=""
+                )
+            
+            # Build sources
+            sources = None
+            if include_sources and search_results:
+                sources = [
+                    SourceDocument(
+                        content=result.document.content[:300] + "..." if len(result.document.content) > 300 else result.document.content,
+                        source=result.document.metadata.get('source', 'unknown'),
+                        section_title=result.document.metadata.get('section_title', 'N/A'),
+                        score=result.score,
+                        category=result.document.metadata.get('category')
+                    )
+                    for result in search_results
+                ]
+            
+            return RAGQueryResponse(
+                answer=answer,
+                sources=sources,
+                query=query,
+                model_used=self.generator.model if self.generator else "unknown"
+            )
+            
+        except Exception as e:
+            logger.error(f"[RAG Query w/ Conversation] FAILED: {e}", exc_info=True)
+            raise
+    
     async def health_check(self) -> Dict[str, Any]:
         """Check health status of all RAG components."""
         if not self._initialized:
