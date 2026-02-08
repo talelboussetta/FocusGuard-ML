@@ -32,6 +32,7 @@ psycopg2-binary>=2.9.9          # PostgreSQL adapter (for migrations/sync ops)
 # Data Validation
 pydantic>=2.5.0                 # Data validation using Python type hints
 pydantic-settings>=2.1.0        # Settings management
+email-validator>=2.1.0          # Email validation for Pydantic EmailStr
 
 # Authentication & Security
 python-jose[cryptography]>=3.3.0  # JWT token handling
