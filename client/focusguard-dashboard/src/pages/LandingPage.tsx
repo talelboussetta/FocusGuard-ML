@@ -1,792 +1,776 @@
 import { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Sparkles, Brain, Leaf, Camera, TrendingUp, ArrowRight, ArrowUp, Clock, Target, Zap, Shield, Users, Award, Lock, Server, Eye, FileCheck } from 'lucide-react'
-import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.png'
-import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.png'
-import gardenImage3 from '../assets/images/garden_images/GST DACAR 121-04.png'
-import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.png'
+import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check } from 'lucide-react'
+import moonImage from '../assets/images/moonjpg.jpg'
 
 const LandingPage = () => {
   const navigate = useNavigate()
-  const [showScrollTop, setShowScrollTop] = useState(false)
+  
+  // Mouse parallax for orb
+  const mouseX = useMotionValue(0)
+  const mouseY = useMotionValue(0)
+  const smoothMouseX = useSpring(mouseX, { stiffness: 50, damping: 20 })
+  const smoothMouseY = useSpring(mouseY, { stiffness: 50, damping: 20 })
+  
+  const [isOrbHovered, setIsOrbHovered] = useState(false)
+  const [activeFeature, setActiveFeature] = useState(0) // 0=Timer, 1=AI, 2=Garden
+  const [moonSpin, setMoonSpin] = useState(0)
+  const [showFeatureDetails, setShowFeatureDetails] = useState(false)
+  const [floatingPos, setFloatingPos] = useState({ x: 0, y: 0 })
+  const [hasFloatingInit, setHasFloatingInit] = useState(false)
+  const [smallMoonIndex, setSmallMoonIndex] = useState(0)
+  const [smallMoonBaseY, setSmallMoonBaseY] = useState<number | null>(null)
+
+  // Feature data for orb navigation
+  const orbFeatures = [
+    {
+      icon: Timer,
+      name: 'Focus Timer',
+      color: 'emerald',
+      badge: 'Focus',
+      headline: 'Focus is a skill. We help you grow it.',
+      subtext: 'Science-backed Pomodoro sessions with real-time feedback'
+    },
+    {
+      icon: MessageSquare,
+      name: 'AI Coach',
+      color: 'violet',
+      badge: 'Coach',
+      headline: 'Your personal productivity mentor.',
+      subtext: 'Get insights from 40+ research docs on deep work'
+    },
+    {
+      icon: Sprout,
+      name: 'Personal Garden',
+      color: 'amber',
+      badge: 'Grow',
+      headline: 'Watch your consistency bloom.',
+      subtext: 'Visual progress tracking that motivates daily practice'
+    },
+  ]
+
+  const cycleFeature = () => {
+    setActiveFeature((prev) => (prev + 1) % 3)
+  }
+
+  const updateFloatingPosition = (index: number) => {
+    const ids = ['feature-focus', 'feature-coach', 'feature-garden']
+    const container = document.getElementById('pillars-section')
+    const target = document.getElementById(ids[index])
+    if (!target || !container) {
+      return
+    }
+    const containerRect = container.getBoundingClientRect()
+    const rect = target.getBoundingClientRect()
+    const size = 80
+    const x = rect.left - containerRect.left + (rect.width / 2) - (size / 2)
+    const y = rect.bottom - containerRect.top + 35
+    const baseY = smallMoonBaseY ?? y
+    if (smallMoonBaseY === null) {
+      setSmallMoonBaseY(y)
+    }
+    setFloatingPos({ x, y: baseY })
+    setHasFloatingInit(true)
+  }
 
   useEffect(() => {
-    const handleScroll = () => {
-      setShowScrollTop(window.scrollY > 400)
+    const init = () => updateFloatingPosition(0)
+    const handleResize = () => updateFloatingPosition(0)
+    window.addEventListener('resize', handleResize)
+    const t = window.setTimeout(init, 150)
+    return () => {
+      window.clearTimeout(t)
+      window.removeEventListener('resize', handleResize)
     }
-
-    window.addEventListener('scroll', handleScroll)
-    return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
-  const scrollToTop = () => {
-    window.scrollTo({ top: 0, behavior: 'smooth' })
-  }
+  const currentFeature = orbFeatures[activeFeature]
+  
+  useEffect(() => {
+    const handleMouseMove = (e: MouseEvent) => {
+      const { clientX, clientY } = e
+      const { innerWidth, innerHeight } = window
+      
+      // Convert to -1 to 1 range, then scale to 10-20px movement
+      const x = ((clientX / innerWidth) - 0.5) * 20
+      const y = ((clientY / innerHeight) - 0.5) * 20
+      
+      mouseX.set(x)
+      mouseY.set(y)
+    }
+    
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [mouseX, mouseY])
 
-  const scrollToHowItWorks = () => {
-    const element = document.getElementById('how-it-works')
-    element?.scrollIntoView({ behavior: 'smooth' })
-  }
-
-  const scrollToPrivacy = () => {
-    const element = document.getElementById('privacy')
-    element?.scrollIntoView({ behavior: 'smooth' })
-  }
-  const scrollToSignin=()=>{
-    const element=document.getElementById("bottom_arrow")
-    element?.scrollIntoView({behavior:"smooth"}) 
-  }
+  const pillars = [
+    {
+      icon: Timer,
+      title: 'Focus Timer',
+      description: 'Science-backed Pomodoro sessions that adapt to your rhythm',
+      details: [
+        'Start focused sprints with calibrated breaks so your energy doesn’t crash mid‑day.',
+        'Live signals help you recover focus faster when attention drifts.',
+      ],
+      gradient: 'from-emerald-400 to-teal-500',
+    },
+    {
+      icon: MessageSquare,
+      title: 'AI Coach',
+      description: 'Personalized insights from 40+ research docs on focus & productivity',
+      details: [
+        'Ask for context‑aware guidance grounded in cognitive science and learning research.',
+        'Get actionable prompts that turn reflection into consistent habit change.',
+      ],
+      gradient: 'from-violet-400 to-purple-500',
+    },
+    {
+      icon: Sprout,
+      title: 'Personal Garden',
+      description: 'Watch your dedication bloom into a thriving virtual ecosystem',
+      details: [
+        'Your streaks translate into visible growth, making progress feel tangible.',
+        'Small wins stack into a visual record of your best focus weeks.',
+      ],
+      gradient: 'from-amber-400 to-orange-500',
+    },
+  ]
 
   const features = [
-    {
-      icon: <Sparkles className="w-8 h-8" />,
-      title: 'Smart Focus Sessions',
-      description: 'Pomodoro technique enhanced with AI-powered insights',
-      gradient: 'from-primary-500 to-primary-700',
-    },
-    {
-      icon: <Brain className="w-8 h-8" />,
-      title: 'AI-Powered Insights',
-      description: 'Understand your focus patterns with computer vision',
-      gradient: 'from-purple-500 to-pink-700',
-    },
-    {
-      icon: <Leaf className="w-8 h-8" />,
-      title: 'Personal Garden',
-      description: 'Watch your productivity bloom into a beautiful garden',
-      gradient: 'from-nature-500 to-emerald-700',
-    },
-  ]
-
-  const stats = [
-    { value: '23%', label: 'Average Productivity Increase' },
-    { value: '85%', label: 'Users Report Better Focus' },
-    { value: '2.5x', label: 'More Deep Work Sessions' },
-    { value: '10k+', label: 'Focus Warriors Worldwide' },
-  ]
-
-  const howItWorksSteps = [
-    {
-      step: '01',
-      title: 'Start Your Session',
-      description: 'Choose your focus duration and begin a Pomodoro session. Our AI-powered camera tracks your engagement in real-time.',
-      icon: <Clock className="w-8 h-8" />,
-      gradient: 'from-primary-500 to-primary-700',
-    },
-    {
-      step: '02',
-      title: 'Stay Focused',
-      description: 'FocusGuard uses computer vision to monitor your attention level, providing gentle feedback to keep you on track.',
-      icon: <Camera className="w-8 h-8" />,
-      gradient: 'from-purple-500 to-pink-700',
-    },
-    {
-      step: '03',
-      title: 'Plant Your Progress',
-      description: 'Complete sessions to earn seeds and plant trees in your personal garden. Watch your dedication grow into a beautiful forest.',
-      icon: <Leaf className="w-8 h-8" />,
-      gradient: 'from-nature-500 to-emerald-700',
-    },
-    {
-      step: '04',
-      title: 'Get AI Insights',
-      description: 'Receive personalized analytics about your focus patterns, peak productivity times, and actionable recommendations.',
-      icon: <Brain className="w-8 h-8" />,
-      gradient: 'from-cyan-500 to-blue-700',
-    },
-  ]
-
-  const benefits = [
-    {
-      icon: <Target className="w-6 h-6" />,
-      title: 'Science-Backed Technique',
-      description: 'Based on the proven Pomodoro Technique, used by millions to enhance focus and productivity.',
-    },
-    {
-      icon: <Zap className="w-6 h-6" />,
-      title: 'Real-Time Feedback',
-      description: 'AI-powered camera detection helps you maintain focus by identifying distractions as they happen.',
-    },
-    {
-      icon: <Shield className="w-6 h-6" />,
-      title: 'Privacy First',
-      description: 'All camera processing happens locally. Your data stays on your device, ensuring complete privacy.',
-    },
-    {
-      icon: <Users className="w-6 h-6" />,
-      title: 'Build Streaks',
-      description: 'Maintain daily streaks and unlock achievements as you build a consistent focus habit.',
-    },
-    {
-      icon: <Award className="w-6 h-6" />,
-      title: 'Gamified Progress',
-      description: 'Turn productivity into a game with gardens, levels, and rewards that motivate you daily.',
-    },
-    {
-      icon: <TrendingUp className="w-6 h-6" />,
-      title: 'Deep Analytics',
-      description: 'Understand your productivity patterns with detailed charts and AI-generated insights.',
-    },
+    { icon: Zap, text: 'Real-time blink detection & posture tracking' },
+    { icon: TrendingUp, text: 'Deep analytics on focus patterns' },
+    { icon: Users, text: 'Team leaderboards & accountability' },
+    { icon: Eye, text: 'Camera never leaves your device' },
   ]
 
   const privacyFeatures = [
-    {
-      icon: <Lock className="w-8 h-8" />,
-      title: '100% Local Processing',
-      description: 'All AI models run entirely on your device. Your camera feed is processed locally and never leaves your computer.',
-      gradient: 'from-green-500 to-emerald-700',
-    },
-    {
-      icon: <Server className="w-8 h-8" />,
-      title: 'No Cloud Storage',
-      description: 'We don\'t store your data on any servers. Everything stays on your local machine, giving you complete control.',
-      gradient: 'from-blue-500 to-cyan-700',
-    },
-    {
-      icon: <Eye className="w-8 h-8" />,
-      title: 'Zero Tracking',
-      description: 'No analytics, no telemetry, no tracking cookies. We don\'t collect, transmit, or sell any of your personal data.',
-      gradient: 'from-purple-500 to-pink-700',
-    },
-    {
-      icon: <FileCheck className="w-8 h-8" />,
-      title: 'Open Source',
-      description: 'Our code is transparent and auditable. You can verify exactly what happens with your data at any time.',
-      gradient: 'from-primary-500 to-primary-700',
-    },
+    { icon: Shield, label: 'Private by Design', detail: 'Video never leaves device' },
+    { icon: Zap, label: 'Runs Locally', detail: 'Browser-based ML models' },
+    { icon: Lock, label: 'No Cloud Processing', detail: '100% client-side analysis' },
   ]
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.2,
-      },
-    },
-  }
-
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    visible: {
-      opacity: 1,
-      y: 0,
-      transition: {
-        duration: 0.6,
-        ease: 'easeOut',
-      },
-    },
-  }
-
   return (
-    <div className="min-h-screen overflow-hidden">
-      {/* Animated Background */}
-      <div className="fixed inset-0 z-0">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
-        <div className="absolute top-0 left-0 w-full h-full">
-          <motion.div
-            className="absolute top-20 left-20 w-96 h-96 bg-primary-500/20 rounded-full blur-3xl"
-            animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.3, 0.5, 0.3],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
-          <motion.div
-            className="absolute bottom-20 right-20 w-96 h-96 bg-nature-500/20 rounded-full blur-3xl"
-            animate={{
-              scale: [1.2, 1, 1.2],
-              opacity: [0.5, 0.3, 0.5],
-            }}
-            transition={{
-              duration: 8,
-              repeat: Infinity,
-              ease: 'easeInOut',
-            }}
-          />
+    <div className="min-h-screen overflow-x-hidden text-slate-100">
+      {/* Match global app background */}
+      <motion.div
+        className="fixed inset-0 -z-10"
+        animate={{
+          background: currentFeature.color === 'emerald'
+            ? [
+                'radial-gradient(circle at 20% 10%, rgba(16,185,129,0.10), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(16,185,129,0.18), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
+            : currentFeature.color === 'violet'
+            ? [
+                'radial-gradient(circle at 20% 10%, rgba(139,92,246,0.10), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(139,92,246,0.18), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
+            : [
+                'radial-gradient(circle at 20% 10%, rgba(245,158,11,0.12), transparent 55%), linear-gradient(180deg, #020617 0%, #0b1220 100%)',
+                'radial-gradient(circle at 80% 30%, rgba(245,158,11,0.2), transparent 60%), linear-gradient(180deg, #020617 0%, #0b1220 100%)'
+              ]
+        }}
+        transition={{ duration: 1.1, ease: 'easeInOut' }}
+      >
+        <motion.div
+          key={`bg-pulse-${activeFeature}`}
+          initial={{ opacity: 0.0, scale: 0.6 }}
+          animate={{ opacity: 0.35, scale: 1.2 }}
+          transition={{ duration: 0.9, ease: 'easeOut' }}
+          className="absolute inset-0"
+          style={{
+            background:
+              currentFeature.color === 'emerald'
+                ? 'radial-gradient(circle at 50% 45%, rgba(16,185,129,0.28) 0%, rgba(16,185,129,0.0) 60%)'
+                : currentFeature.color === 'violet'
+                ? 'radial-gradient(circle at 50% 45%, rgba(139,92,246,0.28) 0%, rgba(139,92,246,0.0) 60%)'
+                : 'radial-gradient(circle at 50% 45%, rgba(245,158,11,0.32) 0%, rgba(245,158,11,0.0) 60%)',
+          }}
+        />
+      </motion.div>
+
+      {/* Minimal Navigation */}
+      <motion.nav 
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6 }}
+        className="relative z-50 container mx-auto px-6 py-6 flex justify-between items-center"
+      >
+        <div className="flex items-center gap-2">
+          <Sprout className="w-6 h-6 text-emerald-400" strokeWidth={2.5} />
+          <span className="text-xl font-semibold text-slate-100">FocusGuard</span>
         </div>
-      </div>
+        <div className="flex items-center gap-4">
+          <button 
+            onClick={() => document.getElementById('privacy')?.scrollIntoView({ behavior: 'smooth' })}
+            className="hidden sm:flex items-center gap-1.5 text-sm text-slate-300 hover:text-slate-100 transition-colors"
+          >
+            <Shield size={16} />
+            Privacy
+          </button>
+          <button
+            onClick={() => navigate('/auth')}
+            className="text-sm font-medium text-slate-100 hover:text-slate-300 transition-colors"
+          >
+            Sign In
+          </button>
+        </div>
+      </motion.nav>
 
-      {/* Content */}
-      <div className="relative z-10">
-        {/* Navigation */}
-        <motion.nav
-          initial={{ y: -100 }}
-          animate={{ y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="container mx-auto px-6 py-8 flex justify-between items-center"
-        >
-          <div className="flex items-center space-x-2">
-            <Leaf className="w-8 h-8 text-nature-500" />
-            <span className="text-2xl font-display font-bold gradient-text">
-              FocusGuard
-            </span>
-          </div>
-          <div className="flex items-center gap-4">
-            <motion.button
-              onClick={scrollToPrivacy}
-              className="text-slate-300 hover:text-nature-400 transition-colors flex items-center space-x-2"
-              whileHover={{ scale: 1.05 }}
-            >
-              <Shield className="w-4 h-4" />
-              <span className="hidden sm:inline">Privacy</span>
-            </motion.button>
-            <button
-              onClick={() => navigate('/auth')}
-              className="btn-secondary"
-            >
-              Sign In
-            </button>
-          </div>
-        </motion.nav>
-
-        {/* Hero Section */}
-        <motion.section
-          variants={containerVariants}
-          initial="hidden"
-          animate="visible"
-          className="container mx-auto px-6 py-20 text-center"
-        >
-          <motion.div variants={itemVariants}>
-            <motion.div
-              className="inline-block mb-6 px-4 py-2 glass rounded-full"
-              whileHover={{ scale: 1.05 }}
-            >
-              <span className="text-sm font-medium text-primary-400">
-                ✨ AI-Powered Focus Platform
-              </span>
-            </motion.div>
+      {/* Hero Section */}
+      <section className="relative container mx-auto px-6 pt-20 pb-32">
+        <div className="relative z-10 grid lg:grid-cols-[1.05fr_0.95fr] gap-10 items-center">
+        {/* Hero Content */}
+        <div className="text-center lg:text-left">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            className="inline-block mb-6"
+          >
+            <div className="px-4 py-2 rounded-full bg-slate-900/60 backdrop-blur-sm border border-slate-800/60 text-sm font-medium text-slate-300">
+              ✨ Private by design
+            </div>
           </motion.div>
 
           <motion.h1
-            variants={itemVariants}
-            className="text-6xl md:text-7xl lg:text-8xl font-display font-bold mb-6 leading-tight"
+            key={`headline-${activeFeature}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-5xl md:text-7xl font-bold text-slate-100 mb-8 leading-[1.1] drop-shadow-[0_10px_30px_rgba(0,0,0,0.45)]"
           >
-            Grow your focus.
-            <br />
-            <span className="gradient-text">One session at a time.</span>
+            <span className={`bg-gradient-to-br bg-clip-text text-transparent ${
+              currentFeature.color === 'emerald'
+                ? 'from-emerald-300 via-emerald-400 to-emerald-500'
+                : currentFeature.color === 'violet'
+                ? 'from-violet-300 via-violet-400 to-violet-500'
+                : 'from-amber-300 via-amber-400 to-amber-500'
+            }`}>
+              {currentFeature.headline}
+            </span>
           </motion.h1>
 
-          <motion.p
-            variants={itemVariants}
-            className="text-xl md:text-2xl text-slate-400 mb-12 max-w-3xl mx-auto"
-          >
-            Transform your productivity with AI-powered insights, gamified progress,
-            and a beautiful garden that grows with every focused moment.
-          </motion.p>
-
+          {/* Interactive Feature Selector - More prominent */}
           <motion.div
-            variants={itemVariants}
-            className="flex flex-col sm:flex-row gap-4 justify-center items-center"
-          >
-            <motion.button
-              onClick={() => navigate('/auth')}
-              className="btn-primary group flex items-center space-x-2"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              <span>Start Focusing</span>
-              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-            </motion.button>
-            <motion.button
-              onClick={scrollToHowItWorks}
-              className="btn-secondary"
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-            >
-              How It Works
-            </motion.button>
-          </motion.div>
-
-          {/* Hero Visual */}
-          <motion.div
-            variants={itemVariants}
-            className="mt-20 relative"
-          >
-            <div className="glass rounded-3xl p-8 max-w-5xl mx-auto overflow-hidden">
-              <motion.div
-                className="aspect-video rounded-2xl overflow-hidden relative"
-                whileHover={{ scale: 1.02 }}
-                transition={{ duration: 0.3 }}
-              >
-                <img
-                  src={gardenImage1}
-                  alt="Beautiful forest representing your productivity garden"
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 via-slate-900/20 to-transparent" />
-                <div className="absolute bottom-6 left-6 right-6">
-                  <p className="text-white text-lg font-medium">Your productivity garden awaits 🌳</p>
-                </div>
-              </motion.div>
-            </div>
-          </motion.div>
-        </motion.section>
-
-        {/* Features Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <motion.h2
             initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-display font-bold text-center mb-16"
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="mb-8"
           >
-            Everything you need to
-            <span className="gradient-text"> focus better</span>
-          </motion.h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {features.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.2 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -10 }}
-                className="card-soft group cursor-pointer"
-              >
-                <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform duration-300`}
-                >
-                  {feature.icon}
-                </div>
-                <h3 className="text-2xl font-display font-semibold mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Stats Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <div className="glass rounded-3xl p-12">
-            <div className="grid md:grid-cols-4 gap-8">
-              {stats.map((stat, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ duration: 0.6, delay: index * 0.1 }}
-                  viewport={{ once: true }}
-                  className="text-center"
-                >
-                  <motion.div
-                    className="text-4xl md:text-5xl font-display font-bold gradient-text mb-2"
-                    whileHover={{ scale: 1.1 }}
+            <p className="text-sm text-slate-400 mb-3 font-medium">Explore features</p>
+            <div className="flex gap-3 justify-center lg:justify-start flex-wrap">
+              {orbFeatures.map((feature, idx) => {
+                const Icon = feature.icon
+                return (
+                  <motion.button
+                    key={idx}
+                    onClick={() => setActiveFeature(idx)}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className={`group px-4 py-2.5 rounded-xl text-sm font-semibold transition-all flex items-center gap-2 ${
+                      activeFeature === idx
+                        ? feature.color === 'emerald'
+                          ? 'bg-emerald-900/40 text-emerald-200 border-2 border-emerald-500/50 shadow-lg shadow-emerald-500/10'
+                          : feature.color === 'violet'
+                          ? 'bg-violet-900/40 text-violet-200 border-2 border-violet-500/50 shadow-lg shadow-violet-500/10'
+                          : 'bg-amber-900/40 text-amber-200 border-2 border-amber-500/50 shadow-lg shadow-amber-500/10'
+                        : 'bg-slate-900/70 text-slate-300 border-2 border-slate-800 hover:border-slate-700 hover:bg-slate-950'
+                    }`}
                   >
-                    {stat.value}
-                  </motion.div>
-                  <div className="text-slate-400">{stat.label}</div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </motion.section>
-
-        {/* How It Works Section */}
-        <motion.section
-          id="how-it-works"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-display font-bold text-center mb-8"
-          >
-            How <span className="gradient-text">FocusGuard</span> Works
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="text-xl text-slate-400 text-center mb-16 max-w-3xl mx-auto"
-          >
-            Our AI-powered platform combines proven productivity techniques with cutting-edge technology
-            to help you achieve deep focus and build lasting habits.
-          </motion.p>
-
-          <div className="space-y-12">
-            {howItWorksSteps.map((step, index) => {
-              const stepImages = [gardenImage2, gardenImage3, gardenImage4, gardenImage1]
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: index % 2 === 0 ? -50 : 50 }}
-                  whileInView={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.8, delay: index * 0.2 }}
-                  viewport={{ once: true }}
-                  className={`flex flex-col ${index % 2 === 0 ? 'md:flex-row' : 'md:flex-row-reverse'} items-center gap-8`}
-                >
-                  <div className="flex-1">
-                    <motion.div
-                      className={`w-20 h-20 rounded-2xl bg-gradient-to-br ${step.gradient} flex items-center justify-center mb-6`}
-                      whileHover={{ rotate: 360, scale: 1.1 }}
-                      transition={{ duration: 0.6 }}
-                    >
-                      {step.icon}
-                    </motion.div>
-                    <div className="text-6xl font-display font-bold text-slate-800 mb-4">
-                      {step.step}
-                    </div>
-                    <h3 className="text-3xl font-display font-semibold mb-4">
-                      {step.title}
-                    </h3>
-                    <p className="text-lg text-slate-400 leading-relaxed">
-                      {step.description}
-                    </p>
-                  </div>
-                  <div className="flex-1">
-                    <motion.div
-                      className="glass rounded-2xl overflow-hidden relative aspect-square"
-                      whileHover={{ scale: 1.05 }}
-                      transition={{ duration: 0.3 }}
-                    >
-                      <img
-                        src={stepImages[index]}
-                        alt={step.title}
-                        className="w-full h-full object-cover"
+                    <Icon className="w-4 h-4" />
+                    {feature.name}
+                    {activeFeature === idx && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="w-2 h-2 rounded-full bg-current"
                       />
-                      <div className={`absolute inset-0 bg-gradient-to-br ${step.gradient} mix-blend-overlay opacity-20`} />
-                    </motion.div>
-                  </div>
-                </motion.div>
-              )
-            })}
-          </div>
-        </motion.section>
-
-        {/* Benefits Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <motion.h2
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-display font-bold text-center mb-8"
-          >
-            Why Choose <span className="gradient-text">FocusGuard?</span>
-          </motion.h2>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.1 }}
-            viewport={{ once: true }}
-            className="text-xl text-slate-400 text-center mb-16 max-w-3xl mx-auto"
-          >
-            Research shows that the average person loses focus every 40 seconds when working on a computer.
-            FocusGuard helps you reclaim your attention and achieve peak productivity.
-          </motion.p>
-
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {benefits.map((benefit, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-                className="card-soft"
-              >
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-500 to-nature-500 flex items-center justify-center mb-4">
-                  {benefit.icon}
-                </div>
-                <h3 className="text-xl font-display font-semibold mb-3">
-                  {benefit.title}
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  {benefit.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
-        </motion.section>
-
-        {/* Science Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <div className="glass rounded-3xl p-12 max-w-5xl mx-auto">
-            <motion.h2
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-              className="text-3xl md:text-4xl font-display font-bold text-center mb-6"
-            >
-              Backed by <span className="gradient-text">Science</span>
-            </motion.h2>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.2 }}
-              viewport={{ once: true }}
-              className="text-lg text-slate-300 leading-relaxed space-y-4"
-            >
-              <p>
-                The Pomodoro Technique, developed by Francesco Cirillo in the late 1980s, 
-                has been scientifically proven to improve focus and productivity. By breaking 
-                work into focused intervals, you leverage your brain's natural attention span.
-              </p>
-              <p>
-                Studies show that taking regular breaks can improve mental agility by up to 30%. 
-                FocusGuard enhances this proven method with AI-powered insights, helping you 
-                understand when you're most productive and how to optimize your work schedule.
-              </p>
-              <p>
-                Our computer vision technology uses machine learning to detect signs of 
-                distraction—all processed locally on your device for complete privacy. This 
-                real-time feedback helps you develop better focus habits naturally.
-              </p>
-            </motion.div>
-          </div>
-        </motion.section>
-
-        {/* Privacy Section */}
-        <motion.section
-          id="privacy"
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            viewport={{ once: true }}
-            className="text-center mb-16"
-          >
-            <motion.div
-              className="inline-flex items-center space-x-2 px-4 py-2 glass rounded-full mb-6"
-              whileHover={{ scale: 1.05 }}
-            >
-              <Shield className="w-5 h-5 text-green-400" />
-              <span className="text-sm font-medium text-green-400">
-                Your Privacy Matters
-              </span>
-            </motion.div>
-            <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">
-              Your Data Stays <span className="gradient-text">With You</span>
-            </h2>
-            <p className="text-xl text-slate-400 max-w-3xl mx-auto">
-              We built FocusGuard with privacy as our top priority. Your focus data, camera feed, 
-              and personal information never leave your device. Period.
-            </p>
+                    )}
+                  </motion.button>
+                )
+              })}
+            </div>
           </motion.div>
 
-          <div className="grid md:grid-cols-2 gap-8 mb-16">
-            {privacyFeatures.map((feature, index) => (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.6, delay: index * 0.1 }}
-                viewport={{ once: true }}
-                whileHover={{ y: -5 }}
-                className="card-soft"
-              >
-                <div
-                  className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${feature.gradient} flex items-center justify-center mb-6`}
-                >
-                  {feature.icon}
-                </div>
-                <h3 className="text-2xl font-display font-semibold mb-4">
-                  {feature.title}
-                </h3>
-                <p className="text-slate-400 leading-relaxed">
-                  {feature.description}
-                </p>
-              </motion.div>
-            ))}
-          </div>
+          {/* Subtext and CTA */}
+          <div className="max-w-2xl mx-auto lg:mx-0">
+            <motion.p
+              key={`subtext-${activeFeature}`}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5 }}
+              className="text-lg md:text-xl text-slate-300 mb-5 leading-relaxed"
+            >
+              {currentFeature.subtext}
+            </motion.p>
 
-          {/* Privacy Details */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
-            viewport={{ once: true }}
-            className="glass rounded-3xl p-8 md:p-12 max-w-5xl mx-auto"
+            <motion.p
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="text-sm text-slate-400 font-medium mb-8 flex items-center justify-center lg:justify-start gap-2"
+            >
+              <Lock className="w-4 h-4" />
+              Local AI • No cloud video • Privacy-first
+            </motion.p>
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start items-center lg:items-start"
+            >
+              <button
+                onClick={() => navigate('/auth')}
+                className="group px-8 py-4 bg-slate-900 text-white rounded-xl font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20 hover:shadow-xl hover:shadow-slate-900/30 flex items-center gap-2"
+              >
+                Start Free
+                <ChevronRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+              </button>
+              <button
+                onClick={() => document.getElementById('how-it-works')?.scrollIntoView({ behavior: 'smooth' })}
+                className="group px-8 py-4 bg-slate-900/70 backdrop-blur-sm text-slate-100 rounded-xl font-semibold border border-slate-800/60 hover:bg-slate-900/80 transition-all flex items-center gap-2"
+              >
+                <Play className="w-5 h-5" />
+                See How It Works
+              </button>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.6, delay: 0.7 }}
+              className="mt-10"
+            >
+              <p className="text-slate-400 mb-4 text-xs font-semibold uppercase tracking-wider">
+                Privacy-First Architecture
+              </p>
+              <div className="flex flex-wrap gap-3">
+                {privacyFeatures.map((item, i) => {
+                  const Icon = item.icon
+                  return (
+                    <motion.div
+                      key={i}
+                      initial={{ opacity: 0, y: 12 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.8 + i * 0.1 }}
+                      whileHover={{ y: -3, scale: 1.01 }}
+                      className="flex items-center gap-3 px-5 py-3 bg-slate-900/70 backdrop-blur-md rounded-xl border border-slate-800/60 shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <Icon className="w-5 h-5 text-slate-300 flex-shrink-0" strokeWidth={2} />
+                      <div className="text-left">
+                        <p className="text-sm font-semibold text-slate-100">{item.label}</p>
+                        <p className="text-xs text-slate-400">{item.detail}</p>
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          </div>
+        </div>
+
+        {/* Interactive Feature Orb - Now below title */}
+        <motion.div 
+          whileHover={{ scale: 1.04 }}
+          className="relative w-[360px] h-[360px] lg:w-[460px] lg:h-[460px] mx-auto my-8 lg:my-0 z-0"
+        >
+          {/* Clickable Moon */}
+          <motion.button
+            type="button"
+            onClick={() => { cycleFeature(); setMoonSpin((prev) => prev + 360); setShowFeatureDetails(true) }}
+            onMouseEnter={() => setIsOrbHovered(true)}
+            onMouseLeave={() => setIsOrbHovered(false)}
+            className="absolute inset-[12%] rounded-full overflow-hidden focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-300/60"
+            aria-label="Cycle feature"
+            whileHover={{ scale: 1.02 }}
+            transition={{ type: 'spring', stiffness: 140, damping: 18 }}
           >
-            <h3 className="text-2xl md:text-3xl font-display font-bold mb-8 text-center">
-              How It Works <span className="gradient-text">Locally</span>
-            </h3>
-            <div className="space-y-6 text-slate-300 leading-relaxed">
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center text-sm font-bold">
-                  1
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 text-slate-200">AI Models Run on Your Device</h4>
-                  <p>
-                    Our computer vision models are downloaded once and run entirely on your local machine. 
-                    When you start a session, your camera feed is processed in real-time by your own CPU/GPU—nothing 
-                    is sent to any server or cloud service.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-nature-500 to-emerald-600 flex items-center justify-center text-sm font-bold">
-                  2
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 text-slate-200">Local Data Storage</h4>
-                  <p>
-                    All your focus sessions, analytics, and garden progress are stored in your browser's local 
-                    storage or on your device's file system. We use IndexedDB for efficient local storage that 
-                    never syncs to any external server.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-sm font-bold">
-                  3
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 text-slate-200">No Network Requests</h4>
-                  <p>
-                    During your focus sessions, FocusGuard makes zero network requests. You can even disconnect 
-                    from the internet completely and the app will continue to work perfectly. The only time we 
-                    communicate with servers is during initial app download.
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="flex-shrink-0 w-8 h-8 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-sm font-bold">
-                  4
-                </div>
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 text-slate-200">You're in Control</h4>
-                  <p>
-                    Want to export your data? No problem. Want to delete everything? One click. Want to verify 
-                    our claims? Check our open-source code. Your privacy is not just a promise—it's built into 
-                    our architecture.
-                  </p>
-                </div>
+            <motion.div
+              className="absolute -inset-10 rounded-full blur-[70px]"
+              animate={{
+                background: currentFeature.color === 'emerald'
+                  ? 'radial-gradient(circle, rgba(16, 185, 129, 0.75) 0%, rgba(16, 185, 129, 0.08) 68%)'
+                  : currentFeature.color === 'violet'
+                  ? 'radial-gradient(circle, rgba(139, 92, 246, 0.75) 0%, rgba(139, 92, 246, 0.08) 68%)'
+                  : 'radial-gradient(circle, rgba(245, 158, 11, 0.75) 0%, rgba(245, 158, 11, 0.08) 68%)'
+              }}
+              transition={{ duration: 0.8 }}
+            />
+            <motion.div
+              className="absolute -inset-16 rounded-full blur-[140px]"
+              animate={{
+                background: currentFeature.color === 'emerald'
+                  ? 'radial-gradient(circle, rgba(110, 231, 183, 0.45) 0%, rgba(16, 185, 129, 0.06) 72%)'
+                  : currentFeature.color === 'violet'
+                  ? 'radial-gradient(circle, rgba(167, 139, 250, 0.45) 0%, rgba(139, 92, 246, 0.06) 72%)'
+                  : 'radial-gradient(circle, rgba(251, 191, 36, 0.45) 0%, rgba(245, 158, 11, 0.06) 72%)'
+              }}
+              transition={{ duration: 0.8 }}
+            />
+            <motion.img
+              src={moonImage}
+              alt="Moon surface"
+              className="relative z-0 w-full h-full object-cover rounded-full shadow-2xl shadow-black/40 opacity-80"
+              animate={{ rotate: moonSpin }}
+              transition={{ duration: 2.6, ease: 'easeInOut' }}
+              style={{
+                y: smoothMouseY,
+                x: smoothMouseX,
+              }}
+            />
+            <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
+            <div className="absolute inset-0 rounded-full shadow-[inset_0_0_60px_rgba(0,0,0,0.45)]" />
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+              <div className="px-4 py-2 rounded-full text-xs font-bold uppercase tracking-[0.35em] text-white/95 bg-black/40 border border-white/30 backdrop-blur-sm shadow-[0_0_24px_rgba(0,0,0,0.45)]">
+                {currentFeature.badge === 'Focus' ? 'FOCUS' : currentFeature.badge === 'Coach' ? 'COACH' : 'GROW'}
               </div>
             </div>
-            <motion.div
-              className="mt-8 p-6 rounded-2xl bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20"
-              whileHover={{ scale: 1.02 }}
-            >
-              <div className="flex items-start gap-3">
-                <Lock className="w-6 h-6 text-green-400 flex-shrink-0 mt-1" />
-                <div>
-                  <h4 className="font-semibold text-lg mb-2 text-green-400">Privacy Guarantee</h4>
-                  <p className="text-slate-300">
-                    We will never collect, transmit, sell, or share your personal data. This is not just 
-                    a policy—it's impossible by design. Your trust is our foundation.
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          </motion.div>
-        </motion.section>
-
-        {/* CTA Section */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          viewport={{ once: true }}
-          className="container mx-auto px-6 py-20"
-        >
-          <div className="glass rounded-3xl p-12 text-center max-w-4xl mx-auto">
-            <motion.div
-              initial={{ scale: 0.9 }}
-              whileInView={{ scale: 1 }}
-              transition={{ duration: 0.6 }}
-              viewport={{ once: true }}
-            >
-              <h2 className="text-4xl md:text-5xl font-display font-bold mb-6">
-                Ready to transform your
-                <span className="gradient-text"> productivity?</span>
-              </h2>
-              <p className="text-xl text-slate-400 mb-8">
-                Join thousands of focused minds growing their potential every day.
-              </p>
-              <motion.button
-                onClick={() => navigate('/auth')}
-                className="btn-primary text-lg"
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-              >
-                Get Started Free
-              </motion.button>
-            </motion.div>
-          </div>
-        </motion.section>
-
-        {/* Footer */}
-        <footer className="container mx-auto px-6 py-12 text-center text-slate-500">
-          <p>© 2026 FocusGuard. Made with 💚 for focused minds everywhere.</p>
-            <motion.button
-              onClick={scrollToSignin}
-              className="text-slate-300 hover:text-nature-400 transition-colors flex items-center space-x-2"
-              whileHover={{ scale: 1.05 }}
-            ></motion.button>
-        </footer>
-
-        {/* Scroll to Top Button */}
-        {showScrollTop && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={scrollToTop}
-            className="fixed bottom-8 right-8 p-4 rounded-full bg-gradient-to-r from-primary-500 to-primary-700 text-white shadow-lg hover:shadow-xl transition-all z-50"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            aria-label="Scroll to top"
-          >
-            <ArrowUp className="w-6 h-6" />
           </motion.button>
-        )}
-      </div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: isOrbHovered ? 1 : 0, scale: isOrbHovered ? 1 : 0.95 }}
+            className="absolute -bottom-16 left-1/2 -translate-x-1/2 pointer-events-none"
+          >
+            <div className="px-4 py-2 bg-slate-900/90 backdrop-blur-md text-white text-xs font-semibold rounded-lg shadow-xl border border-white/10 whitespace-nowrap">
+              Click the moon to explore
+            </div>
+          </motion.div>
+        </motion.div>
+        </div>
+      </section>
+
+      {/* How It Works Micro-Timeline */}
+      <section className="container mx-auto px-6 py-16">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto"
+        >
+          <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-4">
+            {[
+              { step: '1', title: 'Start a session', icon: Timer },
+              { step: '2', title: 'AI observes locally', icon: Eye },
+              { step: '3', title: 'Garden grows + insights', icon: Sprout },
+            ].map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, scale: 0.8 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="flex items-center gap-4"
+              >
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg ${
+                  i === 0 ? 'bg-gradient-to-br from-emerald-200 to-emerald-300 border-2 border-emerald-400/30' :
+                  i === 1 ? 'bg-gradient-to-br from-violet-200 to-violet-300 border-2 border-violet-400/30' :
+                  'bg-gradient-to-br from-amber-200 to-amber-300 border-2 border-amber-400/30'
+                }`}>
+                  <item.icon className={`w-6 h-6 ${
+                    i === 0 ? 'text-emerald-700' :
+                    i === 1 ? 'text-violet-700' :
+                    'text-amber-700'
+                  }`} strokeWidth={2.5} />
+                </div>
+                <div className="flex-1">
+                  <div className="text-xs font-bold text-slate-400 uppercase tracking-wide">Step {item.step}</div>
+                  <div className="text-sm font-semibold text-slate-100">{item.title}</div>
+                </div>
+                {i < 2 && (
+                  <ChevronRight className="hidden md:block w-5 h-5 text-slate-300" />
+                )}
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Three Pillars */}
+      <section id="how-it-works" className="container mx-auto px-6 py-24 relative">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center mb-16"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-100 mb-4">
+            Three pillars of focused growth
+          </h2>
+          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
+            Everything you need to build deep work habits, backed by science and AI
+          </p>
+          <p className='text-lg text -slate-300 max-w-2xl mx-auto'>
+            Click the moon on the bottom right to explore each pillar in detail
+          </p>
+        </motion.div>
+
+        <div id="pillars-section" className="relative grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {pillars.map((pillar, i) => (
+            <motion.div
+              key={i}
+              id={i === 0 ? 'feature-focus' : i === 1 ? 'feature-coach' : 'feature-garden'}
+              initial={{ opacity: 0, y: 30 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: i * 0.1 }}
+              whileHover={{ y: -8 }}
+              className={`group relative p-8 bg-slate-900/70 backdrop-blur-sm border border-slate-800/60 rounded-2xl hover:shadow-2xl hover:shadow-slate-900/10 transition-all ${
+                i === 1 ? 'md:-mt-6 md:scale-[1.03] shadow-xl' : ''
+              }`}
+            >
+                    <div className={`w-14 h-14 rounded-xl bg-gradient-to-br ${pillar.gradient} flex items-center justify-center mb-6 group-hover:scale-110 transition-transform`}>
+                      <pillar.icon className="w-7 h-7 text-white" strokeWidth={2.5} />
+                    </div>
+              <h3 className="text-2xl font-bold text-slate-100 mb-3">
+                {pillar.title}
+              </h3>
+              <p className="text-slate-300 leading-relaxed">
+                {pillar.description}
+              </p>
+              <motion.div
+                initial={false}
+                animate={{
+                  height: showFeatureDetails && activeFeature === i ? 'auto' : 0,
+                  opacity: showFeatureDetails && activeFeature === i ? 1 : 0,
+                  marginTop: showFeatureDetails && activeFeature === i ? 12 : 0,
+                }}
+                transition={{ duration: 0.45, ease: 'easeInOut' }}
+                className="overflow-hidden"
+              >
+                <div className="space-y-2 text-sm text-slate-400">
+                  {pillar.details.map((line, idx) => (
+                    <p key={idx}>{line}</p>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          ))}
+          {/* Floating Moon Navigator */}
+          <motion.button
+            type="button"
+            onClick={() => {
+              const next = (smallMoonIndex + 1) % 3
+              setSmallMoonIndex(next)
+              setActiveFeature(next)
+              setShowFeatureDetails(true)
+              updateFloatingPosition(next)
+            }}
+            className="absolute z-20 group"
+            aria-label="Jump to feature section"
+            whileHover={{ scale: 1.05 }}
+            transition={{ type: 'spring', stiffness: 180, damping: 16 }}
+            animate={{ x: floatingPos.x, y: floatingPos.y }}
+            style={{ left: 0, top: 0, visibility: hasFloatingInit ? 'visible' : 'hidden' }}
+          >
+            <div className="relative w-20 h-20 rounded-full overflow-hidden shadow-xl border border-white/10">
+              <motion.div
+                className="absolute -inset-6 rounded-full blur-[30px]"
+                animate={{
+                  background: currentFeature.color === 'emerald'
+                    ? 'radial-gradient(circle, rgba(16, 185, 129, 0.35) 0%, rgba(16, 185, 129, 0.0) 70%)'
+                    : currentFeature.color === 'violet'
+                    ? 'radial-gradient(circle, rgba(139, 92, 246, 0.35) 0%, rgba(139, 92, 246, 0.0) 70%)'
+                    : 'radial-gradient(circle, rgba(245, 158, 11, 0.4) 0%, rgba(245, 158, 11, 0.0) 70%)'
+                }}
+                transition={{ duration: 0.8 }}
+              />
+              <img
+                src={moonImage}
+                alt=""
+                className="relative z-10 w-full h-full object-cover rounded-full opacity-75 grayscale-[0.2] saturate-[0.8]"
+              />
+              <div className="absolute inset-0 rounded-full shadow-[inset_0_0_24px_rgba(0,0,0,0.45)]" />
+              <div className="absolute inset-0 rounded-full ring-1 ring-white/10" />
+            </div>
+            <div className="mt-2 text-xs text-slate-300 bg-slate-900/80 border border-slate-800/60 px-2 py-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity">
+              {smallMoonIndex === 0 ? 'Focus Timer' : smallMoonIndex === 1 ? 'AI Coach' : 'Personal Garden'}
+            </div>
+          </motion.button>
+        </div>
+      </section>
+
+      {/* Features Grid */}
+      <section className="container mx-auto px-6 py-24 bg-gradient-to-b from-transparent via-slate-900/40 to-transparent">
+        <div className="max-w-4xl mx-auto">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h3 className="text-3xl font-bold text-slate-100 mb-4">
+              Built for serious focus
+            </h3>
+          </motion.div>
+
+          <div className="grid sm:grid-cols-2 gap-6">
+            {features.map((feature, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, x: i % 2 === 0 ? -20 : 20 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: i * 0.1 }}
+                className="flex items-start gap-4 p-6 bg-slate-900/60 backdrop-blur-sm border border-slate-800/60 rounded-xl"
+              >
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-900/60 to-teal-900/60 flex items-center justify-center flex-shrink-0 border border-emerald-500/20">
+                  <feature.icon className="w-5 h-5 text-emerald-200" strokeWidth={2.5} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-slate-300 font-medium">{feature.text}</p>
+                </div>
+                <Check className="w-5 h-5 text-emerald-600 flex-shrink-0" strokeWidth={3} />
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Outcomes Strip */
+      <section className="container mx-auto px-6 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-5xl mx-auto"
+        >
+          <div className="text-center mb-12">
+            <h3 className="text-3xl font-bold text-slate-100 mb-4">
+              Built for real outcomes
+            </h3>
+            <p className="text-slate-300">
+              Simple signals that compound into lasting focus habits
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {[
+              {
+                title: 'More Focus Minutes',
+                value: '+38%',
+                detail: 'Sustained sessions with fewer resets'
+              },
+              {
+                title: 'Fewer Distractions',
+                value: '-27%',
+                detail: 'Local signals nudge you back on track'
+              },
+              {
+                title: 'Stronger Streaks',
+                value: '+2.4x',
+                detail: 'Visual growth drives daily consistency'
+              }
+            ].map((item, i) => (
+              <motion.div
+                key={item.title}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.1 }}
+                className="rounded-2xl p-6 bg-slate-900/60 border border-slate-800/60 shadow-lg"
+              >
+                <div className="text-xs uppercase tracking-wider text-slate-500 mb-2">
+                  Outcome
+                </div>
+                <div className="text-3xl font-bold text-slate-100 mb-2">
+                  {item.value}
+                </div>
+                <div className="text-sm font-semibold text-slate-200 mb-1">
+                  {item.title}
+                </div>
+                <div className="text-sm text-slate-400">
+                  {item.detail}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+/* Privacy Block */}
+      <section id="privacy" className="container mx-auto px-6 py-24">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="max-w-4xl mx-auto p-12 bg-gradient-to-br from-emerald-950/50 via-slate-900/70 to-teal-950/40 border border-emerald-500/20 rounded-3xl"
+        >
+          <div className="flex items-start gap-6 mb-8">
+            <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500/60 to-teal-500/60 flex items-center justify-center flex-shrink-0 border border-emerald-400/30">
+              <Lock className="w-8 h-8 text-white" strokeWidth={2.5} />
+            </div>
+            <div>
+              <h3 className="text-3xl font-bold text-slate-100 mb-3">
+                Runs locally — camera never leaves device
+              </h3>
+              <p className="text-lg text-slate-300 leading-relaxed mb-6">
+                All AI analysis happens on your machine. Zero data transmission. 
+                Zero tracking. Zero compromise on privacy.
+              </p>
+            </div>
+          </div>
+
+          <div className="grid sm:grid-cols-3 gap-6">
+            {[
+              { label: '100% local ML', icon: Lock },
+              { label: 'No cloud storage', icon: Shield },
+              { label: 'Open source', icon: Eye },
+            ].map((item, i) => (
+              <div key={i} className="flex items-center gap-3 p-4 bg-slate-900/60 backdrop-blur-sm rounded-xl border border-emerald-500/20">
+                <item.icon className="w-5 h-5 text-emerald-300" strokeWidth={2.5} />
+                <span className="text-sm font-semibold text-slate-300">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Final CTA */}
+      <section className="container mx-auto px-6 py-32">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          whileInView={{ opacity: 1, scale: 1 }}
+          viewport={{ once: true }}
+          className="max-w-3xl mx-auto text-center"
+        >
+          <h2 className="text-4xl md:text-5xl font-bold text-slate-100 mb-6">
+            Start growing your focus today
+          </h2>
+          <p className="text-xl text-slate-300 mb-10">
+            No credit card. No commitments. Just focus.
+          </p>
+          <button
+            onClick={() => navigate('/auth')}
+            className="px-10 py-5 bg-slate-900 text-white rounded-xl text-lg font-semibold hover:bg-slate-800 transition-all shadow-xl shadow-slate-900/20 hover:shadow-2xl hover:shadow-slate-900/30"
+          >
+            Get Started Free
+          </button>
+        </motion.div>
+      </section>
+
+      {/* Minimal Footer */}
+      <footer className="container mx-auto px-6 py-12 border-t border-slate-800/60">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-4 text-sm text-slate-400">
+          <p>&copy; 2026 FocusGuard. Made for focused minds.</p>
+          <div className="flex items-center gap-6">
+            <a href="#privacy" className="hover:text-slate-300 transition-colors">
+              Privacy
+            </a>
+            <button onClick={() => navigate('/auth')} className="hover:text-slate-300 transition-colors">
+              Sign In
+            </button>
+          </div>
+        </div>
+      </footer>
+
     </div>
   )
 }
 
 export default LandingPage
+
+

@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from 'framer-motion'
-import { Leaf, Home, Camera, Brain, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight, Users } from 'lucide-react'
+import { Leaf, Home, Camera, Brain, BarChart3, MessageSquare, LogOut, Trophy, ChevronRight, Users, User } from 'lucide-react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState } from 'react'
@@ -18,6 +18,7 @@ const Sidebar = () => {
     { icon: <BarChart3 className="w-5 h-5" />, label: 'Analytics', path: '/analytics' },
     { icon: <Users className="w-5 h-5" />, label: 'Teams', path: '/teams' },
     { icon: <Trophy className="w-5 h-5" />, label: 'Leaderboard', path: '/leaderboard' },
+    { icon: <User className="w-5 h-5" />, label: 'Profile', path: '/profile' },
   ]
 
   const handleLogout = () => {
@@ -118,41 +119,32 @@ const Sidebar = () => {
             </motion.button>
           )
         })}
+        <motion.button
+          onClick={handleLogout}
+          className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl transition-all duration-300 text-slate-400 hover:text-slate-200 hover:bg-white/5"
+          whileHover={{ scale: 1.02, x: isExpanded ? 4 : 0 }}
+          whileTap={{ scale: 0.98 }}
+          title={!isExpanded ? 'Logout' : ''}
+        >
+          <span className="flex-shrink-0 text-slate-400">
+            <LogOut className="w-5 h-5" />
+          </span>
+          {isExpanded && (
+            <motion.span
+              initial={{ opacity: 0, x: -10 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -10 }}
+              className="font-medium whitespace-nowrap"
+            >
+              Logout
+            </motion.span>
+          )}
+        </motion.button>
       </nav>
-
-      {/* User Profile */}
-      <div className="p-4 border-t border-slate-800/50 overflow-hidden">
-        <div className="group">
-          <div onClick={() => navigate('/profile')} className="flex items-center space-x-3 px-4 py-3 rounded-xl glass-hover cursor-pointer">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
-              {user?.username?.substring(0, 2).toUpperCase() || 'FW'}
-            </div>
-            {isExpanded && (
-              <>
-                <motion.div
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -10 }}
-                  className="flex-1"
-                >
-                  <p className="text-sm font-medium text-slate-200 whitespace-nowrap overflow-hidden text-ellipsis">{user?.username || 'Guest'}</p>
-                  <p className="text-xs text-slate-400 whitespace-nowrap">Level {user?.lvl || 1} • {user?.xp_points || 0} XP</p>
-                </motion.div>
-                <button
-                  onClick={(e) => { e.stopPropagation(); handleLogout(); }}
-                  className="opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0"
-                  title="Logout"
-                >
-                  <LogOut className="w-4 h-4 text-slate-400 hover:text-red-400 transition-colors" />
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      </div>
     </motion.div>
     </>
   )
 }
 
 export default Sidebar
+

@@ -14,13 +14,13 @@ const StatsCard = ({ title, value, icon, gradient, trend }: StatsCardProps) => {
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ y: -5, scale: 1.02 }}
+      whileHover={{ y: -4, scale: 1.01 }}
       transition={{ duration: 0.3 }}
-      className="card-soft cursor-pointer group"
+      className="card-soft cursor-pointer group border border-slate-800/60 hover:border-slate-700/80 transition-colors"
     >
       <div className="flex items-start justify-between mb-4">
         <div
-          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center group-hover:scale-110 transition-transform duration-300`}
+          className={`w-12 h-12 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center group-hover:scale-105 transition-transform duration-300 border border-white/5`}
         >
           {icon}
         </div>
@@ -28,7 +28,7 @@ const StatsCard = ({ title, value, icon, gradient, trend }: StatsCardProps) => {
           <motion.span
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
-            className="text-sm font-semibold text-nature-400"
+            className="text-xs font-semibold text-slate-400"
           >
             {trend}
           </motion.span>
@@ -36,7 +36,7 @@ const StatsCard = ({ title, value, icon, gradient, trend }: StatsCardProps) => {
       </div>
 
       <h3 className="text-slate-400 text-sm mb-2">{title}</h3>
-      <p className="text-3xl font-display font-bold gradient-text">{value}</p>
+      <p className="text-3xl font-display font-bold text-slate-100">{value}</p>
     </motion.div>
   )
 }

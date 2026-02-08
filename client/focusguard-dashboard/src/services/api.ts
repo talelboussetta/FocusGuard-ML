@@ -190,7 +190,78 @@ export function getErrorMessage(error: any, fallback: string = 'An error occurre
   }
 }
 
-async function handleResponse<T>(response: Response): Promise<T> {
+// Track if we're currently refreshing to avoid multiple refresh attempts
+let isRefreshing = false;
+let refreshSubscribers: ((token: string) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (token: string) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function onTokenRefreshed(token: string) {
+  refreshSubscribers.forEach(cb => cb(token));
+  refreshSubscribers = [];
+}
+
+async function refreshAccessToken(): Promise<string | null> {
+  const refreshToken = localStorage.getItem('refresh_token');
+  if (!refreshToken) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: refreshToken }),
+    });
+
+    if (!response.ok) {
+      // Refresh token is also expired or invalid
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('user');
+      window.location.href = '/auth';
+      return null;
+    }
+
+    const data = await response.json();
+    localStorage.setItem('access_token', data.access_token);
+    return data.access_token;
+  } catch (error) {
+    console.error('Token refresh failed:', error);
+    return null;
+  }
+}
+
+async function handleResponse<T>(response: Response, originalRequest?: () => Promise<Response>): Promise<T> {
+  // Handle 401 Unauthorized - attempt token refresh
+  if (response.status === 401 && originalRequest) {
+    if (!isRefreshing) {
+      isRefreshing = true;
+      const newToken = await refreshAccessToken();
+      isRefreshing = false;
+
+      if (newToken) {
+        onTokenRefreshed(newToken);
+        // Retry original request with new token
+        return handleResponse<T>(await originalRequest());
+      }
+    } else {
+      // Wait for the ongoing refresh to complete
+      return new Promise((resolve, reject) => {
+        subscribeTokenRefresh(async (token: string) => {
+          try {
+            const retryResponse = await originalRequest();
+            resolve(await handleResponse<T>(retryResponse));
+          } catch (error) {
+            reject(error);
+          }
+        });
+      });
+    }
+  }
+
   if (!response.ok) {
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
     
@@ -304,14 +375,15 @@ export const authAPI = {
 
 export const userAPI = {
   async getProfile() {
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/users/me`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<User>(response);
+    const response = await makeRequest();
+    return handleResponse<User>(response, makeRequest);
   },
 
   async updateProfile(data: { full_name?: string; bio?: string }) {
-    const response = await fetch(`${API_BASE_URL}/users/me`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/users/me`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -319,11 +391,12 @@ export const userAPI = {
       },
       body: JSON.stringify(data),
     });
-    return handleResponse<User>(response);
+    const response = await makeRequest();
+    return handleResponse<User>(response, makeRequest);
   },
 
   async changePassword(current_password: string, new_password: string) {
-    const response = await fetch(`${API_BASE_URL}/users/me/password`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/users/me/password`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -331,7 +404,8 @@ export const userAPI = {
       },
       body: JSON.stringify({ current_password, new_password }),
     });
-    return handleResponse<{ message: string }>(response);
+    const response = await makeRequest();
+    return handleResponse<{ message: string }>(response, makeRequest);
   },
 
   async deleteAccount() {
@@ -343,10 +417,11 @@ export const userAPI = {
   },
 
   async getStats() {
-    const response = await fetch(`${API_BASE_URL}/users/me/stats`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/users/me/stats`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<UserStats>(response);
+    const response = await makeRequest();
+    return handleResponse<UserStats>(response, makeRequest);
   },
 };
 
@@ -356,7 +431,7 @@ export const userAPI = {
 
 export const sessionAPI = {
   async create(planned_duration: number) {
-    const response = await fetch(`${API_BASE_URL}/sessions`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/sessions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -364,35 +439,39 @@ export const sessionAPI = {
       },
       body: JSON.stringify({ duration_min: planned_duration }),
     });
-    return handleResponse<Session>(response);
+    const response = await makeRequest();
+    return handleResponse<Session>(response, makeRequest);
   },
 
   async list(params?: { status?: string; limit?: number; offset?: number }): Promise<Session[]> {
     const query = new URLSearchParams(params as any).toString();
-    const response = await fetch(`${API_BASE_URL}/sessions?${query}`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/sessions?${query}`, {
       headers: getAuthHeader(),
     });
-    const data = await handleResponse<SessionListResponse>(response);
+    const response = await makeRequest();
+    const data = await handleResponse<SessionListResponse>(response, makeRequest);
     return data.sessions;
   },
 
   async getActive(): Promise<Session | null> {
-    const response = await fetch(`${API_BASE_URL}/sessions/active`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/sessions/active`, {
       headers: getAuthHeader(),
     });
-    const data = await handleResponse<ActiveSessionResponse>(response);
+    const response = await makeRequest();
+    const data = await handleResponse<ActiveSessionResponse>(response, makeRequest);
     return data.session;
   },
 
   async getById(sessionId: string) {
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/sessions/${sessionId}`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<Session>(response);
+    const response = await makeRequest();
+    return handleResponse<Session>(response, makeRequest);
   },
 
   async complete(sessionId: string, actual_duration: number, focus_score?: number) {
-    const response = await fetch(`${API_BASE_URL}/sessions/${sessionId}/complete`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/sessions/${sessionId}/complete`, {
       method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -400,7 +479,8 @@ export const sessionAPI = {
       },
       body: JSON.stringify({ actual_duration, focus_score }),
     });
-    return handleResponse<Session>(response);
+    const response = await makeRequest();
+    return handleResponse<Session>(response, makeRequest);
   },
 
 
@@ -419,10 +499,11 @@ export const sessionAPI = {
 
 export const gardenAPI = {
   async get() {
-    const response = await fetch(`${API_BASE_URL}/garden/stats`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/garden/stats`, {
       headers: getAuthHeader(),
     });
-    return handleResponse<Garden>(response);
+    const response = await makeRequest();
+    return handleResponse<Garden>(response, makeRequest);
   },
 
   async growPlant(sessionId: string) {
@@ -489,9 +570,10 @@ export const gardenAPI = {
 
 export const statsAPI = {
   async getDailyStats(days: number = 7) {
-    const response = await fetch(`${API_BASE_URL}/stats/daily?days=${days}`, {
+    const makeRequest = () => fetch(`${API_BASE_URL}/stats/daily?days=${days}`, {
       headers: getAuthHeader(),
     });
+    const response = await makeRequest();
     return handleResponse<{
       daily_stats: DailyStats[];
       total_days: number;

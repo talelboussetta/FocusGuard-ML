@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera } from 'lucide-react'
+import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera, Clock, Flame, CheckCircle, TrendingUp } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
 import DistractionMonitor from '../components/DistractionMonitor'
@@ -10,8 +10,21 @@ import CircularTimerPicker from '../components/CircularTimerPicker'
 import { useAuth } from '../contexts/AuthContext'
 import { useSessionContext } from '../contexts/SessionContext'
 import { useNotificationContext } from '../contexts/NotificationContext'
-import { userAPI, sessionAPI, getErrorMessage } from '../services/api'
-import type { UserStats, Session } from '../services/api'
+import { userAPI, sessionAPI, statsAPI, getErrorMessage } from '../services/api'
+import type { UserStats, Session, DailyStats } from '../services/api'
+
+const InfoCard = ({ title, children }: { title: string; children: React.ReactNode }) => (
+  <motion.div
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="card-soft p-5 border border-slate-800/60"
+  >
+    <div className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
+      {title}
+    </div>
+    {children}
+  </motion.div>
+)
 
 const Dashboard = () => {
   const navigate = useNavigate()
@@ -32,6 +45,7 @@ const Dashboard = () => {
   // Stats and session data
   const [stats, setStats] = useState<UserStats | null>(null)
   const [recentSessions, setRecentSessions] = useState<Session[]>([])
+  const [dailyStats, setDailyStats] = useState<DailyStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const location = useLocation()
@@ -79,14 +93,16 @@ const Dashboard = () => {
       }
       setError(null)
       
-      const [statsData, sessions] = await Promise.all([
+      const [statsData, sessions, dailyData] = await Promise.all([
         userAPI.getStats(),
-        sessionAPI.list({ limit: 4 })
+        sessionAPI.list({ limit: 4 }),
+        statsAPI.getDailyStats(7),
       ])
       
       console.log('Dashboard stats loaded:', statsData)
       setStats(statsData)
       setRecentSessions(sessions || [])
+      setDailyStats(dailyData?.daily_stats || [])
       await refreshActiveSession()
     } catch (err: any) {
       console.error('Dashboard load error:', err)
@@ -180,6 +196,19 @@ const Dashboard = () => {
     return `${mins}m`
   }
 
+  const buildSparklinePoints = (data: DailyStats[]) => {
+    if (!data || data.length === 0) return '0,48 200,48'
+    const max = Math.max(...data.map((d) => d.focus_min || 0), 1)
+    const step = data.length > 1 ? 200 / (data.length - 1) : 200
+    return data
+      .map((d, i) => {
+        const value = d.focus_min || 0
+        const y = 48 - (value / max) * 40
+        return `${Math.round(i * step)},${Math.round(y)}`
+      })
+      .join(' ')
+  }
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -197,10 +226,10 @@ const Dashboard = () => {
         <div className="fixed inset-0 z-0 pointer-events-none">
           <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
           <motion.div
-            className="absolute top-20 right-20 w-96 h-96 bg-primary-500/10 rounded-full blur-3xl"
+            className="absolute top-20 right-20 w-96 h-96 bg-primary-500/5 rounded-full blur-3xl"
             animate={{
-              scale: [1, 1.2, 1],
-              opacity: [0.2, 0.4, 0.2], 
+              scale: [1, 1.15, 1],
+              opacity: [0.08, 0.18, 0.08], 
             }}
             transition={{
               duration: 8,
@@ -251,13 +280,13 @@ const Dashboard = () => {
                   Welcome back, <span className="gradient-text">{user?.username || 'Focus Warrior'}</span>
                 </h1>
                 <p className="text-slate-400">
-                  Level {user?.lvl || 1} • {user?.xp_points || 0} XP • Your garden is waiting to grow.
+                  Level {user?.lvl || 1} • {user?.xp_points || 0} XP • Today’s focus overview.
                 </p>
               </div>
               <div className="flex gap-3">
                 <motion.button
                   onClick={() => navigate('/camera')}
-                  className="btn-secondary flex items-center space-x-2 group"
+                  className="btn-secondary flex items-center space-x-2"
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -287,12 +316,34 @@ const Dashboard = () => {
                 animate={{ opacity: 1, scale: 1 }}
                 className="glass rounded-2xl p-8"
               >
+                {/* Session Status Bar */}
+                {activeSession && (
+                  <div className="mb-6 p-4 bg-slate-900/60 border border-slate-800/70 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-slate-300" />
+                        <span className="text-slate-300">Session: <span className="font-semibold text-slate-100">{sessionDuration} min</span></span>
+                      </div>
+                      <div className="w-px h-4 bg-slate-700" />
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-slate-300" />
+                        <span className="text-slate-300">Time left: <span className="font-semibold text-slate-100">{formatTime(timeLeft)}</span></span>
+                      </div>
+                      <div className="w-px h-4 bg-slate-700" />
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-slate-300" />
+                        <span className="text-slate-300">Status: <span className="font-semibold text-slate-100">{isTimerRunning ? 'Active' : 'Paused'}</span></span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div className="flex justify-between items-start mb-6">
                   <div>
                     <h2 className="text-2xl font-display font-semibold mb-1">
                       {activeSession ? 'Focus Session Active' : 'Set Your Focus Time'}
                     </h2>
-                    <p className="text-gray-600 text-sm">
+                    <p className="text-slate-400 text-sm">
                       {activeSession ? 'Stay focused and watch your garden grow' : 'Drag the clock to choose your perfect session duration'}
                     </p>
                   </div>
@@ -311,12 +362,11 @@ const Dashboard = () => {
                       {/* Running timer display with circular progress */}
                       <svg width="320" height="320" viewBox="0 0 320 320">
                         <defs>
-                          <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#606060" />
-                            <stop offset="50%" stopColor="#404040" />
-                            <stop offset="100%" stopColor="#202020" />
-                          </linearGradient>
-                        </defs>
+                      <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#e2e8f0" />
+                        <stop offset="100%" stopColor="#94a3b8" />
+                      </linearGradient>
+                    </defs>
                         
                         {/* Background circle */}
                         <circle
@@ -324,9 +374,9 @@ const Dashboard = () => {
                           cy="160"
                           r="140"
                           fill="none"
-                          stroke="#e0e0e0"
+                          stroke="#1f2937"
                           strokeWidth="32"
-                          opacity="0.2"
+                          opacity="0.6"
                         />
                         
                         {/* Progress circle */}
@@ -335,8 +385,8 @@ const Dashboard = () => {
                           cy="160"
                           r="140"
                           fill="none"
-                          stroke="url(#timer-gradient)"
-                          strokeWidth="32"
+                        stroke="#cbd5f5"
+                        strokeWidth="32"
                           strokeLinecap="round"
                           strokeDasharray={2 * Math.PI * 140}
                           strokeDashoffset={2 * Math.PI * 140 * (1 - (timeLeft / (sessionDuration * 60)))}
@@ -352,7 +402,7 @@ const Dashboard = () => {
                           x="160"
                           y="150"
                           textAnchor="middle"
-                          className="text-7xl font-display font-bold fill-gray-900"
+                          className="text-7xl font-display font-bold fill-slate-100"
                         >
                           {formatTime(timeLeft)}
                         </text>
@@ -360,7 +410,7 @@ const Dashboard = () => {
                           x="160"
                           y="185"
                           textAnchor="middle"
-                          className="text-lg font-medium fill-gray-600"
+                          className="text-lg font-medium fill-slate-400"
                         >
                           {isTimerRunning ? 'In Progress' : 'Paused'}
                         </text>
@@ -424,26 +474,99 @@ const Dashboard = () => {
 
             {/* Stats Column */}
             <div className="space-y-6">
-              <StatsCard
-                title="Total Focus Time"
-                value={formatMinutes(liveStats.total_focus_min)}
-                icon={<Leaf className="w-6 h-6" />}
-                gradient="from-nature-500 to-emerald-600"
-              />
-              <StatsCard
-                title="Current Streak"
-                value={`${liveStats.current_streak} days`}
-                icon={<Leaf className="w-6 h-6" />}
-                gradient="from-primary-500 to-primary-600"
-                trend={liveStats.current_streak ? '🔥' : undefined}
-              />
-              <StatsCard
-                title="Total Sessions"
-                value={`${liveStats.total_sessions}`}
-                icon={<Leaf className="w-6 h-6" />}
-                gradient="from-purple-500 to-pink-600"
-                trend={`${liveStats.avg_focus_per_session ? liveStats.avg_focus_per_session.toFixed(0) : '0'} min avg`}
-              />
+              {/* Hero Stat - Total Focus Time (larger) */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="card-soft p-6 border border-slate-800/70"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <div className="p-3 rounded-xl bg-slate-800 border border-slate-700">
+                    <Clock className="w-7 h-7 text-slate-200" />
+                  </div>
+                </div>
+                <div className="mb-2">
+                  <div className="text-4xl font-display font-bold mb-1">
+                    {formatMinutes(liveStats.total_focus_min)}
+                  </div>
+                  <div className="text-sm text-slate-400">Total Focus Time</div>
+                </div>
+                <div className="text-xs text-slate-400 font-semibold">Keep building momentum</div>
+              </motion.div>
+
+              {/* Secondary Stats (smaller) */}
+              <div className="grid grid-cols-2 gap-4">
+                <StatsCard
+                  title="Streak"
+                  value={`${liveStats.current_streak}`}
+                  icon={<Flame className="w-5 h-5" />}
+                  gradient="from-slate-700 to-slate-800"
+                  trend={liveStats.current_streak ? 'days' : undefined}
+                />
+                <StatsCard
+                  title="Sessions"
+                  value={`${liveStats.total_sessions}`}
+                  icon={<CheckCircle className="w-5 h-5" />}
+                  gradient="from-slate-700 to-slate-800"
+                  trend={`${liveStats.avg_focus_per_session ? liveStats.avg_focus_per_session.toFixed(0) : '0'} min`}
+                />
+              </div>
+
+              {/* Focus Tip */}
+              <InfoCard title="Focus Tip">
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Try a 25/5 cadence: 25 minutes of deep focus, 5 minutes of reset.
+                  It keeps attention high without burnout.
+                </p>
+              </InfoCard>
+
+              {/* Today Summary */}
+              <InfoCard title="Today Summary">
+                <div className="flex items-center justify-between text-sm text-slate-300">
+                  <span>Time focused today</span>
+                  <span className="text-slate-100 font-semibold">
+                    {activeSession ? formatMinutes(Math.floor((sessionDuration * 60 - timeLeft) / 60)) : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-slate-300 mt-2">
+                  <span>Sessions today</span>
+                  <span className="text-slate-100 font-semibold">
+                    {activeSession ? '1' : '0'}
+                  </span>
+                </div>
+              </InfoCard>
+
+              {/* Quick Insight */}
+              <InfoCard title="Quick Insight">
+                <div className="flex items-center justify-between text-sm text-slate-300">
+                  <span>Avg session length</span>
+                  <span className="text-slate-100 font-semibold">
+                    {liveStats.avg_focus_per_session ? `${liveStats.avg_focus_per_session.toFixed(0)} min` : '—'}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between text-sm text-slate-300 mt-2">
+                  <span>Current streak</span>
+                  <span className="text-slate-100 font-semibold">
+                    {liveStats.current_streak} days
+                  </span>
+                </div>
+              </InfoCard>
+
+              {/* Weekly Focus Trend */}
+              <InfoCard title="Weekly Focus Trend">
+                <div className="h-20">
+                  <svg viewBox="0 0 200 60" className="w-full h-full">
+                    <polyline
+                      fill="none"
+                      stroke="#94a3b8"
+                      strokeWidth="2"
+                      points={buildSparklinePoints(dailyStats)}
+                    />
+                    <circle cx="200" cy="22" r="3" fill="#e2e8f0" />
+                  </svg>
+                </div>
+                <div className="text-xs text-slate-400 mt-2">Last 7 days focus minutes</div>
+              </InfoCard>
             </div>
           </div>
 
@@ -457,28 +580,47 @@ const Dashboard = () => {
             <h2 className="text-2xl font-display font-semibold mb-4">
               Recent Sessions
             </h2>
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="card-soft border border-slate-800/60">
               {recentSessions.length > 0 ? (
-                recentSessions.map((session, index) => (
-                  <motion.div
-                    key={session.id}
-                    initial={{ opacity: 0, scale: 0.9 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    className="card-soft hover:scale-105 transition-transform cursor-pointer"
-                  >
-                    <div className="flex justify-between items-start mb-3">
-                      <span className="text-slate-400 text-sm">
-                        {session.completed ? 'Completed' : 'In Progress'}
-                      </span>
-                    </div>
-                    <div className="text-sm text-slate-500">
-                      {new Date(session.created_at).toLocaleDateString()}
-                    </div>
-                  </motion.div>
-                ))
+                <div className="divide-y divide-slate-800/60">
+                  <div className="grid grid-cols-5 text-xs uppercase tracking-wider text-slate-500 px-4 py-3">
+                    <span>Status</span>
+                    <span>Duration</span>
+                    <span>Date</span>
+                    <span>Blink</span>
+                    <span className="text-right">Focus</span>
+                  </div>
+                  {recentSessions.map((session, index) => {
+                    const duration = session.duration_minutes || 25
+                    const blinkRate = session.blink_rate ? session.blink_rate.toFixed(1) : '—'
+                    return (
+                      <motion.div
+                        key={session.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 + index * 0.05 }}
+                        className="grid grid-cols-5 items-center px-4 py-3 text-sm"
+                      >
+                        <div className="flex items-center gap-2">
+                          <div className={`w-2 h-2 rounded-full ${
+                            session.completed ? 'bg-emerald-400' : 'bg-slate-400 animate-pulse'
+                          }`} />
+                          <span className="text-slate-300">
+                            {session.completed ? 'Completed' : 'Active'}
+                          </span>
+                        </div>
+                        <span className="text-slate-200 font-semibold">{duration}m</span>
+                        <span className="text-slate-400">
+                          {new Date(session.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                        </span>
+                        <span className="text-slate-300">{blinkRate}</span>
+                        <span className="text-right text-slate-400">—</span>
+                      </motion.div>
+                    )
+                  })}
+                </div>
               ) : (
-                <div className="col-span-full text-center text-slate-400 py-8">
+                <div className="text-center text-slate-400 py-8">
                   No sessions yet. Start your first focus session!
                 </div>
               )}

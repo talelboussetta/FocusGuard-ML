@@ -2,7 +2,7 @@ name: Backend Tests
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, develop, 'feature/**' ]
     paths:
       - 'serv/**'
       - '.github/workflows/test.yml'
@@ -38,6 +38,7 @@ jobs:
       with:
         python-version: '3.11'
         cache: 'pip'
+        cache-dependency-path: 'serv/requirements.txt'
     
     - name: Install dependencies
       working-directory: ./serv
