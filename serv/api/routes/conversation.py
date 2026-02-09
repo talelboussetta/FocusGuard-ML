@@ -17,6 +17,7 @@ from api.schemas.conversation import (
     ConversationQueryRequest,
     ConversationQueryResponse,
 )
+from api.schemas.rag import RAGQueryResponse
 from api.services.conversation_service import ConversationService
 from api.services.rag_service import get_rag_service
 from api.database import get_db
@@ -170,15 +171,48 @@ async def query_with_conversation(
         max_messages=6
     )
     
-    # Query RAG with conversation context
-    rag_response = await rag_service.query_with_conversation(
-        query=query_request.query,
-        conversation_history=conversation_history,
-        top_k=query_request.top_k,
-        include_sources=query_request.include_sources,
-        user_id=user_uuid,
-        db=db
-    )
+    # Try RAG service, fallback to direct LLM if RAG not ready
+    try:
+        rag_response = await rag_service.query_with_conversation(
+            query=query_request.query,
+            conversation_history=conversation_history,
+            top_k=query_request.top_k,
+            include_sources=query_request.include_sources,
+            user_id=user_uuid,
+            db=db
+        )
+    except RuntimeError as e:
+        # RAG service still initializing - use fallback direct LLM response
+        if "initializing" in str(e).lower() or "failed to initialize" in str(e).lower():
+            import logging
+            logging.info(f"RAG not ready, using fallback LLM: {e}")
+            
+            # Use direct LLM generator without retrieval
+            from rag.generation.config import get_generator
+            from api.schemas.rag import RAGQueryResponse
+            
+            generator = get_generator()
+            
+            # Build context from conversation history
+            context_text = "\n".join([
+                f"{msg['role']}: {msg['content']}"
+                for msg in conversation_history[-4:]  # Last 2 exchanges
+            ]) if conversation_history else ""
+            
+            # Generate response without retrieval
+            answer = await generator.generate(
+                query=query_request.query,
+                context_documents=[context_text] if context_text else [],
+                conversation_history=conversation_history
+            )
+            
+            rag_response = RAGQueryResponse(
+                answer=answer,
+                sources=None,
+                model_used=generator.model_name + " (fallback - RAG initializing)"
+            )
+        else:
+            raise  # Re-raise if it's a different error
     
     # Add assistant message
     sources_list = None
