@@ -8,9 +8,16 @@ from typing import Optional, Union
 import logging
 
 from api.config import settings
-from .openai_embedder import OpenAIEmbedder
 from .sentence_transformer_embedder import SentenceTransformerEmbedder
 from .base_embedder import BaseEmbedder
+
+# Conditional import - only available if openai package is installed
+try:
+    from .openai_embedder import OpenAIEmbedder
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OpenAIEmbedder = None  # type: ignore
+    OPENAI_AVAILABLE = False
 
 
 logger = logging.getLogger(__name__)
@@ -57,7 +64,13 @@ def get_embedder() -> BaseEmbedder:
                 f"(dimension: {_embedder.dimension}, device: {settings.sentence_transformer_device})"
             )
         else:
-            # Use OpenAI embeddings (requires API key)
+            # Use OpenAI embeddings (requires API key and openai package)
+            if not OPENAI_AVAILABLE:
+                raise ImportError(
+                    "OpenAI package not installed. "
+                    "Install with 'pip install openai' or set USE_LOCAL_EMBEDDINGS=True to use local embeddings."
+                )
+            
             if not settings.openai_api_key:
                 raise ValueError(
                     "OPENAI_API_KEY not configured. "
