@@ -155,6 +155,14 @@ async def complete_session(
     # Get session
     session = await get_session(db, session_id, user_id)
     
+    # Log what we're about to update
+    logger.info(f"🔄 Completing session {session_id}: actual_duration={actual_duration} min, planned={session.duration_minutes} min, focus_score={focus_score}")
+    
+    # Prevent double-completion
+    if session.completed:
+        logger.warning(f"⚠️ Session {session_id} already completed, skipping stats update")
+        return session
+    
     # Mark as completed
     session.completed = True
     if blink_rate is not None:
@@ -166,6 +174,7 @@ async def complete_session(
     await db.commit()
     await db.refresh(session)
     
+    logger.info(f"✅ Session {session_id} completed successfully")
     return session
 
 
@@ -200,8 +209,13 @@ async def _update_user_stats_on_completion(
         db.add(stats)
     
     # Update stats
+    old_total_focus = stats.total_focus_min
+    old_total_sessions = stats.total_sessions
+    
     stats.total_sessions += 1
     stats.total_focus_min += actual_duration
+    
+    logger.info(f"📊 Stats update: sessions {old_total_sessions} → {stats.total_sessions}, focus_min {old_total_focus} → {stats.total_focus_min} (+{actual_duration})")
     
     # Update streak based on consecutive days
     from datetime import datetime, timedelta
