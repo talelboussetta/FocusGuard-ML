@@ -67,98 +67,68 @@ else:
 async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
-    Handles startup and shutdown events.
     
-    CRITICAL: Must complete quickly to allow port binding.
-    All slow operations run in background.
+    CRITICAL: Returns IMMEDIATELY to allow port binding.
+    All startup work happens in background tasks.
     """
     import asyncio
     import os
     
-    async def startup_with_timeout():
-        """Startup logic with hard timeout to prevent hanging."""
-        # Startup
-        print("[*] Starting FocusGuard API...")
-        port = os.getenv("PORT", settings.port)
-        print(f"[INFO] Binding to port: {port}")
-        print(f"[INFO] Database URL configured: {settings.database_url[:30]}...")
-        
-        # Skip table creation in production - tables exist from migrations
-        # Only verify connection (fast check)
-        if not settings.debug:
-            print("[INFO] Production mode - skipping table creation")
-            try:
-                is_connected = await asyncio.wait_for(check_db_connection(), timeout=3.0)
-                if is_connected:
-                    print("[OK] Database connection verified")
-                else:
-                    print("[WARNING] Database connection check failed - will retry on first request")
-            except asyncio.TimeoutError:
-                print("[WARNING] Database check timed out - will retry on first request")
-            except Exception as e:
-                print(f"[WARNING] Database check error: {str(e)[:100]} - will retry on first request")
-        else:
-            # Development mode - create tables if they don't exist
-            print("[INFO] Development mode - checking tables...")
-            try:
-                await asyncio.wait_for(init_db(), timeout=5.0)
-                print("[OK] Database tables ready")
-            except asyncio.TimeoutError:
-                print("[WARNING] Table creation timed out - continuing anyway")
-            except Exception as e:
-                print(f"[WARNING] Table creation error: {str(e)[:100]}")
-        
-        # Initialize RAG/AI Tutor in background (completely optional)
-        # Only if QDRANT_URL is configured
-        async def initialize_rag():
-            """Initialize RAG service in background - non-blocking."""
-            # Check if RAG is configured before attempting initialization
-            qdrant_url = os.getenv("QDRANT_URL", "")
-            if not qdrant_url or qdrant_url == "http://localhost:6333":
-                print("[INFO] AI Tutor disabled - QDRANT_URL not configured")
-                print("[INFO] Set QDRANT_URL in environment to enable RAG features")
-                return
+    # Define all background startup tasks
+    async def background_startup():
+        """All startup work - runs in background after port is open."""
+        try:
+            port = os.getenv("PORT", settings.port)
+            print(f"[BACKGROUND] Starting FocusGuard API background tasks...")
+            print(f"[INFO] Server running on port: {port}")
             
-            print("[INFO] AI Tutor initializing in background...")
-            try:
-                # Import here to avoid blocking startup if imports fail
-                from api.services.rag_service import get_rag_service
-                rag_service = get_rag_service()
-                await asyncio.wait_for(rag_service.initialize(), timeout=30.0)
-                print("[OK] AI Tutor ready (RAG system initialized)")
-            except ImportError as e:
-                print(f"[INFO] AI Tutor disabled - missing dependency: {str(e).split(':')[-1].strip()}")
-            except asyncio.TimeoutError:
-                print("[WARNING] AI Tutor initialization timed out - using fallback mode")
-            except Exception as e:
-                print(f"[WARNING] AI Tutor initialization failed: {str(e)[:100]}")
-        
-        # Start initialization in background (non-blocking - fire and forget)
-        asyncio.create_task(initialize_rag())
+            # Database check (non-critical)
+            if not settings.debug:
+                print("[INFO] Production mode - checking database connection...")
+                try:
+                    is_connected = await asyncio.wait_for(check_db_connection(), timeout=3.0)
+                    if is_connected:
+                        print("[OK] Database connection verified")
+                    else:
+                        print("[WARNING] Database not connected - will retry on first request")
+                except Exception as e:
+                    print(f"[WARNING] Database check failed: {str(e)[:100]}")
+            
+            # RAG initialization (completely optional)
+            qdrant_url = os.getenv("QDRANT_URL", "")
+            if qdrant_url and qdrant_url != "http://localhost:6333":
+                print("[INFO] AI Tutor initializing...")
+                try:
+                    from api.services.rag_service import get_rag_service
+                    rag_service = get_rag_service()
+                    await asyncio.wait_for(rag_service.initialize(), timeout=30.0)
+                    print("[OK] AI Tutor ready")
+                except ImportError as e:
+                    print(f"[INFO] AI Tutor disabled - missing dependency: {str(e).split(':')[-1].strip()}")
+                except Exception as e:
+                    print(f"[WARNING] AI Tutor failed: {str(e)[:100]}")
+            else:
+                print("[INFO] AI Tutor disabled - QDRANT_URL not configured")
+            
+            print("[OK] Background startup complete")
+        except Exception as e:
+            print(f"[ERROR] Background startup error: {str(e)[:200]}")
     
-    # Run startup with absolute 10-second timeout
-    # This MUST complete or app won't bind to port
-    try:
-        await asyncio.wait_for(startup_with_timeout(), timeout=10.0)
-        print(f"[✓] API startup complete in <10s")
-        print(f"[✓] Swagger UI available at /docs")
-        print(f"[✓] Health check available at /health")
-    except asyncio.TimeoutError:
-        print("[ERROR] Startup exceeded 10s timeout - starting anyway!")
-        print("[INFO] Some features may not be available immediately")
-    except Exception as e:
-        print(f"[ERROR] Startup error: {str(e)[:200]}")
-        print("[INFO] Starting anyway - check logs for issues")
+    # Fire background tasks and return IMMEDIATELY
+    print("[*] FocusGuard API starting...")
+    print("[*] Port will bind immediately - background tasks running...")
+    asyncio.create_task(background_startup())
     
+    # IMMEDIATE RETURN - port binds NOW
     yield
     
     # Shutdown
-    print("[*] Shutting down FocusGuard API...")
+    print("[*] Shutting down...")
     try:
-        await asyncio.wait_for(close_db(), timeout=5.0)
-        print("[OK] Database connection closed")
+        await asyncio.wait_for(close_db(), timeout=2.0)
+        print("[OK] Shutdown complete")
     except:
-        print("[WARNING] Database close timed out - exiting anyway")
+        print("[WARNING] Shutdown timed out")
 
 
 # Create FastAPI application
