@@ -144,26 +144,35 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const startTimer = (session: Session, duration: number) => {
-    console.log('Starting timer for session:', session.id, 'duration:', duration)
+  const startTimer = (session: Session, duration: number, isRestoredSession: boolean = false) => {
+    console.log('Starting timer for session:', session.id, 'duration:', duration, 'isRestored:', isRestoredSession)
     setActiveSession(session)
     setSessionDuration(duration)
-    // Use session's actual creation time from backend, not current time
-    const sessionCreatedAt = new Date(session.created_at).getTime()
-    setSessionStartMs(sessionCreatedAt)
     
-    // Calculate remaining time from session creation
-    const now = Date.now()
-    const elapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+    let startMs: number
+    let remainingSeconds: number
     const plannedSeconds = duration * 60
-    const remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
     
+    if (isRestoredSession) {
+      // For restored sessions, use backend's created_at to calculate elapsed time
+      const sessionCreatedAt = new Date(session.created_at).getTime()
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+      remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
+      startMs = sessionCreatedAt
+      console.log(`Restored session: ${elapsedSeconds}s elapsed, ${remainingSeconds}s remaining`)
+    } else {
+      // For NEW sessions, start from NOW to avoid network delay issues
+      startMs = Date.now()
+      remainingSeconds = plannedSeconds
+      console.log(`New session: starting with full ${plannedSeconds}s`)
+    }
+    
+    setSessionStartMs(startMs)
     setTimeLeft(remainingSeconds)
     setIsTimerRunning(remainingSeconds > 0)
     setPlantsEarned(0) // Reset plants counter
     lastPlantTimeRef.current = 0 // Reset plant tracker
-    
-    console.log(`Timer started: ${remainingSeconds}s remaining of ${plannedSeconds}s (created ${Math.floor(elapsedSeconds)}s ago)`)
   }
 
   const setPlannedDuration = (duration: number) => {
