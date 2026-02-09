@@ -138,13 +138,17 @@ const Dashboard = () => {
     try {
       pauseTimer()
       
-      // Calculate actual duration from the session's planned duration and time elapsed
-      const plannedSeconds = (activeSession.duration_minutes || sessionDuration) * 60
-      const elapsedSeconds = plannedSeconds - timeLeft
-      const actualMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
-      const focusScore = Math.min(100, Math.floor((elapsedSeconds / plannedSeconds) * 100))
+      // Calculate actual duration from ACTUAL TIME ELAPSED (not timer state)
+      // This ensures correct time tracking even if timer expired or user completed late
+      const sessionCreatedAt = new Date(activeSession.created_at).getTime()
+      const now = Date.now()
+      const actualElapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+      const actualMinutes = Math.max(1, Math.ceil(actualElapsedSeconds / 60))
       
-      console.log(`Completing session with ${actualMinutes} minutes, focus score ${focusScore}%`)
+      const plannedSeconds = (activeSession.duration_minutes || sessionDuration) * 60
+      const focusScore = Math.min(100, Math.floor((actualElapsedSeconds / plannedSeconds) * 100))
+      
+      console.log(`Completing session with ${actualMinutes} actual minutes (${Math.floor(actualElapsedSeconds / 60)}m ${actualElapsedSeconds % 60}s elapsed), focus score ${focusScore}%`)
       console.log('Stats BEFORE complete:', stats?.total_focus_min, 'min,', stats?.total_sessions, 'sessions')
       
       // Complete the session on backend (updates XP, stats, plants)
