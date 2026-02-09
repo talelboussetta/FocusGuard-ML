@@ -68,60 +68,88 @@ async def lifespan(app: FastAPI):
     """
     Application lifespan manager.
     Handles startup and shutdown events.
+    
+    CRITICAL: Must complete quickly to allow port binding.
+    All slow operations run in background.
     """
-    # Startup
-    print("[*] Starting FocusGuard API...")
-    print(f"[INFO] Binding to port: {settings.port}")
-    print(f"[INFO] Database URL configured: {settings.database_url[:30]}...")
-    
-    # Initialize database with timeout to prevent hanging
     import asyncio
-    try:
-        print("[*] Initializing database connection...")
-        await asyncio.wait_for(init_db(), timeout=15.0)
-        print("[OK] Database connection initialized")
+    import os
+    
+    async def startup_with_timeout():
+        """Startup logic with hard timeout to prevent hanging."""
+        # Startup
+        print("[*] Starting FocusGuard API...")
+        port = os.getenv("PORT", settings.port)
+        print(f"[INFO] Binding to port: {port}")
+        print(f"[INFO] Database URL configured: {settings.database_url[:30]}...")
         
-        # Check database connection (non-blocking)
-        is_connected = await asyncio.wait_for(check_db_connection(), timeout=5.0)
-        if is_connected:
-            print("[OK] Database connection verified")
+        # Skip table creation in production - tables exist from migrations
+        # Only verify connection (fast check)
+        if not settings.debug:
+            print("[INFO] Production mode - skipping table creation")
+            try:
+                is_connected = await asyncio.wait_for(check_db_connection(), timeout=3.0)
+                if is_connected:
+                    print("[OK] Database connection verified")
+                else:
+                    print("[WARNING] Database connection check failed - will retry on first request")
+            except asyncio.TimeoutError:
+                print("[WARNING] Database check timed out - will retry on first request")
+            except Exception as e:
+                print(f"[WARNING] Database check error: {str(e)[:100]} - will retry on first request")
         else:
-            print("[WARNING] Database connection check failed - continuing anyway")
+            # Development mode - create tables if they don't exist
+            print("[INFO] Development mode - checking tables...")
+            try:
+                await asyncio.wait_for(init_db(), timeout=5.0)
+                print("[OK] Database tables ready")
+            except asyncio.TimeoutError:
+                print("[WARNING] Table creation timed out - continuing anyway")
+            except Exception as e:
+                print(f"[WARNING] Table creation error: {str(e)[:100]}")
+        
+        # Initialize RAG/AI Tutor in background (don't block)
+        print("[INFO] AI Tutor initializing in background...")
+        
+        async def initialize_rag():
+            """Initialize RAG service in background."""
+            try:
+                from api.services.rag_service import get_rag_service
+                rag_service = get_rag_service()
+                await asyncio.wait_for(rag_service.initialize(), timeout=30.0)
+                print("[OK] AI Tutor ready (RAG system initialized)")
+            except asyncio.TimeoutError:
+                print("[WARNING] AI Tutor initialization timed out - using fallback mode")
+            except Exception as e:
+                print(f"[WARNING] AI Tutor initialization failed: {str(e)[:100]}")
+                print("[INFO] AI Tutor will use fallback mode")
+        
+        # Start initialization in background (don't block startup)
+        asyncio.create_task(initialize_rag())
+    
+    # Run startup with absolute 10-second timeout
+    # This MUST complete or app won't bind to port
+    try:
+        await asyncio.wait_for(startup_with_timeout(), timeout=10.0)
+        print(f"[✓] API startup complete in <10s")
+        print(f"[✓] Swagger UI available at /docs")
+        print(f"[✓] Health check available at /health")
     except asyncio.TimeoutError:
-        print("[WARNING] Database initialization timed out - continuing anyway")
-        print("[INFO] Database will be connected on first request")
+        print("[ERROR] Startup exceeded 10s timeout - starting anyway!")
+        print("[INFO] Some features may not be available immediately")
     except Exception as e:
-        print(f"[WARNING] Database initialization error: {str(e)}")
-        print("[INFO] API will start anyway - database will retry on first request")
-        # Don't re-raise - allow app to start
-    
-    # Eagerly initialize RAG/AI Tutor in background (ready for first request)
-    print("[INFO] AI Tutor initializing in background...")
-    from api.services.rag_service import get_rag_service
-    
-    async def initialize_rag():
-        """Initialize RAG service in background."""
-        try:
-            rag_service = get_rag_service()
-            await rag_service.initialize()
-            print("[OK] AI Tutor ready (RAG system initialized)")
-        except Exception as e:
-            print(f"[WARNING] AI Tutor initialization failed: {e}")
-            print("[INFO] AI Tutor will use fallback mode until manually restarted")
-    
-    # Start initialization in background (don't block startup)
-    asyncio.create_task(initialize_rag())
-    
-    print(f"[INFO] API startup complete")
-    print(f"[INFO] Swagger UI available at /docs")
-    print(f"[INFO] Health check available at /health")
+        print(f"[ERROR] Startup error: {str(e)[:200]}")
+        print("[INFO] Starting anyway - check logs for issues")
     
     yield
     
     # Shutdown
     print("[*] Shutting down FocusGuard API...")
-    await close_db()
-    print("[OK] Database connection closed")
+    try:
+        await asyncio.wait_for(close_db(), timeout=5.0)
+        print("[OK] Database connection closed")
+    except:
+        print("[WARNING] Database close timed out - exiting anyway")
 
 
 # Create FastAPI application

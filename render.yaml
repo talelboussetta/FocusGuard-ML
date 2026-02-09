@@ -10,14 +10,16 @@ services:
     branch: main
     rootDir: serv
     
-    buildCommand: pip install -r requirements-production.txt
+    buildCommand: pip install --no-cache-dir -r requirements-production.txt
     
-    # CRITICAL: Bind to 0.0.0.0:$PORT (Render provides PORT env var)
-    # Convert DATABASE_URL to asyncpg format if needed
-    startCommand: >
-      export DATABASE_URL=$(echo $DATABASE_URL | sed 's|^postgresql://|postgresql+asyncpg://|') &&
-      python validate_startup.py || true &&
-      uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 75 --log-level info
+    # CRITICAL: Convert DATABASE_URL and start server
+    # Must bind to 0.0.0.0:$PORT (Render scans for open ports)
+    startCommand: |
+      if [ ! -z "$DATABASE_URL" ]; then
+        export DATABASE_URL=$(echo $DATABASE_URL | sed 's|^postgresql://|postgresql+asyncpg://|')
+        echo "[INFO] DATABASE_URL converted to asyncpg format"
+      fi
+      exec uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 75 --log-level info
     
     healthCheckPath: /health
     
