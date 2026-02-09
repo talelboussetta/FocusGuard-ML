@@ -7,7 +7,6 @@ services:
     name: focusguard-backend
     runtime: python
     region: oregon
-    plan: free
     branch: main
     rootDir: serv
     
@@ -112,7 +111,6 @@ services:
   - type: web
     name: focusguard-frontend
     runtime: static
-    plan: free
     branch: main
     rootDir: client/focusguard-dashboard
     
@@ -144,5 +142,4 @@ databases:
     databaseName: focusguarddb
     user: talel_focusguard_db
     region: oregon
-    plan: free
     # Database connects automatically to backend via DATABASE_URL
