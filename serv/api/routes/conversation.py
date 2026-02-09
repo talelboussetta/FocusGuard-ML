@@ -200,6 +200,7 @@ async def query_with_conversation(
         )
         
         rag_response = RAGQueryResponse(
+            query=query_request.query,
             answer=answer,
             sources=None,
             model_used=getattr(generator, 'model', 'LLM') + " (fallback - RAG initializing)"

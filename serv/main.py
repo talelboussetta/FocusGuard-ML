@@ -83,8 +83,23 @@ async def lifespan(app: FastAPI):
     else:
         print("[WARNING] Database connection check failed")
     
-    # RAG service will initialize lazily on first request (saves startup time & memory)
-    print("[INFO] RAG/AI Tutor will initialize on first request")
+    # Eagerly initialize RAG/AI Tutor in background (ready for first request)
+    print("[INFO] AI Tutor initializing in background...")
+    import asyncio
+    from api.services.rag_service import get_rag_service
+    
+    async def initialize_rag():
+        """Initialize RAG service in background."""
+        try:
+            rag_service = get_rag_service()
+            await rag_service.initialize()
+            print("[OK] AI Tutor ready (RAG system initialized)")
+        except Exception as e:
+            print(f"[WARNING] AI Tutor initialization failed: {e}")
+            print("[INFO] AI Tutor will use fallback mode until manually restarted")
+    
+    # Start initialization in background (don't block startup)
+    asyncio.create_task(initialize_rag())
     
     print(f"[INFO] API running at: http://localhost:8000")
     print(f"[INFO] Swagger UI: http://localhost:8000/docs")
