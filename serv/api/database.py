@@ -42,12 +42,25 @@ if database_url.startswith("postgresql://") and "+asyncpg" not in database_url:
 
 # Create async engine for PostgreSQL
 # Note: Set DATABASE_ECHO=True in .env to log SQL queries during development
-engine = create_async_engine(
-    database_url,  # Use converted URL
-    echo=settings.database_echo,  # Log SQL queries when True
-    future=True,  # Use SQLAlchemy 2.0 style
-    poolclass=NullPool if settings.debug else None,  # Disable pooling in debug mode
-)
+if settings.debug:
+    # Debug mode: No connection pooling (simpler, easier to debug)
+    engine = create_async_engine(
+        database_url,
+        echo=settings.database_echo,
+        future=True,
+        poolclass=NullPool,
+    )
+else:
+    # Production mode: Connection pooling with limits
+    engine = create_async_engine(
+        database_url,
+        echo=settings.database_echo,
+        future=True,
+        pool_size=5,  # Max 5 persistent connections
+        max_overflow=10,  # Allow 10 extra connections if pool exhausted
+        pool_pre_ping=True,  # Check connection health before use
+        pool_recycle=3600,  # Recycle connections after 1 hour
+    )
 
 # ============================================================================
 # Session Factory

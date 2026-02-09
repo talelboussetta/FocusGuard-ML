@@ -119,8 +119,23 @@ async def lifespan(app: FastAPI):
     
     # Fire background tasks and return IMMEDIATELY
     print("[*] FocusGuard API starting...")
-    print("[*] Port will bind immediately - background tasks running...")
-    asyncio.create_task(background_startup())
+    print("[*] Port binding immediately...")
+    
+    # TEMPORARY: Disable background tasks entirely to isolate crash
+    # If app stays up without this, we know background task was the issue
+    print("[INFO] Background tasks DISABLED for debugging")
+    print("[INFO] Database checks and RAG initialization skipped")
+    
+    # Uncomment to re-enable background tasks after confirming app is stable:
+    # async def safe_background_wrapper():
+    #     """Safety wrapper - exceptions here CANNOT crash the app."""
+    #     try:
+    #         await background_startup()
+    #     except Exception as e:
+    #         print(f"[CRITICAL] Background task exception (non-fatal): {str(e)[:200]}")
+    #         import traceback
+    #         traceback.print_exc()
+    # asyncio.create_task(safe_background_wrapper())
     
     # IMMEDIATE RETURN - port binds NOW
     yield
