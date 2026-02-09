@@ -26,13 +26,24 @@ except ImportError:
     )
 
 # ============================================================================
+# Database URL Conversion (Render Compatibility)
+# ============================================================================
+
+# Render provides DATABASE_URL as postgresql://, but we need postgresql+asyncpg://
+# Auto-convert if needed (don't modify settings, create local variable)
+database_url = settings.database_url
+if database_url.startswith("postgresql://") and "+asyncpg" not in database_url:
+    database_url = database_url.replace("postgresql://", "postgresql+asyncpg://")
+    print(f"[INFO] Converted DATABASE_URL to use asyncpg driver")
+
+# ============================================================================
 # Database Engine
 # ============================================================================
 
 # Create async engine for PostgreSQL
 # Note: Set DATABASE_ECHO=True in .env to log SQL queries during development
 engine = create_async_engine(
-    settings.database_url,
+    database_url,  # Use converted URL
     echo=settings.database_echo,  # Log SQL queries when True
     future=True,  # Use SQLAlchemy 2.0 style
     poolclass=NullPool if settings.debug else None,  # Disable pooling in debug mode

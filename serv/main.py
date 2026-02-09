@@ -71,11 +71,14 @@ async def lifespan(app: FastAPI):
     """
     # Startup
     print("[*] Starting FocusGuard API...")
+    print(f"[INFO] Binding to port: {settings.port}")
+    print(f"[INFO] Database URL configured: {settings.database_url[:30]}...")
     
     # Initialize database with timeout to prevent hanging
     import asyncio
     try:
-        await asyncio.wait_for(init_db(), timeout=10.0)
+        print("[*] Initializing database connection...")
+        await asyncio.wait_for(init_db(), timeout=15.0)
         print("[OK] Database connection initialized")
         
         # Check database connection (non-blocking)
@@ -83,13 +86,14 @@ async def lifespan(app: FastAPI):
         if is_connected:
             print("[OK] Database connection verified")
         else:
-            print("[WARNING] Database connection check failed")
+            print("[WARNING] Database connection check failed - continuing anyway")
     except asyncio.TimeoutError:
         print("[WARNING] Database initialization timed out - continuing anyway")
         print("[INFO] Database will be connected on first request")
     except Exception as e:
-        print(f"[WARNING] Database initialization error: {e}")
-        print("[INFO] API will start anyway - check DATABASE_URL environment variable")
+        print(f"[WARNING] Database initialization error: {str(e)}")
+        print("[INFO] API will start anyway - database will retry on first request")
+        # Don't re-raise - allow app to start
     
     # Eagerly initialize RAG/AI Tutor in background (ready for first request)
     print("[INFO] AI Tutor initializing in background...")

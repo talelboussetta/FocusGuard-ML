@@ -13,11 +13,22 @@ services:
     buildCommand: pip install -r requirements-production.txt
     
     # CRITICAL: Bind to 0.0.0.0:$PORT (Render provides PORT env var)
-    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1
+    # Convert DATABASE_URL to asyncpg format if needed
+    startCommand: >
+      export DATABASE_URL=$(echo $DATABASE_URL | sed 's|^postgresql://|postgresql+asyncpg://|') &&
+      python validate_startup.py || true &&
+      uvicorn main:app --host 0.0.0.0 --port $PORT --workers 1 --timeout-keep-alive 75 --log-level info
     
     healthCheckPath: /health
     
     envVars:
+      # ========== DATABASE CONNECTION ==========
+      # CRITICAL: Links to managed PostgreSQL database
+      - key: DATABASE_URL
+        fromDatabase:
+          name: focusguard-db
+          property: connectionString
+      
       # ========== JWT SECURITY ==========
       - key: JWT_SECRET_KEY
         sync: false  # Set manually in Render dashboard
