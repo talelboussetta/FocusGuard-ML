@@ -72,20 +72,27 @@ async def lifespan(app: FastAPI):
     # Startup
     print("[*] Starting FocusGuard API...")
     
-    # Initialize database
-    await init_db()
-    print("[OK] Database connection initialized")
-    
-    # Check database connection
-    is_connected = await check_db_connection()
-    if is_connected:
-        print("[OK] Database connection verified")
-    else:
-        print("[WARNING] Database connection check failed")
+    # Initialize database with timeout to prevent hanging
+    import asyncio
+    try:
+        await asyncio.wait_for(init_db(), timeout=10.0)
+        print("[OK] Database connection initialized")
+        
+        # Check database connection (non-blocking)
+        is_connected = await asyncio.wait_for(check_db_connection(), timeout=5.0)
+        if is_connected:
+            print("[OK] Database connection verified")
+        else:
+            print("[WARNING] Database connection check failed")
+    except asyncio.TimeoutError:
+        print("[WARNING] Database initialization timed out - continuing anyway")
+        print("[INFO] Database will be connected on first request")
+    except Exception as e:
+        print(f"[WARNING] Database initialization error: {e}")
+        print("[INFO] API will start anyway - check DATABASE_URL environment variable")
     
     # Eagerly initialize RAG/AI Tutor in background (ready for first request)
     print("[INFO] AI Tutor initializing in background...")
-    import asyncio
     from api.services.rag_service import get_rag_service
     
     async def initialize_rag():
@@ -101,9 +108,9 @@ async def lifespan(app: FastAPI):
     # Start initialization in background (don't block startup)
     asyncio.create_task(initialize_rag())
     
-    print(f"[INFO] API running at: http://localhost:8000")
-    print(f"[INFO] Swagger UI: http://localhost:8000/docs")
-    print(f"[INFO] ReDoc: http://localhost:8000/redoc")
+    print(f"[INFO] API startup complete")
+    print(f"[INFO] Swagger UI available at /docs")
+    print(f"[INFO] Health check available at /health")
     
     yield
     
