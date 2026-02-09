@@ -71,6 +71,7 @@ class SessionResponse(BaseModel):
     user_id: UUID = Field(..., description="User ID (UUID)")
     completed: bool = Field(..., description="Completion status")
     duration_minutes: Optional[int] = Field(None, description="Planned duration in minutes")
+    actual_duration_minutes: Optional[int] = Field(None, description="Actual duration spent on session in minutes")
     blink_rate: Optional[float] = Field(None, description="Blink rate from AI analysis")
     created_at: datetime = Field(..., description="Session creation timestamp")
     

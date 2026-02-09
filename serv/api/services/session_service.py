@@ -4,6 +4,7 @@ FocusGuard API - Session Service
 Business logic for focus session management.
 """
 
+import logging
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,8 @@ from ..utils import (
     SessionNotFoundException,
     ForbiddenException
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def create_session(
@@ -155,8 +158,17 @@ async def complete_session(
     # Get session
     session = await get_session(db, session_id, user_id)
     
+    # Log what we're about to update
+    logger.info(f"🔄 Completing session {session_id}: actual_duration={actual_duration} min, planned={session.duration_minutes} min, focus_score={focus_score}")
+    
+    # Prevent double-completion
+    if session.completed:
+        logger.warning(f"⚠️ Session {session_id} already completed, skipping stats update")
+        return session
+    
     # Mark as completed
     session.completed = True
+    session.actual_duration_minutes = actual_duration  # Persist actual time spent (from timer state)
     if blink_rate is not None:
         session.blink_rate = blink_rate
     
@@ -166,6 +178,7 @@ async def complete_session(
     await db.commit()
     await db.refresh(session)
     
+    logger.info(f"✅ Session {session_id} completed successfully")
     return session
 
 
@@ -200,8 +213,13 @@ async def _update_user_stats_on_completion(
         db.add(stats)
     
     # Update stats
+    old_total_focus = stats.total_focus_min
+    old_total_sessions = stats.total_sessions
+    
     stats.total_sessions += 1
     stats.total_focus_min += actual_duration
+    
+    logger.info(f"📊 Stats update: sessions {old_total_sessions} → {stats.total_sessions}, focus_min {old_total_focus} → {stats.total_focus_min} (+{actual_duration})")
     
     # Update streak based on consecutive days
     from datetime import datetime, timedelta

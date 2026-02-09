@@ -32,7 +32,8 @@ async def api_exception_handler(request: Request, exc: APIException) -> JSONResp
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 **({"details": exc.details} if exc.details else {})
             }
-        }
+        },
+        headers={"Access-Control-Allow-Origin": "*"}  # Always send CORS headers
     )
 
 
@@ -60,7 +61,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 "errors": errors
             }
-        }
+        },
+        headers={"Access-Control-Allow-Origin": "*"}
     )
 
 
@@ -85,7 +87,8 @@ async def database_exception_handler(request: Request, exc: SQLAlchemyError) -> 
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 **({"db_error": str(exc)} if settings.debug else {})
             }
-        }
+        },
+        headers={"Access-Control-Allow-Origin": "*"}
     )
 
 
@@ -110,7 +113,8 @@ async def generic_exception_handler(request: Request, exc: Exception) -> JSONRes
                 "timestamp": datetime.now(timezone.utc).isoformat(),
                 **({"error": str(exc)} if settings.debug else {})
             }
-        }
+        },
+        headers={"Access-Control-Allow-Origin": "*"}  # Critical for CORS on 500 errors
     )
 
 

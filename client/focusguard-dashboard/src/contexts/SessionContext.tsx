@@ -105,9 +105,6 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   }
 
   const loadActiveSession = async () => {
-    // NEVER reload if a session is already loaded to prevent timer disruption
-    if (activeSession) return
-
     const token = localStorage.getItem('access_token')
     if (!token) return
 
@@ -115,6 +112,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const session = await sessionAPI.getActive().catch(() => null)
       if (!session) {
         console.log('No active session found on backend')
+        // Clear any stale session state
+        if (activeSession) {
+          stopTimer()
+        }
         return
       }
 
@@ -126,12 +127,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       const plannedSeconds = duration * 60
       const remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
 
-      // Don't auto-abandon - let users complete sessions at any time
-
       // Restore session even if it has little time left - user might want to complete it
       console.log('Restoring active session with', Math.floor(remainingSeconds / 60), 'minutes remaining')
 
-      // Restore the session state
+      // Restore the session state - force update even if activeSession exists
       setActiveSession(session)
       setSessionDuration(duration)
       setSessionStartMs(createdAt)
@@ -145,15 +144,33 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     }
   }
 
-  const startTimer = (session: Session, duration: number) => {
-    console.log('Starting timer for session:', session.id, 'duration:', duration)
+  const startTimer = (session: Session, duration: number, isRestoredSession: boolean = false) => {
+    console.log('Starting timer for session:', session.id, 'duration:', duration, 'isRestored:', isRestoredSession)
     setActiveSession(session)
     setSessionDuration(duration)
-    // Start timer from NOW, not from backend created_at
-    const startMs = Date.now()
+    
+    let startMs: number
+    let remainingSeconds: number
+    const plannedSeconds = duration * 60
+    
+    if (isRestoredSession) {
+      // For restored sessions, use backend's created_at to calculate elapsed time
+      const sessionCreatedAt = new Date(session.created_at).getTime()
+      const now = Date.now()
+      const elapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+      remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
+      startMs = sessionCreatedAt
+      console.log(`Restored session: ${elapsedSeconds}s elapsed, ${remainingSeconds}s remaining`)
+    } else {
+      // For NEW sessions, start from NOW to avoid network delay issues
+      startMs = Date.now()
+      remainingSeconds = plannedSeconds
+      console.log(`New session: starting with full ${plannedSeconds}s`)
+    }
+    
     setSessionStartMs(startMs)
-    setTimeLeft(duration * 60)
-    setIsTimerRunning(true)
+    setTimeLeft(remainingSeconds)
+    setIsTimerRunning(remainingSeconds > 0)
     setPlantsEarned(0) // Reset plants counter
     lastPlantTimeRef.current = 0 // Reset plant tracker
   }

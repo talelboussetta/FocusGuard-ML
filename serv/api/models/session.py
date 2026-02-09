@@ -56,6 +56,12 @@ class Session(Base):
         comment="Planned duration in minutes (e.g., 15, 25, 45, 60 for Pomodoro)"
     )
     
+    actual_duration_minutes = Column(
+        Integer,
+        nullable=True,
+        comment="Actual duration user spent on session in minutes (from timer state). NULL for old sessions."
+    )
+    
     blink_rate = Column(
         Float,
         nullable=True,

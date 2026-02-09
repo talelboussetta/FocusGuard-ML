@@ -52,9 +52,11 @@ const Dashboard = () => {
   const [popupChallenge, setPopupChallenge] = useState<string | null>(null)
 
   // Calculate real-time stats including current session progress
+  // Live stats calculation (includes current session in progress)
+  // DO NOT add activeSession progress if session is already marked completed (prevents double-counting during refresh)
   const liveStats = {
-    total_focus_min: (stats?.total_focus_min || 0) + (activeSession ? Math.floor((sessionDuration * 60 - timeLeft) / 60) : 0),
-    total_sessions: (stats?.total_sessions || 0) + (activeSession ? 1 : 0),
+    total_focus_min: (stats?.total_focus_min || 0) + (activeSession && !activeSession.completed ? Math.floor((sessionDuration * 60 - timeLeft) / 60) : 0),
+    total_sessions: (stats?.total_sessions || 0) + (activeSession && !activeSession.completed ? 1 : 0),
     current_streak: stats?.current_streak || 0,
     avg_focus_per_session: 0,
     longest_streak: stats?.longest_streak || 0,
@@ -114,6 +116,15 @@ const Dashboard = () => {
   const handleStartSession = async () => {
     try {
       setError(null)
+      
+      // Prevent creating a new session if one is already active
+      if (activeSession) {
+        console.warn('⚠️ Session already active, not creating a new one')
+        setError('A session is already active. Please complete or cancel it first.')
+        return
+      }
+      
+      console.log('Creating new session with duration:', sessionDuration, 'minutes')
       const session = await sessionAPI.create(sessionDuration)
       console.log('Created session:', session) // Debug log
       const duration = session.duration_minutes || sessionDuration
@@ -133,19 +144,41 @@ const Dashboard = () => {
       return
     }
     
-    console.log('Attempting to complete session:', activeSession.id)
+    // Prevent double-completion
+    if (activeSession.completed) {
+      console.warn('⚠️ Session already marked as completed')
+      setError('This session has already been completed')
+      stopTimer()
+      return
+    }
+    
+    console.log('🎯 === COMPLETING SESSION ===')
+    console.log('Session ID:', activeSession.id)
+    console.log('Session created_at:', activeSession.created_at)
+    console.log('Session duration_minutes:', activeSession.duration_minutes)
+    console.log('Session completed status:', activeSession.completed)
+    console.log('Current sessionDuration state:', sessionDuration)
+    console.log('Current timeLeft state:', timeLeft, 'seconds')
     
     try {
       pauseTimer()
       
-      // Calculate actual duration from the session's planned duration and time elapsed
-      const plannedSeconds = (activeSession.duration_minutes || sessionDuration) * 60
-      const elapsedSeconds = plannedSeconds - timeLeft
-      const actualMinutes = Math.max(1, Math.ceil(elapsedSeconds / 60))
-      const focusScore = Math.min(100, Math.floor((elapsedSeconds / plannedSeconds) * 100))
+      // Calculate actual duration from TIMER STATE (not created_at)
+      // This uses the actual countdown state which is accurate regardless of network delays
+      const actualElapsedSeconds = (sessionDuration * 60) - timeLeft
+      const actualMinutes = Math.max(1, Math.ceil(actualElapsedSeconds / 60))
       
-      console.log(`Completing session with ${actualMinutes} minutes, focus score ${focusScore}%`)
-      console.log('Stats BEFORE complete:', stats?.total_focus_min, 'min,', stats?.total_sessions, 'sessions')
+      const plannedSeconds = (activeSession.duration_minutes || sessionDuration) * 60
+      const focusScore = Math.min(100, Math.floor((actualElapsedSeconds / plannedSeconds) * 100))
+      
+      console.log('⏱️  CALCULATION BREAKDOWN:')
+      console.log('  - Session duration:', sessionDuration, 'minutes')
+      console.log('  - Time left:', timeLeft, 'seconds')
+      console.log('  - Elapsed seconds (from timer):', actualElapsedSeconds)
+      console.log('  - Actual minutes (sending to backend):', actualMinutes)
+      console.log('  - Planned seconds:', plannedSeconds)
+      console.log('  - Focus score:', focusScore, '%')
+      console.log('📊 Stats BEFORE complete:', stats?.total_focus_min, 'min,', stats?.total_sessions, 'sessions')
       
       // Complete the session on backend (updates XP, stats, plants)
       const completedSession = await sessionAPI.complete(activeSession.id, actualMinutes, focusScore)
