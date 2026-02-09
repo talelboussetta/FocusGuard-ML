@@ -148,13 +148,22 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     console.log('Starting timer for session:', session.id, 'duration:', duration)
     setActiveSession(session)
     setSessionDuration(duration)
-    // Start timer from NOW, not from backend created_at
-    const startMs = Date.now()
-    setSessionStartMs(startMs)
-    setTimeLeft(duration * 60)
-    setIsTimerRunning(true)
+    // Use session's actual creation time from backend, not current time
+    const sessionCreatedAt = new Date(session.created_at).getTime()
+    setSessionStartMs(sessionCreatedAt)
+    
+    // Calculate remaining time from session creation
+    const now = Date.now()
+    const elapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+    const plannedSeconds = duration * 60
+    const remainingSeconds = Math.max(0, plannedSeconds - elapsedSeconds)
+    
+    setTimeLeft(remainingSeconds)
+    setIsTimerRunning(remainingSeconds > 0)
     setPlantsEarned(0) // Reset plants counter
     lastPlantTimeRef.current = 0 // Reset plant tracker
+    
+    console.log(`Timer started: ${remainingSeconds}s remaining of ${plannedSeconds}s (created ${Math.floor(elapsedSeconds)}s ago)`)
   }
 
   const setPlannedDuration = (duration: number) => {
