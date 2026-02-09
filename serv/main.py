@@ -4,11 +4,19 @@ FocusGuard API - Main Application
 FastAPI application entry point.
 """
 
-import sentry_sdk
-from sentry_sdk.integrations.fastapi import FastApiIntegration
-from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
-from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse
+# Sentry imports - optional (only if sentry-sdk installed)
+try:
+    import sentry_sdk
+    from sentry_sdk.integrations.fastapi import FastApiIntegration
+    from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
+    SENTRY_AVAILABLE = True
+except ImportError:
+    sentry_sdk = None  # type: ignore
+    FastApiIntegration = None  # type: ignore
+    SqlalchemyIntegration = None  # type: ignore
+    SENTRY_AVAILABLE = False
+
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
@@ -34,20 +42,23 @@ from slowapi.errors import RateLimitExceeded
 
 # Initialize Sentry for error tracking and performance monitoring
 if settings.sentry_dsn:
-    sentry_sdk.init(
-        dsn=settings.sentry_dsn,
-        environment=settings.sentry_environment,
-        traces_sample_rate=settings.sentry_traces_sample_rate,
-        integrations=[
-            FastApiIntegration(),
-            SqlalchemyIntegration(),
-        ],
-        # Capture errors, performance data, and breadcrumbs
-        send_default_pii=False,  # Don't send personally identifiable information
-        attach_stacktrace=True,
-        max_breadcrumbs=50,
-    )
-    print(f"[OK] Sentry initialized (environment: {settings.sentry_environment})")
+    if SENTRY_AVAILABLE:
+        sentry_sdk.init(
+            dsn=settings.sentry_dsn,
+            environment=settings.sentry_environment,
+            traces_sample_rate=settings.sentry_traces_sample_rate,
+            integrations=[
+                FastApiIntegration(),
+                SqlalchemyIntegration(),
+            ],
+            # Capture errors, performance data, and breadcrumbs
+            send_default_pii=False,  # Don't send personally identifiable information
+            attach_stacktrace=True,
+            max_breadcrumbs=50,
+        )
+        print(f"[OK] Sentry initialized (environment: {settings.sentry_environment})")
+    else:
+        print("[WARNING] Sentry DSN configured but sentry-sdk not installed. Install with: pip install sentry-sdk[fastapi]")
 else:
     print("[INFO] Sentry disabled (no DSN configured)")
 

@@ -28,9 +28,6 @@ python-multipart>=0.0.6           # Form data parsing
 # Rate Limiting
 slowapi>=0.1.9                  # Rate limiting for FastAPI
 
-# Utilities
-python-dotenv>=1.0.0            # Environment variable management
-
 # ============================================================================
 # RAG & AI Dependencies (Required for Chatbot)
 # ============================================================================
@@ -45,12 +42,6 @@ numpy>=1.24.0                   # Required by sentence-transformers
 # LLM Integration (Only what we actually use)
 huggingface-hub>=0.20.0         # Hugging Face Hub client (for inference API)
 
-# HTTP Client
-aiohttp>=3.9.0                  # Async HTTP client for API calls
-
-# Parsing
-PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
-
 # ============================================================================
 # REMOVED from production (not used or optional):
 # ============================================================================
@@ -60,3 +51,6 @@ PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
 # tiktoken>=0.5.0                 # Only needed for OpenAI
 # anthropic>=0.18.0               # Optional alternative - not used
 # psycopg2-binary>=2.9.9          # Redundant - asyncpg handles PostgreSQL
+# python-dotenv>=1.0.0            # Not needed - pydantic-settings handles .env
+# aiohttp>=3.9.0                  # Not used anywhere in codebase
+# PyYAML>=6.0.0                   # Only for knowledge ingestion (not run on Render)
