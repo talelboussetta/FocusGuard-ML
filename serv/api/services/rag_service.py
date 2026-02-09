@@ -54,22 +54,38 @@ class RAGService:
         
         try:
             # Lazy import to avoid loading heavy dependencies at module import time
-            from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
+            from api.config import settings
             from rag.vector_store.qdrant_store import QdrantVectorStore
             from rag.retrieval.retriever import Retriever
             from rag.generation.config import get_generator
             
-            # Initialize embedder
-            logger.info("[RAG] Loading sentence transformer embedder...")
-            self.embedder = SentenceTransformerEmbedder()
-            logger.info(f"[RAG] Embedder loaded: dimension={self.embedder.dimension}")
+            # Initialize embedder based on configuration
+            if settings.use_local_embeddings:
+                logger.info("[RAG] Using local sentence transformer embeddings...")
+                from rag.embeddings.sentence_transformer_embedder import SentenceTransformerEmbedder
+                self.embedder = SentenceTransformerEmbedder(
+                    model_name=getattr(settings, 'sentence_transformer_model', 'all-MiniLM-L6-v2'),
+                    device=getattr(settings, 'sentence_transformer_device', 'cpu')
+                )
+            else:
+                logger.info("[RAG] Using OpenAI cloud embeddings (production mode)...")
+                from rag.embeddings.openai_embedder import OpenAIEmbedder
+                if not settings.openai_api_key:
+                    raise ValueError("OPENAI_API_KEY is required when USE_LOCAL_EMBEDDINGS=False")
+                self.embedder = OpenAIEmbedder(
+                    api_key=settings.openai_api_key,
+                    model=settings.openai_embedding_model
+                )
+            
+            logger.info(f"[RAG] Embedder loaded: model={getattr(self.embedder, 'model', 'unknown')}, dimension={self.embedder.dimension}")
             
             # Initialize vector store
             logger.info("[RAG] Connecting to Qdrant vector store...")
             self.vector_store = QdrantVectorStore(
-                url="http://localhost:6333",
-                collection_name="focusguard_knowledge",
-                vector_size=self.embedder.dimension
+                url=settings.qdrant_url,
+                collection_name=settings.qdrant_collection_name,
+                vector_size=self.embedder.dimension,
+                api_key=settings.qdrant_api_key if settings.qdrant_api_key else None
             )
             await self.vector_store.initialize()
             

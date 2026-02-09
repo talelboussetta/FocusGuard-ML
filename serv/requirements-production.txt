@@ -42,8 +42,8 @@ python-dotenv>=1.0.0            # Environment variable management
 # Vector Store
 qdrant-client>=1.7.0            # Qdrant vector database client
 
-# Embeddings (Cloud-based only for Render free tier - low memory)
-# sentence-transformers>=2.3.0  # REMOVED: Too heavy for 512MB RAM limit
+# Embeddings (Local model for free tier)
+sentence-transformers>=2.3.0    # Local embeddings with HuggingFace models
 
 # LLM Integration
 openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
