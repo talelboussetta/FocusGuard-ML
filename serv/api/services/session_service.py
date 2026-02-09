@@ -4,6 +4,7 @@ FocusGuard API - Session Service
 Business logic for focus session management.
 """
 
+import logging
 from typing import List, Optional
 from datetime import datetime, timezone, timedelta
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,6 +17,8 @@ from ..utils import (
     SessionNotFoundException,
     ForbiddenException
 )
+
+logger = logging.getLogger(__name__)
 
 
 async def create_session(
