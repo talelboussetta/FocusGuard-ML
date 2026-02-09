@@ -132,12 +132,21 @@ async def check_db_connection() -> bool:
     Check if database connection is working.
     
     Returns:
-        True if connection successful, False otherwise
+        True if connection successful, False otherwise.
+        Never hangs - has 3-second timeout.
     """
+    import asyncio
     try:
-        async with engine.connect() as conn:
-            await conn.execute(text("SELECT 1"))
-        return True
+        async def _check():
+            async with engine.connect() as conn:
+                await conn.execute(text("SELECT 1"))
+            return True
+        
+        # 3-second timeout to prevent hanging
+        return await asyncio.wait_for(_check(), timeout=3.0)
+    except asyncio.TimeoutError:
+        print(f"[WARNING] Database connection check timed out")
+        return False
     except Exception as e:
-        print(f"Database connection failed: {e}")
+        print(f"[WARNING] Database connection failed: {str(e)[:100]}")
         return False
