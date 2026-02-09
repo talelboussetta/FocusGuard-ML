@@ -108,23 +108,32 @@ async def lifespan(app: FastAPI):
             except Exception as e:
                 print(f"[WARNING] Table creation error: {str(e)[:100]}")
         
-        # Initialize RAG/AI Tutor in background (don't block)
-        print("[INFO] AI Tutor initializing in background...")
-        
+        # Initialize RAG/AI Tutor in background (completely optional)
+        # Only if QDRANT_URL is configured
         async def initialize_rag():
-            """Initialize RAG service in background."""
+            """Initialize RAG service in background - non-blocking."""
+            # Check if RAG is configured before attempting initialization
+            qdrant_url = os.getenv("QDRANT_URL", "")
+            if not qdrant_url or qdrant_url == "http://localhost:6333":
+                print("[INFO] AI Tutor disabled - QDRANT_URL not configured")
+                print("[INFO] Set QDRANT_URL in environment to enable RAG features")
+                return
+            
+            print("[INFO] AI Tutor initializing in background...")
             try:
+                # Import here to avoid blocking startup if imports fail
                 from api.services.rag_service import get_rag_service
                 rag_service = get_rag_service()
                 await asyncio.wait_for(rag_service.initialize(), timeout=30.0)
                 print("[OK] AI Tutor ready (RAG system initialized)")
+            except ImportError as e:
+                print(f"[INFO] AI Tutor disabled - missing dependency: {str(e).split(':')[-1].strip()}")
             except asyncio.TimeoutError:
                 print("[WARNING] AI Tutor initialization timed out - using fallback mode")
             except Exception as e:
                 print(f"[WARNING] AI Tutor initialization failed: {str(e)[:100]}")
-                print("[INFO] AI Tutor will use fallback mode")
         
-        # Start initialization in background (don't block startup)
+        # Start initialization in background (non-blocking - fire and forget)
         asyncio.create_task(initialize_rag())
     
     # Run startup with absolute 10-second timeout
