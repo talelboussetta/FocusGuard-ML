@@ -1,8 +1,8 @@
-# FocusGuard Production Requirements (DigitalOcean App Platform)
-# Optimized for FastAPI backend with RAG AI Tutor
+# FocusGuard Production Requirements (Render)
+# MINIMAL - Only essential packages for fast deployment
 
 # ============================================================================
-# REST API Dependencies
+# REST API Dependencies (Core)
 # ============================================================================
 
 # FastAPI - Modern, high-performance web framework
@@ -14,7 +14,6 @@ uvicorn[standard]>=0.27.0
 # Database ORM & Drivers
 sqlalchemy>=2.0.25              # SQL toolkit and ORM
 asyncpg>=0.29.0                 # Async PostgreSQL driver
-psycopg2-binary>=2.9.9          # PostgreSQL adapter (for migrations/sync ops)
 
 # Data Validation
 pydantic>=2.5.0                 # Data validation using Python type hints
@@ -29,26 +28,21 @@ python-multipart>=0.0.6           # Form data parsing
 # Rate Limiting
 slowapi>=0.1.9                  # Rate limiting for FastAPI
 
-# Error Tracking & Monitoring
-sentry-sdk[fastapi]>=1.40.0     # Error tracking and performance monitoring
-
 # Utilities
 python-dotenv>=1.0.0            # Environment variable management
 
 # ============================================================================
-# RAG & AI Dependencies
+# RAG & AI Dependencies (Required for Chatbot)
 # ============================================================================
 
 # Vector Store
 qdrant-client>=1.7.0            # Qdrant vector database client
 
-# Embeddings (Local model for free tier)
+# Embeddings (Local model - free, no API key)
 sentence-transformers>=2.3.0    # Local embeddings with HuggingFace models
+numpy>=1.24.0                   # Required by sentence-transformers
 
-# LLM Integration
-openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
-tiktoken>=0.5.0                 # Token counting for OpenAI models
-anthropic>=0.18.0               # Anthropic Claude API (optional alternative)
+# LLM Integration (Only what we actually use)
 huggingface-hub>=0.20.0         # Hugging Face Hub client (for inference API)
 
 # HTTP Client
@@ -58,20 +52,11 @@ aiohttp>=3.9.0                  # Async HTTP client for API calls
 PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
 
 # ============================================================================
-# Image Processing (Garden Features)
+# REMOVED from production (not used or optional):
 # ============================================================================
-pillow>=10.0.0                  # Image processing for garden visuals
-
-# Numerical Computing (for ML/AI utilities)
-numpy>=1.24.0
-
-# ============================================================================
-# Development & Testing (install separately, not in production)
-# ============================================================================
-# pytest>=7.4.0
-# pytest-asyncio>=0.23.0
-# pytest-cov>=4.1.0
-# httpx>=0.26.0                 # Async HTTP client for testing
-# black>=23.0.0
-# flake8>=6.0.0
-# mypy>=1.8.0
+# sentry-sdk[fastapi]>=1.40.0     # Error tracking - optional, adds deployment time
+# pillow>=10.0.0                  # Image processing - not critical for core features
+# openai>=1.10.0                  # Not using OpenAI (using local embeddings)
+# tiktoken>=0.5.0                 # Only needed for OpenAI
+# anthropic>=0.18.0               # Optional alternative - not used
+# psycopg2-binary>=2.9.9          # Redundant - asyncpg handles PostgreSQL

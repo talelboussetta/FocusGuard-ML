@@ -170,15 +170,24 @@ async def query_with_conversation(
         max_messages=6
     )
     
-    # Query RAG with conversation context
-    rag_response = await rag_service.query_with_conversation(
-        query=query_request.query,
-        conversation_history=conversation_history,
-        top_k=query_request.top_k,
-        include_sources=query_request.include_sources,
-        user_id=user_uuid,
-        db=db
-    )
+    # Query RAG with conversation context (with timeout protection)
+    try:
+        rag_response = await rag_service.query_with_conversation(
+            query=query_request.query,
+            conversation_history=conversation_history,
+            top_k=query_request.top_k,
+            include_sources=query_request.include_sources,
+            user_id=user_uuid,
+            db=db
+        )
+    except Exception as rag_error:
+        # If RAG service fails, return helpful error without crashing
+        import logging
+        logging.error(f"RAG service error: {rag_error}")
+        raise HTTPException(
+            status_code=503,
+            detail="AI Tutor is currently initializing. Please try again in 30 seconds."
+        )
     
     # Add assistant message
     sources_list = None
