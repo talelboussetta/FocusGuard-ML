@@ -30,9 +30,16 @@ Example usage:
 """
 
 from .base_embedder import BaseEmbedder
-from .openai_embedder import OpenAIEmbedder
 from .sentence_transformer_embedder import SentenceTransformerEmbedder
 from .config import get_embedder, initialize_embedder, reset_embedder
+
+# Conditional import - only available if openai package is installed
+try:
+    from .openai_embedder import OpenAIEmbedder
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OpenAIEmbedder = None  # type: ignore
+    OPENAI_AVAILABLE = False
 
 
 __all__ = [
@@ -42,4 +49,5 @@ __all__ = [
     "get_embedder",
     "initialize_embedder",
     "reset_embedder",
+    "OPENAI_AVAILABLE",
 ]
