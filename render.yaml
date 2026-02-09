@@ -112,7 +112,6 @@ services:
   - type: web
     name: focusguard-frontend
     runtime: static
-    region: oregon
     plan: free
     branch: main
     rootDir: client/focusguard-dashboard
