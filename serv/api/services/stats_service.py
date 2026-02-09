@@ -90,7 +90,8 @@ async def get_daily_stats(
             }
         
         daily_data[date_key]["sessions_completed"] += 1
-        daily_data[date_key]["focus_min"] += session.duration_minutes
+        # Use actual_duration_minutes (from timer state) with fallback to planned duration for old sessions
+        daily_data[date_key]["focus_min"] += (session.actual_duration_minutes or session.duration_minutes or 0)
     
     # Fill in missing dates with zeros
     current_date = start_date.date()
@@ -141,7 +142,8 @@ async def get_user_trends(
     recent_sessions = result.scalars().all()
 
     def total_minutes(sessions):
-        return sum((s.duration_minutes or 0) for s in sessions)
+        # Use actual_duration_minutes (from timer state) with fallback to planned duration for old sessions
+        return sum((s.actual_duration_minutes or s.duration_minutes or 0) for s in sessions)
 
     # Buckets
     this_week_sessions = [s for s in recent_sessions if s.created_at >= seven_days_ago]

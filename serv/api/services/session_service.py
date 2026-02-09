@@ -168,6 +168,7 @@ async def complete_session(
     
     # Mark as completed
     session.completed = True
+    session.actual_duration_minutes = actual_duration  # Persist actual time spent (from timer state)
     if blink_rate is not None:
         session.blink_rate = blink_rate
     

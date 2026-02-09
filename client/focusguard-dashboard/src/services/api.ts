@@ -29,6 +29,7 @@ export interface Session {
   user_id: string;  // UUID from backend
   completed: boolean;
   duration_minutes?: number;  // Planned duration (15, 25, 45, 60 for Pomodoro)
+  actual_duration_minutes?: number;  // Actual duration from timer state (persisted on completion)
   duration?: number;  // Duration in seconds (computed: duration_minutes * 60)
   focus_score?: number;  // Focus quality percentage (0-100)
   blink_rate?: number;  // AI analysis

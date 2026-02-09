@@ -52,9 +52,11 @@ const Dashboard = () => {
   const [popupChallenge, setPopupChallenge] = useState<string | null>(null)
 
   // Calculate real-time stats including current session progress
+  // Live stats calculation (includes current session in progress)
+  // DO NOT add activeSession progress if session is already marked completed (prevents double-counting during refresh)
   const liveStats = {
-    total_focus_min: (stats?.total_focus_min || 0) + (activeSession ? Math.floor((sessionDuration * 60 - timeLeft) / 60) : 0),
-    total_sessions: (stats?.total_sessions || 0) + (activeSession ? 1 : 0),
+    total_focus_min: (stats?.total_focus_min || 0) + (activeSession && !activeSession.completed ? Math.floor((sessionDuration * 60 - timeLeft) / 60) : 0),
+    total_sessions: (stats?.total_sessions || 0) + (activeSession && !activeSession.completed ? 1 : 0),
     current_streak: stats?.current_streak || 0,
     avg_focus_per_session: 0,
     longest_streak: stats?.longest_streak || 0,
@@ -161,20 +163,18 @@ const Dashboard = () => {
     try {
       pauseTimer()
       
-      // Calculate actual duration from ACTUAL TIME ELAPSED (not timer state)
-      // This ensures correct time tracking even if timer expired or user completed late
-      const sessionCreatedAt = new Date(activeSession.created_at).getTime()
-      const now = Date.now()
-      const actualElapsedSeconds = Math.floor((now - sessionCreatedAt) / 1000)
+      // Calculate actual duration from TIMER STATE (not created_at)
+      // This uses the actual countdown state which is accurate regardless of network delays
+      const actualElapsedSeconds = (sessionDuration * 60) - timeLeft
       const actualMinutes = Math.max(1, Math.ceil(actualElapsedSeconds / 60))
       
       const plannedSeconds = (activeSession.duration_minutes || sessionDuration) * 60
       const focusScore = Math.min(100, Math.floor((actualElapsedSeconds / plannedSeconds) * 100))
       
       console.log('⏱️  CALCULATION BREAKDOWN:')
-      console.log('  - Session created at:', new Date(sessionCreatedAt).toLocaleTimeString())
-      console.log('  - Completing at:', new Date(now).toLocaleTimeString())
-      console.log('  - Elapsed seconds:', actualElapsedSeconds)
+      console.log('  - Session duration:', sessionDuration, 'minutes')
+      console.log('  - Time left:', timeLeft, 'seconds')
+      console.log('  - Elapsed seconds (from timer):', actualElapsedSeconds)
       console.log('  - Actual minutes (sending to backend):', actualMinutes)
       console.log('  - Planned seconds:', plannedSeconds)
       console.log('  - Focus score:', focusScore, '%')
