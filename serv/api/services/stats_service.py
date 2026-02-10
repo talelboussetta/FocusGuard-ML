@@ -59,8 +59,8 @@ async def get_daily_stats(
     Returns:
         List of daily statistics dictionaries
     """
-    # Calculate date range (use UTC timezone to match database)
-    end_date = datetime.now(timezone.utc)
+    # Calculate date range (use naive UTC to match TIMESTAMP column)
+    end_date = datetime.utcnow()
     start_date = end_date - timedelta(days=days)
     
     # Get sessions in date range
@@ -123,8 +123,8 @@ async def get_user_trends(
     Returns:
         Dictionary with trend data
     """
-    # Get stats for last 30 days (use UTC timezone to match database)
-    now = datetime.now(timezone.utc)
+    # Get stats for last 30 days (use naive UTC to match TIMESTAMP column)
+    now = datetime.utcnow()
     thirty_days_ago = now - timedelta(days=30)
     seven_days_ago = now - timedelta(days=7)
     fourteen_days_ago = now - timedelta(days=14)
