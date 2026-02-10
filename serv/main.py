@@ -121,21 +121,47 @@ async def lifespan(app: FastAPI):
     print("[*] FocusGuard API starting...")
     print("[*] Port binding immediately...")
     
-    # TEMPORARY: Disable background tasks entirely to isolate crash
-    # If app stays up without this, we know background task was the issue
-    print("[INFO] Background tasks DISABLED for debugging")
-    print("[INFO] Database checks and RAG initialization skipped")
+    # Re-enable MINIMAL background tasks - just DB check (safe)
+    async def safe_background_wrapper():
+        """Minimal background tasks - only what's needed."""
+        try:
+            print("[BACKGROUND] Starting minimal background checks...")
+            
+            # Database setup (production mode)
+            if not settings.debug:
+                print("[INFO] Production mode - checking database setup...")
+                try:
+                    # Check if tables exist, if not create them (one-time setup)
+                    is_connected = await asyncio.wait_for(check_db_connection(), timeout=3.0)
+                    if is_connected:
+                        print("[OK] Database connection verified")
+                        # Try to create tables (idempotent - won't recreate existing tables)
+                        print("[INFO] Ensuring database tables exist...")
+                        await asyncio.wait_for(init_db(), timeout=10.0)
+                        print("[OK] Database tables ready")
+                    else:
+                        print("[WARNING] Database not connected - tables may not exist")
+                except Exception as e:
+                    print(f"[WARNING] Database setup error: {str(e)[:100]}")
+            else:
+                # Development mode - always ensure tables exist
+                print("[INFO] Development mode - ensuring tables exist...")
+                try:
+                    await asyncio.wait_for(init_db(), timeout=10.0)
+                    print("[OK] Database tables ready")
+                except Exception as e:
+                    print(f"[WARNING] Table creation error: {str(e)[:100]}")
+            
+            # RAG is disabled (was causing crashes)
+            print("[INFO] AI Tutor disabled - skipping RAG initialization")
+            print("[OK] Background startup complete")
+            
+        except Exception as e:
+            print(f"[ERROR] Background task exception (non-fatal): {str(e)[:200]}")
+            import traceback
+            traceback.print_exc()
     
-    # Uncomment to re-enable background tasks after confirming app is stable:
-    # async def safe_background_wrapper():
-    #     """Safety wrapper - exceptions here CANNOT crash the app."""
-    #     try:
-    #         await background_startup()
-    #     except Exception as e:
-    #         print(f"[CRITICAL] Background task exception (non-fatal): {str(e)[:200]}")
-    #         import traceback
-    #         traceback.print_exc()
-    # asyncio.create_task(safe_background_wrapper())
+    asyncio.create_task(safe_background_wrapper())
     
     # IMMEDIATE RETURN - port binds NOW
     yield
