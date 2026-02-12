@@ -32,5 +32,8 @@ export default defineConfig({
         manualChunks: undefined,
       },
     },
+    outDir: 'dist',
   },
+  // Ensure SPA fallback for development
+  appType: 'spa',
 })

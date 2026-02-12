@@ -126,16 +126,23 @@ services:
     
     staticPublishPath: dist
     
-    # Custom headers for SPA routing
-    headers:
-      - path: /*
-        name: Cache-Control
-        value: public, max-age=0, must-revalidate
-    
+    # SPA routing - rewrite all requests to index.html
     routes:
       - type: rewrite
         source: /*
         destination: /index.html
+    
+    # Custom headers
+    headers:
+      - path: /*
+        name: Cache-Control
+        value: no-cache
+      - path: /index.html
+        name: Cache-Control
+        value: no-cache, no-store, must-revalidate
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
     
     envVars:
       - key: VITE_API_URL
