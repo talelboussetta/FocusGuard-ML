@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useNavigate } from 'react-router-dom'
-import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera, Clock, Flame, CheckCircle, TrendingUp } from 'lucide-react'
+import { Play, Pause, Square, Leaf, ArrowRight, Loader2, AlertCircle, Camera, Clock, Flame, CheckCircle, TrendingUp, X, Info } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import StatsCard from '../components/StatsCard'
 import DistractionMonitor from '../components/DistractionMonitor'
@@ -50,6 +50,10 @@ const Dashboard = () => {
   const location = useLocation()
   const [showStartPopup, setShowStartPopup] = useState(false)
   const [popupChallenge, setPopupChallenge] = useState<string | null>(null)
+  const [showTimerNotice, setShowTimerNotice] = useState(() => {
+    const dismissed = localStorage.getItem('timerNoticeDismissed')
+    return dismissed !== 'true'
+  })
 
   // Calculate real-time stats including current session progress
   // Live stats calculation (includes current session in progress)
@@ -287,6 +291,33 @@ const Dashboard = () => {
 
         {/* Content */}
         <div className="relative z-10 p-8 max-w-7xl mx-auto">
+          {/* Timer Notice Banner */}
+          {showTimerNotice && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, height: 0 }}
+              className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg flex items-start gap-3"
+            >
+              <Info className="w-5 h-5 text-blue-400 flex-shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-blue-300 text-sm">
+                  <span className="font-semibold">Timer Stuck?</span> If your timer gets stuck, click the <span className="font-semibold">Complete</span> button 2-3 times to reset it. We're actively working on fixing this bug! 😊
+                </p>
+              </div>
+              <button
+                onClick={() => {
+                  setShowTimerNotice(false)
+                  localStorage.setItem('timerNoticeDismissed', 'true')
+                }}
+                className="text-blue-400 hover:text-blue-300 transition-colors flex-shrink-0"
+                aria-label="Dismiss"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </motion.div>
+          )}
+          
           {/* Error Display */}
           {error && (
             <motion.div
