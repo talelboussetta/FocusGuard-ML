@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar'
 import { useNavigate } from 'react-router-dom'
 import { useState, useRef, useEffect } from 'react'
 import { teamAPI, getErrorMessage } from '../services/api'
+import { useNotificationContext } from '../contexts/NotificationContext'
 
 // Animation variants
 const overlayVariants = {
@@ -25,6 +26,7 @@ const successPulse = {
 
 const TeamPage = () => {
 	const navigate = useNavigate()
+	const { success, warning } = useNotificationContext()
 	const [showCreateModal, setShowCreateModal] = useState(false)
 	const [showJoinModal, setShowJoinModal] = useState(false)
 	const [teamName, setTeamName] = useState('')
@@ -75,6 +77,8 @@ const TeamPage = () => {
 			const team = await teamAPI.createTeam(teamName.trim())
 			setCreatedTeamId(team.team_id)
 			setCreateSuccess(true)
+			// Show notification to save the ID
+			warning('⚠️ Save your Team ID! Share it with members to join.', 5000)
 			// Navigate to team detail after short delay
 			setTimeout(() => {
 				navigate(`/teams/${team.team_id}`)
@@ -90,6 +94,7 @@ const TeamPage = () => {
 		if (!createdTeamId) return
 		try {
 			await navigator.clipboard.writeText(createdTeamId)
+			success('Team ID copied to clipboard!', 2000)
 		} catch (e) {
 			// ignore clipboard failures silently
 		}

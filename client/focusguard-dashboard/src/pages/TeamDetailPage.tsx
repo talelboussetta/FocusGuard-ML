@@ -1,14 +1,16 @@
 import { motion } from 'framer-motion'
-import { Users, Crown, MessageSquare, Send, ArrowLeft, Trophy, Target } from 'lucide-react'
+import { Users, Crown, MessageSquare, Send, ArrowLeft, Trophy, Target, Copy, Check, LogOut } from 'lucide-react'
 import Sidebar from '../components/Sidebar'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { useState, useEffect, useRef } from 'react'
 import { teamAPI, getErrorMessage, type TeamDetail, type TeamMessage } from '../services/api'
+import { useNotificationContext } from '../contexts/NotificationContext'
 
 const TeamDetailPage = () => {
 	const navigate = useNavigate()
 	const { user } = useAuth()
+	const { success } = useNotificationContext()
 	const { teamId } = useParams<{ teamId: string }>()
 	const [team, setTeam] = useState<TeamDetail | null>(null)
 	const [loading, setLoading] = useState(true)
@@ -17,6 +19,8 @@ const TeamDetailPage = () => {
 	const [messages, setMessages] = useState<TeamMessage[]>([])
 	const [sendingMessage, setSendingMessage] = useState(false)
 	const [messageError, setMessageError] = useState<string | null>(null)
+	const [copiedTeamId, setCopiedTeamId] = useState(false)
+	const [leavingTeam, setLeavingTeam] = useState(false)
 	const chatEndRef = useRef<HTMLDivElement>(null)
 
 	useEffect(() => {
@@ -98,6 +102,43 @@ const TeamDetailPage = () => {
 		}
 	}
 
+	const copyTeamId = async () => {
+		if (!teamId) return
+		try {
+			await navigator.clipboard.writeText(teamId)
+			setCopiedTeamId(true)
+			success('Team ID copied! Share it with friends to join.', 2000)
+			setTimeout(() => setCopiedTeamId(false), 2000)
+		} catch (e) {
+			// ignore clipboard failures
+		}
+	}
+
+	const handleLeaveTeam = async () => {
+		if (!teamId || !team) return
+		
+		const confirmed = window.confirm(
+			`Are you sure you want to leave "${team.team_name}"? You can rejoin later if you have the Team ID.`
+		)
+		
+		if (!confirmed) return
+		
+		setLeavingTeam(true)
+		try {
+			await teamAPI.leaveTeam(teamId)
+			success('Successfully left the team', 2000)
+			// Navigate back to teams page (will show join/create options)
+			setTimeout(() => {
+				navigate('/teams')
+			}, 500)
+		} catch (err: any) {
+			const errorMsg = getErrorMessage(err, 'Failed to leave team')
+			setError(errorMsg)
+		} finally {
+			setLeavingTeam(false)
+		}
+	}
+
 	if (loading) {
 		return (
 			<div className="min-h-screen flex">
@@ -157,8 +198,40 @@ const TeamDetailPage = () => {
 						>
 							<ArrowLeft className="w-5 h-5" />
 							Back to Teams
-						</button>
-						<div className="flex items-start justify-between">
+						</button>					
+					{/* Team ID Display with Copy */}
+					<motion.div
+						initial={{ opacity: 0, y: -10 }}
+						animate={{ opacity: 1, y: 0 }}
+						transition={{ delay: 0.1 }}
+						className="mb-4 p-4 glass rounded-xl border border-primary-500/20"
+					>
+						<div className="flex items-center justify-between gap-4">
+							<div className="flex-1">
+								<p className="text-xs text-slate-400 mb-1">Team ID (Share with friends)</p>
+								<p className="text-sm font-mono text-slate-200 break-all">{teamId}</p>
+							</div>
+							<motion.button
+								onClick={copyTeamId}
+								className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+							>
+								{copiedTeamId ? (
+									<>
+										<Check className="w-4 h-4" />
+										Copied!
+									</>
+								) : (
+									<>
+										<Copy className="w-4 h-4" />
+										Copy ID
+									</>
+								)}
+							</motion.button>
+						</div>
+					</motion.div>
+											<div className="flex items-start justify-between">
 							<div>
 								<div className="flex items-center gap-3 mb-2">
 									<Users className="w-10 h-10 text-primary-500" />
@@ -166,8 +239,16 @@ const TeamDetailPage = () => {
 								</div>
 								<p className="text-slate-400">
 									{team.total_members} {team.total_members === 1 ? 'member' : 'members'} • {team.total_xp.toLocaleString()} Total XP • {team.total_sessions_completed} Sessions
-								</p>
-							</div>
+								</p>							<motion.button
+								onClick={handleLeaveTeam}
+								disabled={leavingTeam}
+								className="mt-4 btn-secondary flex items-center gap-2 bg-red-500/10 hover:bg-red-500/20 border border-red-500/30 text-red-400 hover:text-red-300"
+								whileHover={{ scale: 1.05 }}
+								whileTap={{ scale: 0.95 }}
+							>
+								<LogOut className="w-4 h-4" />
+								{leavingTeam ? 'Leaving...' : 'Leave Team'}
+							</motion.button>							</div>
 						</div>
 					</motion.div>
 
