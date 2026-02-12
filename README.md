@@ -308,9 +308,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 **Talel Boussetta**  
 - GitHub: [@talelboussetta](https://github.com/talelboussetta)
-- LinkedIn: [Your LinkedIn Profile](https://linkedin.com/in/yourprofile)
-- Email: your.email@example.com
-- Portfolio: [Your Portfolio](https://yourportfolio.com)
+- LinkedIn: [My LinkedIn Profile]([https://linkedin.com/in/yourprofile](https://www.linkedin.com/in/talel-boussetta/))
+- Email: talelboussetta6@gmail.com
+- Portfolio: [My Portfolio](https://talelboussetta.me)
 
 ---
 
