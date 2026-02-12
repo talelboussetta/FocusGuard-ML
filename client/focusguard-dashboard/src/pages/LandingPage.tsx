@@ -213,7 +213,7 @@ const LandingPage = () => {
             Privacy
           </button>
           <a
-            href="https://github.com/talelelvis/FocusGuard-ML"
+            href="https://github.com/talelboussetta/FocusGuard-ML"
             target="_blank"
             rel="noopener noreferrer"
             className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 rounded-lg text-sm font-medium text-slate-100 transition-all group"
