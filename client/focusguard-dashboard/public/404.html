@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>FocusGuard - Redirecting...</title>
+    <script>
+      // SPA fallback: preserve the URL path and redirect to index.html
+      // This handles page refreshes on Render static sites
+      // The single-page app's router will handle the route client-side
+      var path = window.location.pathname + window.location.search + window.location.hash;
+      // Store the intended path and let the SPA router handle it
+      sessionStorage.setItem('spa_redirect', path);
+      window.location.replace('/');
+    </script>
+  </head>
+  <body>
+    <p>Redirecting...</p>
+  </body>
+</html>
