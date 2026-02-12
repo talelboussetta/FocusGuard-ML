@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, useMotionValue, useSpring } from 'framer-motion'
 import { useNavigate } from 'react-router-dom'
-import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check } from 'lucide-react'
+import { Timer, MessageSquare, Sprout, Lock, ChevronRight, Play, Shield, Eye, Zap, TrendingUp, Users, Check, Star } from 'lucide-react'
 import moonImage from '../assets/images/moonjpg.jpg'
 import arrowImage from '../assets/images/arrow.png'
 
@@ -212,6 +212,15 @@ const LandingPage = () => {
             <Shield size={16} />
             Privacy
           </button>
+          <a
+            href="https://github.com/talelelvis/FocusGuard-ML"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden sm:flex items-center gap-2 px-4 py-2 bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 hover:border-slate-600 rounded-lg text-sm font-medium text-slate-100 transition-all group"
+          >
+            <Star className="w-4 h-4 group-hover:fill-yellow-400 group-hover:text-yellow-400 transition-colors" />
+            Star on GitHub
+          </a>
           <button
             onClick={() => navigate('/auth')}
             className="text-sm font-medium text-slate-100 hover:text-slate-300 transition-colors"

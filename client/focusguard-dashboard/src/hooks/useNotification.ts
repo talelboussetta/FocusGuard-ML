@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 
 export type NotificationType = 'success' | 'error' | 'info' | 'warning'
 
@@ -15,12 +15,30 @@ export interface Notification {
 export function useNotification() {
   const [notifications, setNotifications] = useState<Notification[]>([])
 
+  // Listen for clear all notifications event
+  useEffect(() => {
+    const handleClearAll = () => {
+      setNotifications([])
+    }
+    
+    window.addEventListener('clearAllNotifications', handleClearAll)
+    return () => {
+      window.removeEventListener('clearAllNotifications', handleClearAll)
+    }
+  }, [])
+
   const removeNotification = useCallback((id: string) => {
     setNotifications((prev) => prev.filter((n) => n.id !== id))
   }, [])
 
   const addNotification = useCallback(
     (message: string, type: NotificationType = 'info', duration = 3000) => {
+      // Check if notifications are enabled
+      const notificationsEnabled = localStorage.getItem('notificationsEnabled')
+      if (notificationsEnabled !== null && !JSON.parse(notificationsEnabled)) {
+        return '' // Don't show notification if disabled
+      }
+
       const id = Math.random().toString(36).substr(2, 9)
       const notification: Notification = { id, message, type, duration }
 

@@ -394,11 +394,19 @@ const Dashboard = () => {
                       {/* Running timer display with circular progress */}
                       <svg width="320" height="320" viewBox="0 0 320 320">
                         <defs>
-                      <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#e2e8f0" />
-                        <stop offset="100%" stopColor="#94a3b8" />
-                      </linearGradient>
-                    </defs>
+                          <linearGradient id="timer-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#10b981" />
+                            <stop offset="50%" stopColor="#3b82f6" />
+                            <stop offset="100%" stopColor="#8b5cf6" />
+                          </linearGradient>
+                          <filter id="glow">
+                            <feGaussianBlur stdDeviation="4" result="coloredBlur"/>
+                            <feMerge>
+                              <feMergeNode in="coloredBlur"/>
+                              <feMergeNode in="SourceGraphic"/>
+                            </feMerge>
+                          </filter>
+                        </defs>
                         
                         {/* Background circle */}
                         <circle
@@ -406,9 +414,9 @@ const Dashboard = () => {
                           cy="160"
                           r="140"
                           fill="none"
-                          stroke="#1f2937"
+                          stroke="#0f172a"
                           strokeWidth="32"
-                          opacity="0.6"
+                          opacity="0.8"
                         />
                         
                         {/* Progress circle */}
@@ -417,12 +425,13 @@ const Dashboard = () => {
                           cy="160"
                           r="140"
                           fill="none"
-                        stroke="#cbd5f5"
-                        strokeWidth="32"
+                          stroke="url(#timer-gradient)"
+                          strokeWidth="32"
                           strokeLinecap="round"
                           strokeDasharray={2 * Math.PI * 140}
                           strokeDashoffset={2 * Math.PI * 140 * (1 - (timeLeft / (sessionDuration * 60)))}
                           transform="rotate(-90 160 160)"
+                          filter="url(#glow)"
                           animate={isTimerRunning ? { 
                             strokeDashoffset: 2 * Math.PI * 140 * (1 - (timeLeft / (sessionDuration * 60)))
                           } : {}}
@@ -434,7 +443,8 @@ const Dashboard = () => {
                           x="160"
                           y="150"
                           textAnchor="middle"
-                          className="text-7xl font-display font-bold fill-slate-100"
+                          className="text-7xl font-display font-bold"
+                          style={{ fill: 'url(#timer-gradient)' }}
                         >
                           {formatTime(timeLeft)}
                         </text>
@@ -442,7 +452,7 @@ const Dashboard = () => {
                           x="160"
                           y="185"
                           textAnchor="middle"
-                          className="text-lg font-medium fill-slate-400"
+                          className="text-lg font-medium fill-emerald-400"
                         >
                           {isTimerRunning ? 'In Progress' : 'Paused'}
                         </text>

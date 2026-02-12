@@ -1,9 +1,9 @@
 import { motion } from 'framer-motion'
 import { useState, useEffect } from 'react'
-import { Leaf, Play, Sparkles, Sprout, Loader2, AlertCircle, RotateCcw } from 'lucide-react'
+import { Leaf, Play, Sparkles, Sprout, Loader2, AlertCircle, RotateCcw, Bell, BellOff, X } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
+import { useNotificationContext } from '../contexts/NotificationContext'
 import Sidebar from '../components/Sidebar'
-import { gardenAPI, userAPI, getErrorMessage } from '../services/api'
 import type { Garden, UserStats } from '../services/api'
 import gardenImage1 from '../assets/images/garden_images/GST DACAR 121-02.png'
 import gardenImage2 from '../assets/images/garden_images/GST DACAR 121-03.png'
@@ -12,12 +12,17 @@ import gardenImage4 from '../assets/images/garden_images/GST DACAR 121-05.png'
 
 const GardenPage = () => {
   const navigate = useNavigate()
+  const { success } = useNotificationContext()
   const [garden, setGarden] = useState<Garden | null>(null)
   const [plants, setPlants] = useState<Array<{id: string, plant_num: number, plant_type: string, growth_stage: number}>>([])
   const [stats, setStats] = useState<UserStats | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
+  const [notificationsEnabled, setNotificationsEnabled] = useState(() => {
+    const saved = localStorage.getItem('gardenNotificationsEnabled')
+    return saved !== null ? JSON.parse(saved) : true
+  })
 
   useEffect(() => {
     loadGarden()
@@ -61,6 +66,21 @@ const GardenPage = () => {
     } finally {
       setResetting(false)
     }
+  }
+
+  const toggleNotifications = () => {
+    const newValue = !notificationsEnabled
+    setNotificationsEnabled(newValue)
+    localStorage.setItem('gardenNotificationsEnabled', JSON.stringify(newValue))
+    localStorage.setItem('notificationsEnabled', JSON.stringify(newValue))
+    success(newValue ? 'Notifications enabled' : 'Notifications disabled', 2000)
+  }
+
+  const clearAllNotifications = () => {
+    // This will be handled by the NotificationContext
+    const event = new CustomEvent('clearAllNotifications')
+    window.dispatchEvent(event)
+    success('All notifications cleared', 2000)
   }
 
   const formatMinutes = (minutes: number): string => {
@@ -121,6 +141,32 @@ const GardenPage = () => {
               </div>
               <div className="flex gap-3">
                 <motion.button
+                  onClick={toggleNotifications}
+                  className="btn-secondary flex items-center space-x-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title={notificationsEnabled ? 'Disable notifications' : 'Enable notifications'}
+                >
+                  {notificationsEnabled ? (
+                    <Bell className="w-5 h-5" />
+                  ) : (
+                    <BellOff className="w-5 h-5" />
+                  )}
+                  <span className="hidden md:inline">
+                    {notificationsEnabled ? 'Notifications On' : 'Notifications Off'}
+                  </span>
+                </motion.button>
+                <motion.button
+                  onClick={clearAllNotifications}
+                  className="btn-secondary flex items-center space-x-2"
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  title="Clear all notifications"
+                >
+                  <X className="w-5 h-5" />
+                  <span className="hidden md:inline">Clear</span>
+                </motion.button>
+                <motion.button
                   onClick={() => loadGarden()}
                   disabled={loading}
                   className="btn-secondary flex items-center space-x-2"
@@ -132,7 +178,7 @@ const GardenPage = () => {
                   ) : (
                     <Leaf className="w-5 h-5" />
                   )}
-                  <span>Refresh</span>
+                  <span className="hidden md:inline">Refresh</span>
                 </motion.button>
                 <motion.button
                   onClick={handleResetGarden}
@@ -146,7 +192,7 @@ const GardenPage = () => {
                   ) : (
                     <RotateCcw className="w-5 h-5" />
                   )}
-                  <span>Reset</span>
+                  <span className="hidden md:inline">Reset</span>
                 </motion.button>
                 <motion.button
                   onClick={() => navigate('/dashboard')}
