@@ -1,0 +1,82 @@
+# FocusGuard ML - Server Requirements
+
+# Computer Vision & Machine Learning
+opencv-python>=4.8.0
+ultralytics>=8.1.0              # YOLOv11 for object detection
+torch>=2.1.0                    # PyTorch for deep learning
+torchvision>=0.16.0             # Computer vision utilities
+pillow>=10.0.0                  # Image processing
+
+# Numerical Computing
+numpy>=1.24.0
+
+# API Framework (Legacy - can be removed once FastAPI is fully adopted)
+flask>=3.0.0
+flask-cors>=4.0.0
+
+# ============================================================================
+# REST API Dependencies (FastAPI)
+# ============================================================================
+
+# FastAPI - Modern, high-performance web framework
+fastapi>=0.109.0
+
+# ASGI Server - Production-grade async server
+uvicorn[standard]>=0.27.0
+
+# Database ORM & Drivers
+sqlalchemy>=2.0.25              # SQL toolkit and ORM
+asyncpg>=0.29.0                 # Async PostgreSQL driver
+psycopg2-binary>=2.9.9          # PostgreSQL adapter (for migrations/sync ops)
+
+# Data Validation
+pydantic>=2.5.0                 # Data validation using Python type hints
+pydantic-settings>=2.1.0        # Settings management
+email-validator>=2.1.0          # Email validation for Pydantic EmailStr
+
+# Authentication & Security
+python-jose[cryptography]>=3.3.0  # JWT token handling
+passlib[bcrypt]>=1.7.4            # Password hashing with bcrypt
+python-multipart>=0.0.6           # Form data parsing
+
+# CORS Support
+fastapi-cors>=0.0.6             # Cross-Origin Resource Sharing
+
+# Rate Limiting
+slowapi>=0.1.9                  # Rate limiting for FastAPI
+
+# Error Tracking & Monitoring
+sentry-sdk[fastapi]>=1.40.0     # Error tracking and performance monitoring
+
+# Database Migrations
+alembic>=1.13.0                 # Database migration tool
+
+# Testing
+httpx>=0.26.0                   # Async HTTP client for testing
+pytest-asyncio>=0.23.0          # Async test support
+
+# Utilities
+python-dotenv>=1.0.0
+
+# RAG & Vector Store
+supabase>=2.3.0                 # Supabase client (PostgreSQL + Auth + Storage)
+vecs>=0.4.0                     # Supabase Vector Store (pgvector client)
+sentence-transformers>=2.3.0    # Local embeddings (HuggingFace)
+PyYAML>=6.0.0                   # YAML parsing for knowledge base frontmatter
+
+# LLM & Generation
+openai>=1.10.0                  # OpenAI API (embeddings + GPT-4/GPT-3.5)
+tiktoken>=0.5.0                 # Token counting for OpenAI models
+anthropic>=0.18.0               # Anthropic Claude API (optional alternative)
+ollama>=0.1.0                   # Local LLM via Ollama (optional free alternative)
+huggingface-hub>=0.20.0         # Hugging Face Hub client (for inference API)
+
+# HTTP Client
+aiohttp>=3.9.0                  # Async HTTP client for API calls
+
+# Development
+pytest>=7.4.0
+pytest-cov>=4.1.0               # Code coverage for pytest
+black>=23.0.0
+flake8>=6.0.0
+mypy>=1.8.0                     # Type checking

@@ -1,0 +1,138 @@
+"""
+Tests for Session Service
+
+Tests session creation, streak logic, XP calculations, and blink rate storage.
+"""
+
+import pytest
+import pytest_asyncio
+from datetime import datetime, timedelta
+from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+
+from api.services import session_service
+from api.models.user import User
+from api.models.user_stats import UserStats
+from api.models.session import Session
+from api.schemas.session import SessionCreate
+
+
+@pytest.mark.asyncio
+class TestSessionCreation:
+    """Test session creation logic."""
+    
+    async def test_create_session_basic(
+        self,
+        db_session: AsyncSession,
+        test_user: User
+    ):
+        """Should create basic session without errors."""
+        session_data = SessionCreate(duration_min=25)
+        
+        session = await session_service.create_session(
+            db_session,
+            str(test_user.id),
+            session_data
+        )
+        
+        assert session.duration_minutes == 25
+        assert session.completed is False
+
+
+@pytest.mark.asyncio
+class TestStreakLogic:
+    """Test streak calculation logic."""
+    
+    async def test_first_session_initializes_streak(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        test_user_stats: UserStats
+    ):
+        """First completed session should set streak to 1."""
+        session_data = SessionCreate(duration_min=25)
+        session = await session_service.create_session(
+            db_session,
+            str(test_user.id),
+            session_data
+        )
+        
+        await session_service.complete_session(
+            db_session,
+            session.id,
+            str(test_user.id),
+            actual_duration=25
+        )
+        
+        await db_session.refresh(test_user_stats)
+        assert test_user_stats.current_streak == 1
+    
+    async def test_same_day_sessions_dont_increment_streak(
+        self,
+        db_session: AsyncSession,
+        test_user: User,
+        test_user_stats: UserStats
+    ):
+        """Multiple sessions on same day shouldn't increment streak."""
+        # Create and complete first session
+        first_session = await session_service.create_session(
+            db_session,
+            str(test_user.id),
+            SessionCreate(duration_min=25)
+        )
+        
+        await session_service.complete_session(
+            db_session,
+            first_session.id,
+            str(test_user.id),
+            actual_duration=25
+        )
+        
+        await db_session.refresh(test_user_stats)
+        first_streak = test_user_stats.current_streak
+        
+        # Create and complete second session (same day)
+        second_session = await session_service.create_session(
+            db_session,
+            str(test_user.id),
+            SessionCreate(duration_min=25)
+        )
+        
+        await session_service.complete_session(
+            db_session,
+            second_session.id,
+            str(test_user.id),
+            actual_duration=25
+        )
+        
+        await db_session.refresh(test_user_stats)
+        # Streak should not increase
+        assert test_user_stats.current_streak == first_streak
+
+
+@pytest.mark.asyncio
+class TestSessionCompletion:
+    """Test session completion logic."""
+    
+    async def test_complete_session_stores_blink_rate(
+        self,
+        db_session: AsyncSession,
+        test_user: User
+    ):
+        """Blink rate should be stored when completing session."""
+        session = await session_service.create_session(
+            db_session,
+            str(test_user.id),
+            SessionCreate(duration_min=25)
+        )
+        
+        completed = await session_service.complete_session(
+            db_session,
+            session.id,
+            str(test_user.id),
+            actual_duration=25,
+            blink_rate=15.5
+        )
+        
+        assert completed.blink_rate == 15.5
+        assert completed.completed is True

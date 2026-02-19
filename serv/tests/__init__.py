@@ -1,0 +1,5 @@
+"""
+FocusGuard API - Test Suite
+
+Comprehensive test coverage for backend services.
+"""

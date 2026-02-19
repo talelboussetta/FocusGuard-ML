@@ -1,0 +1,74 @@
+"""
+Tests for Stats Service
+
+Tests leaderboard calculations, user stats retrieval, and XP calculations.
+"""
+
+import pytest
+import pytest_asyncio
+from sqlalchemy.ext.asyncio import AsyncSession
+import uuid
+
+from api.services import stats_service,session_service
+from api.models.user import User
+from api.models.user_stats import UserStats
+from api.schemas.session import SessionCreate
+
+
+@pytest_asyncio.fixture
+async def multiple_test_users(db_session: AsyncSession):
+    """Create multiple users for leaderboard testing."""
+    users = []
+    for i in range(5):
+        user = User(
+            id=uuid.uuid4(),
+            username=f"testuser{i}",
+            email=f"test{i}@example.com",
+            password_hash="$2b$12$dummy",
+            xp_points=i * 50,
+            lvl=i + 1,
+        )
+        db_session.add(user)
+        
+        stats = UserStats(
+            user_id=user.id,
+            total_focus_min=i * 100,
+            total_sessions=i * 10,
+            current_streak=i,
+            best_streak=i + 1,
+        )
+        db_session.add(stats)
+        users.append(user)
+    
+    await db_session.commit()
+    for user in users:
+        await db_session.refresh(user)
+    
+    return users
+
+
+@pytest.mark.asyncio
+class TestLeaderboards:
+    """Test leaderboard generation."""
+    
+    async def test_xp_leaderboard_ordering(
+        self,
+        db_session: AsyncSession,
+        multiple_test_users: list[User]
+    ):
+        """XP leaderboard should order by xp_points descending."""
+        leaderboard = await stats_service.get_leaderboard(
+            db=db_session,
+            metric="xp",
+            limit=10
+        )
+        
+        assert len(leaderboard) == 5
+        
+        # Should be ordered by XP (highest first)
+        for i in range(len(leaderboard) - 1):
+            assert leaderboard[i]['value'] >= leaderboard[i + 1]['value']
+        
+        # Top user should be testuser4 (200 XP)
+        assert leaderboard[0]['username'] == "testuser4"
+        assert leaderboard[0]['value'] == 200

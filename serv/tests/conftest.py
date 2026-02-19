@@ -1,0 +1,108 @@
+"""
+Pytest Configuration for FocusGuard Tests
+
+Provides async fixtures for database setup and test data.
+"""
+
+import pytest
+import pytest_asyncio
+import os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import sessionmaker
+import uuid
+
+from api.database import Base
+from api.models.user import User
+from api.models.user_stats import UserStats
+from api.models.session import Session
+from api.models.garden import Garden
+from api.models.team import Team, TeamMember
+from api.models.team_message import TeamMessage
+from api.models.distraction import DistractionEvent
+from api.config import Settings
+
+
+# Test database URL (use environment variable or fallback to Settings with test DB)
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    Settings().database_url.replace("/focusguard_db", "/focusguard_test_db")
+)
+
+
+@pytest.fixture(scope="session")
+def event_loop():
+    """Create event loop for async tests."""
+    import asyncio
+    loop = asyncio.get_event_loop_policy().new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_engine():
+    """Create test database engine."""
+    engine = create_async_engine(
+        TEST_DATABASE_URL,
+        echo=False,
+        pool_pre_ping=True
+    )
+    
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    
+    yield engine
+    
+    # Cleanup
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.drop_all)
+    
+    await engine.dispose()
+
+
+@pytest_asyncio.fixture(scope="function")
+async def db_session(db_engine):
+    """Create test database session with auto-rollback."""
+    async_session_maker = async_sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    async with async_session_maker() as session:
+        yield session
+        await session.rollback()
+
+
+@pytest_asyncio.fixture
+async def test_user(db_session: AsyncSession):
+    """Create a test user."""
+    user = User(
+        id=uuid.uuid4(),
+        username="testuser",
+        email="test@example.com",
+        password_hash="$2b$12$dummy_hash_for_testing",
+        xp_points=0,
+        lvl=1
+    )
+    db_session.add(user)
+    await db_session.commit()
+    await db_session.refresh(user)
+    return user
+
+
+@pytest_asyncio.fixture
+async def test_user_stats(db_session: AsyncSession, test_user: User):
+    """Create test user stats."""
+    stats = UserStats(
+        user_id=test_user.id,
+        total_focus_min=0,
+        total_sessions=0,
+        current_streak=0,
+        best_streak=0
+    )
+    db_session.add(stats)
+    await db_session.commit()
+    await db_session.refresh(stats)
+    return stats
