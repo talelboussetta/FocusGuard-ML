@@ -280,6 +280,55 @@ VITE_ENABLE_CAMERA=true
 
 Contributions are welcome! Please feel free to submit a Pull Request.
 
+### GitHub Personal Access Token (PAT)
+
+When pushing code to GitHub from the command line, Git will ask for your credentials. GitHub no longer accepts account passwords — you must use a **Personal Access Token (PAT)** instead.
+
+**How to create your GitHub PAT:**
+
+1. Log in to [github.com](https://github.com)
+2. Click your profile photo (top-right) → **Settings**
+3. Scroll to the bottom of the left sidebar → **Developer settings**
+4. Select **Personal access tokens** → **Tokens (classic)**
+5. Click **Generate new token** → **Generate new token (classic)**
+6. Give it a descriptive name (e.g. `focusguard-dev`)
+7. Set an expiration date
+8. Under **Select scopes**, check **`repo`** (full control of private repositories)
+9. Click **Generate token**
+10. **Copy the token immediately** — GitHub will only show it once!
+
+> 💡 **Direct link:** https://github.com/settings/tokens
+
+**Using your PAT:**
+
+When Git prompts for your GitHub password (e.g. after `git push`), paste your PAT instead of your account password:
+
+```bash
+Username: your-github-username
+Password: ghp_xxxxxxxxxxxxxxxxxxxx   # <-- paste your PAT here
+```
+
+**Avoid re-entering the token every time** by storing it in Git's credential helper:
+
+```bash
+# macOS
+git config --global credential.helper osxkeychain
+
+# Windows
+git config --global credential.helper manager
+
+# Linux
+git config --global credential.helper store   # saves to ~/.git-credentials (plain text)
+# ⚠️  Note: 'store' saves the token in plain text. For better security on Linux,
+#    consider using libsecret: git config --global credential.helper /usr/lib/git-core/git-credential-libsecret
+```
+
+---
+
+### Getting Started with Contributions
+
+Once you have your PAT set up, follow these steps to contribute:
+
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
 3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
